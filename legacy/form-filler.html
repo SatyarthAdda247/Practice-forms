@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<!-- IBPS PO Form-Filling Assistant -->
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>IBPS PO Pre Form-Filling Tool - Aspirant Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="assets/styles.css" rel="stylesheet">
+</head>
+<body class="flex bg-background min-h-screen font-sans">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col p-lg gap-sm fixed left-0 top-0 h-full w-64 border-r border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center gap-4 mb-xl">
+<span class="material-symbols-outlined text-4xl text-primary">menu_book</span>
+<div>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Aspirant Portal</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Exam Prep Tools</p>
+</div>
+</div>
+<ul class="flex flex-col gap-sm flex-grow">
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="index.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">photo_size_select_large</span>
+<span class="font-label-md text-label-md">Image Resizer</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="key-checker.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">fact_check</span>
+<span class="font-label-md text-label-md">Key Checker</span>
+</a>
+</li>
+<li>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-4 p-md rounded-xl bg-primary-container text-on-primary-container font-bold group" href="form-filler.html">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="font-label-md text-label-md flex-1">Form Filler</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</a>
+<ul class="flex flex-col gap-1 ml-10 mt-1">
+<li>
+<a class="flex items-center p-2 rounded-lg text-primary font-bold text-label-sm hover:bg-surface-container transition-colors" href="form-filler.html">
+IBPS PO
+</a>
+</li>
+<li>
+<a class="flex items-center p-2 rounded-lg text-on-surface-variant text-label-sm hover:text-primary hover:bg-surface-container transition-colors" href="#">
+SBI PO
+</a>
+</li>
+<li>
+<a class="flex items-center p-2 rounded-lg text-on-surface-variant text-label-sm hover:text-primary hover:bg-surface-container transition-colors" href="#">
+SSC CGL
+</a>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+<div class="mt-auto flex flex-col gap-sm">
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">contact_support</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<button class="primary-btn mt-md w-full">Go Premium</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 relative min-h-screen bg-surface">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-margin-desktop py-md border-b border-outline-variant bg-surface">
+<div class="flex items-center gap-4 md:hidden">
+<span class="material-symbols-outlined text-on-surface text-2xl">menu</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Aspirant Portal</span>
+</div>
+<div class="hidden md:flex flex-col">
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">IBPS PO Form Planner</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Gather and organize your details before the application portal opens.</p>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-sm rounded-full transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-sm rounded-full transition-colors">help</span>
+<img class="w-8 h-8 rounded-full object-cover cursor-pointer border border-outline-variant" data-alt="A small, circular avatar portrait of an Indian aspirant in their early 20s, wearing simple formal attire, set against a clean light blue background. High resolution, well lit." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNTOdGEQPN_aeNNj8P7GKyiKmIOnRy3jhOTK3vevNoQ5ogzwXzALK-o8Dpv4FFa6TWos379-RHTBKDx7yKamCRJIVFQrAc08JNQYUiCIkwjOxKrVyVjCK6nUDK018V9loK8YSYD_NTjK9UV3pHwQDSFjlageeAoSkOmIMAVJptab5eVJx1xaciWTTFH83Lki4kRIUudsBOViQqVsf3xy0cASTS-MtL-vEHly2k4nEtnznKnET0_5HP">
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-margin-desktop">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter max-w-[1200px] mx-auto">
+<!-- Left Column (Main Form) -->
+<div class="xl:col-span-2 flex flex-col gap-gutter">
+<!-- Progress Bar Card -->
+<div class="bento-card bg-surface-container-low border-none">
+<div class="flex justify-between items-end mb-sm">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Form Readiness</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Track your data gathering progress.</p>
+</div>
+<span class="font-headline-md text-headline-md text-primary" id="progress-text">0%</span>
+</div>
+<div class="w-full bg-secondary-fixed rounded-full h-2">
+<div class="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out w-0" id="progress-bar" style="width: 0%;"></div>
+</div>
+</div>
+<!-- Personal Details -->
+<section class="bento-card">
+<h3 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm mb-lg">Personal Details</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div>
+<label class="form-label">Full Name (As per 10th Certificate)</label>
+<input class="form-input form-field" placeholder="E.g., Rahul Kumar" type="text">
+</div>
+<div>
+<label class="form-label">Date of Birth</label>
+<input class="form-input form-field" type="date">
+</div>
+<div>
+<label class="form-label">Category</label>
+<select class="form-input form-field">
+<option value="">Select Category</option>
+<option value="ur">UR / General</option>
+<option value="obc">OBC</option>
+<option value="sc">SC</option>
+<option value="st">ST</option>
+<option value="ews">EWS</option>
+</select>
+</div>
+<div>
+<label class="form-label">Gender</label>
+<select class="form-input form-field">
+<option value="">Select Gender</option>
+<option value="male">Male</option>
+<option value="female">Female</option>
+<option value="other">Other</option>
+</select>
+</div>
+<div class="md:col-span-2">
+<label class="form-label">Aadhar Card Number</label>
+<input class="form-input form-field" placeholder="12-digit number" type="text">
+</div>
+</div>
+</section>
+<!-- Education Details -->
+<section class="bento-card">
+<h3 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm mb-lg">Educational Qualifications</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div>
+<label class="form-label">Degree (Graduation)</label>
+<select class="form-input form-field">
+<option value="">Select Degree</option>
+<option value="ba">B.A.</option>
+<option value="bsc">B.Sc.</option>
+<option value="bcom">B.Com.</option>
+<option value="btech">B.Tech / B.E.</option>
+<option value="other">Other</option>
+</select>
+</div>
+<div>
+<label class="form-label">Date of Passing (As on Marksheet)</label>
+<input class="form-input form-field" type="date">
+</div>
+<div>
+<label class="form-label">Percentage of Marks</label>
+<input class="form-input form-field" placeholder="E.g., 65.50" step="0.01" type="number">
+</div>
+<div>
+<label class="form-label">University / Institute</label>
+<input class="form-input form-field" placeholder="Name of University" type="text">
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (Checklists & Actions) -->
+<div class="flex flex-col gap-gutter">
+<!-- Bank Preferences -->
+<section class="bento-card">
+<div class="flex justify-between items-center border-b border-outline-variant pb-sm mb-lg">
+<h3 class="font-headline-md text-headline-md text-on-surface">Bank Preferences</h3>
+<span class="material-symbols-outlined text-primary cursor-pointer" title="Drag to reorder (Visual only for now)">drag_indicator</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-md">Plan your preference order before the portal opens.</p>
+<div class="flex flex-col gap-sm max-h-[300px] overflow-y-auto pr-2">
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant rounded transition-colors cursor-pointer">
+<input class="form-checkbox text-primary rounded w-4 h-4 form-field" type="checkbox">
+<span class="font-body-sm text-body-sm">Punjab National Bank</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant rounded transition-colors cursor-pointer">
+<input class="form-checkbox text-primary rounded w-4 h-4 form-field" type="checkbox">
+<span class="font-body-sm text-body-sm">Bank of Baroda</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant rounded transition-colors cursor-pointer">
+<input class="form-checkbox text-primary rounded w-4 h-4 form-field" type="checkbox">
+<span class="font-body-sm text-body-sm">Canara Bank</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant rounded transition-colors cursor-pointer">
+<input class="form-checkbox text-primary rounded w-4 h-4 form-field" type="checkbox">
+<span class="font-body-sm text-body-sm">Union Bank of India</span>
+</label>
+<label class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest border border-transparent hover:border-outline-variant rounded transition-colors cursor-pointer">
+<input class="form-checkbox text-primary rounded w-4 h-4 form-field" type="checkbox">
+<span class="font-body-sm text-body-sm">Bank of India</span>
+</label>
+</div>
+</section>
+<!-- Upload Checklist -->
+<section class="bento-card">
+<h3 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm mb-lg">Document Checklist</h3>
+<div class="flex flex-col gap-md">
+<label class="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-surface-bright cursor-pointer hover:bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">photo_camera</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Passport Photo</p>
+<p class="font-label-sm text-label-sm text-outline">20kb - 50kb</p>
+</div>
+</div>
+<input class="form-checkbox text-tertiary rounded-full w-5 h-5 form-field" type="checkbox">
+</label>
+<label class="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-surface-bright cursor-pointer hover:bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">draw</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Signature</p>
+<p class="font-label-sm text-label-sm text-outline">10kb - 20kb (Black Ink)</p>
+</div>
+</div>
+<input class="form-checkbox text-tertiary rounded-full w-5 h-5 form-field" type="checkbox">
+</label>
+<label class="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-surface-bright cursor-pointer hover:bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">fingerprint</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Left Thumb</p>
+<p class="font-label-sm text-label-sm text-outline">20kb - 50kb</p>
+</div>
+</div>
+<input class="form-checkbox text-tertiary rounded-full w-5 h-5 form-field" type="checkbox">
+</label>
+<label class="flex items-center justify-between p-3 border border-outline-variant rounded-lg bg-surface-bright cursor-pointer hover:bg-surface-container-lowest transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">edit_document</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Hand-written Decl.</p>
+<p class="font-label-sm text-label-sm text-outline">50kb - 100kb</p>
+</div>
+</div>
+<input class="form-checkbox text-tertiary rounded-full w-5 h-5 form-field" type="checkbox">
+</label>
+</div>
+</section>
+<!-- Export Actions -->
+<section class="bento-card flex flex-col gap-md">
+<button class="primary-btn flex items-center justify-center gap-2 w-full">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+Copy All Details
+</button>
+<button class="secondary-btn flex items-center justify-center gap-2 w-full">
+<span class="material-symbols-outlined text-xl">download</span>
+Download as PDF
+</button>
+</section>
+</div>
+</div>
+</div>
+</main>
+<script src="assets/form-filler.js"></script>
+</body>
+</html>

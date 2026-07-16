@@ -1,0 +1,297 @@
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import Icon from "../components/Icon.jsx";
+
+function StatCard({ icon, label, value, accent = "text-on-background", sub }) {
+  return (
+    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="flex items-center gap-sm mb-sm text-on-surface-variant">
+        <Icon name={icon} size={20} />
+        <span className="font-label-md text-label-md uppercase tracking-wider">{label}</span>
+      </div>
+      <div className={`font-data-mono text-headline-lg font-bold ${accent}`}>{value}</div>
+      {sub && <p className="font-body-sm text-body-sm text-secondary mt-xs">{sub}</p>}
+    </div>
+  );
+}
+
+export default function Results() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [exams, setExams] = useState([]);
+  const [examId, setExamId] = useState(id || "");
+  const [data, setData] = useState(null);
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api.listExams().then((list) => {
+      setExams(list);
+      if (!examId && list.length) setExamId(String(list[0].id));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!examId) return;
+    setLoading(true);
+    api
+      .results(examId)
+      .then(setData)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [examId]);
+
+  const rows = useMemo(() => {
+    if (!data) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return data.rows;
+    return data.rows.filter(
+      (r) =>
+        (r.rollNumber || "").toLowerCase().includes(q) ||
+        (r.filename || "").toLowerCase().includes(q)
+    );
+  }, [data, query]);
+
+  const exportCsv = () => {
+    if (!data) return;
+    const header = "Rank,Roll Number,File,Correct,Wrong,Unattempted,Score,Max,Percent";
+    const lines = data.rows.map((r, i) => {
+      const pct = r.maxScore ? ((r.score / r.maxScore) * 100).toFixed(1) : "0";
+      return [i + 1, r.rollNumber, r.filename, r.correct, r.wrong, r.unattempted, r.score, r.maxScore, pct].join(",");
+    });
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${data.exam.name.replace(/\s+/g, "_")}_results.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const stats = data?.stats;
+  const maxScore = data?.rows?.[0]?.maxScore || 0;
+
+  return (
+    <>
+      <header className="mb-xl flex flex-wrap gap-md justify-between items-end">
+        <div>
+          <h1 className="font-headline-lg text-headline-lg text-on-background mb-xs">
+            Results Dashboard
+          </h1>
+          <p className="font-body-lg text-body-lg text-secondary">
+            {data?.exam ? data.exam.name : "Graded OMR performance overview."}
+          </p>
+        </div>
+        <div className="flex items-center gap-sm">
+          <select
+            value={examId}
+            onChange={(e) => setExamId(e.target.value)}
+            className="bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+          >
+            <option value="">Select exam…</option>
+            {exams.map((ex) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.name}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={exportCsv}
+            disabled={!data?.rows?.length}
+            className="py-2 px-md bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-xs disabled:opacity-60"
+          >
+            <Icon name="download" size={18} />
+            Export CSV
+          </button>
+        </div>
+      </header>
+
+      {error && (
+        <div className="mb-lg p-md rounded-xl bg-error-container text-on-error-container font-body-md">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-secondary">Loading…</p>
+      ) : !stats || stats.graded === 0 ? (
+        <div className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl p-xl text-center text-on-surface-variant">
+          <Icon name="analytics" size={40} className="text-outline" />
+          <p className="mt-sm font-body-md">
+            No graded sheets yet. Upload sheets and run grading to see results.
+          </p>
+          {examId && (
+            <button
+              onClick={() => navigate(`/upload/${examId}`)}
+              className="mt-md py-sm px-lg bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors"
+            >
+              Go to Uploads
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-lg mb-xl">
+            <StatCard icon="groups" label="Graded" value={stats.graded} />
+            <StatCard
+              icon="functions"
+              label="Average"
+              value={stats.average}
+              sub={maxScore ? `of ${maxScore}` : ""}
+            />
+            <StatCard icon="trending_up" label="Highest" value={stats.highest} accent="text-[#0d9488]" />
+            <StatCard icon="trending_down" label="Lowest" value={stats.lowest} accent="text-error" />
+            <StatCard
+              icon="verified"
+              label="Pass Rate"
+              value={`${Math.round(stats.passRate * 100)}%`}
+              sub="≥ 40% threshold"
+            />
+          </div>
+
+          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
+            <div className="px-lg py-md border-b border-outline-variant bg-surface-bright flex flex-wrap gap-sm justify-between items-center">
+              <h4 className="font-headline-sm text-headline-sm text-on-background">
+                Student Scores ({rows.length})
+              </h4>
+              <div className="relative">
+                <Icon
+                  name="search"
+                  size={18}
+                  className="absolute left-sm top-1/2 -translate-y-1/2 text-outline"
+                />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search roll / file"
+                  className="bg-surface border border-outline-variant rounded-lg pl-xl pr-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </div>
+            </div>
+
+            {/* Mobile: stacked roster cards */}
+            <ul className="md:hidden divide-y divide-outline-variant">
+              {rows.map((r) => {
+                const rank = data.rows.indexOf(r) + 1;
+                const pct = r.maxScore ? (r.score / r.maxScore) * 100 : 0;
+                const flagged = pct < 40;
+                return (
+                  <li key={r.sheetId} className="p-md">
+                    <div className="flex justify-between items-start mb-sm">
+                      <div>
+                        <p className="font-body-lg text-body-lg text-on-background font-semibold leading-tight">
+                          {r.rollNumber || "—"}
+                        </p>
+                        <p className="font-data-mono text-body-sm text-secondary">
+                          Rank #{rank} • {r.filename}
+                        </p>
+                      </div>
+                      <span
+                        className={`font-label-md text-label-md px-sm py-xs rounded-full border shrink-0 ${
+                          flagged
+                            ? "text-error bg-error-container border-[#f87171]"
+                            : "text-[#0d9488] bg-tertiary-fixed-dim/20 border-tertiary-fixed-dim"
+                        }`}
+                      >
+                        {flagged ? "REVIEW REQ" : "VERIFIED"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-sm mb-sm text-center">
+                      {[
+                        { k: "CORRECT", v: r.correct, c: "text-[#0d9488]" },
+                        { k: "WRONG", v: r.wrong, c: "text-error" },
+                        { k: "BLANK", v: r.unattempted, c: "text-secondary" },
+                        { k: "TOTAL", v: `${r.score}`, c: "text-on-background font-bold" },
+                      ].map((cell) => (
+                        <div key={cell.k}>
+                          <p className="font-label-md text-[10px] text-on-surface-variant tracking-wider">
+                            {cell.k}
+                          </p>
+                          <p className={`font-data-mono text-body-md ${cell.c}`}>{cell.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${flagged ? "bg-error" : "bg-primary"}`}
+                        style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Desktop: results table */}
+            <div className="hidden md:block overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-surface-bright text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
+                    <th className="px-lg py-sm">Rank</th>
+                    <th className="px-lg py-sm">Roll No.</th>
+                    <th className="px-lg py-sm hidden md:table-cell">File</th>
+                    <th className="px-lg py-sm text-center">Correct</th>
+                    <th className="px-lg py-sm text-center">Wrong</th>
+                    <th className="px-lg py-sm text-center hidden sm:table-cell">Blank</th>
+                    <th className="px-lg py-sm text-right">Score</th>
+                    <th className="px-lg py-sm w-40">Percent</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant">
+                  {rows.map((r) => {
+                    const rank = data.rows.indexOf(r) + 1;
+                    const pct = r.maxScore ? (r.score / r.maxScore) * 100 : 0;
+                    return (
+                      <tr key={r.sheetId} className="hover:bg-surface-bright transition-colors">
+                        <td className="px-lg py-md font-data-mono text-data-mono text-secondary">
+                          {rank}
+                        </td>
+                        <td className="px-lg py-md font-body-md text-body-md text-on-background font-medium">
+                          {r.rollNumber || "—"}
+                        </td>
+                        <td className="px-lg py-md font-body-sm text-body-sm text-secondary hidden md:table-cell truncate max-w-[200px]">
+                          {r.filename}
+                        </td>
+                        <td className="px-lg py-md text-center font-data-mono text-data-mono text-[#0d9488]">
+                          {r.correct}
+                        </td>
+                        <td className="px-lg py-md text-center font-data-mono text-data-mono text-error">
+                          {r.wrong}
+                        </td>
+                        <td className="px-lg py-md text-center font-data-mono text-data-mono text-secondary hidden sm:table-cell">
+                          {r.unattempted}
+                        </td>
+                        <td className="px-lg py-md text-right font-data-mono text-data-mono font-bold text-on-background">
+                          {r.score}
+                          <span className="text-outline">/{r.maxScore}</span>
+                        </td>
+                        <td className="px-lg py-md">
+                          <div className="flex items-center gap-sm">
+                            <div className="h-2 flex-1 bg-surface-container rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  pct >= 40 ? "bg-primary" : "bg-error"
+                                }`}
+                                style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                              />
+                            </div>
+                            <span className="font-data-mono text-body-sm text-secondary w-10 text-right">
+                              {pct.toFixed(0)}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}

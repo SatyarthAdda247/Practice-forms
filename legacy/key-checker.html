@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<!-- Answer Key Checker (reconstructed to match the design system) -->
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Answer Key Checker - Aspirant Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="assets/styles.css" rel="stylesheet">
+</head>
+<body class="flex bg-background min-h-screen font-sans">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col p-lg gap-sm fixed left-0 top-0 h-full w-64 border-r border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center gap-4 mb-xl">
+<span class="material-symbols-outlined text-4xl text-primary">menu_book</span>
+<div>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Aspirant Portal</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Exam Prep Tools</p>
+</div>
+</div>
+<ul class="flex flex-col gap-sm flex-grow">
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="index.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">photo_size_select_large</span>
+<span class="font-label-md text-label-md">Image Resizer</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl bg-primary-container text-on-primary-container font-bold group" href="key-checker.html">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="font-label-md text-label-md">Key Checker</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="form-filler.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">edit_note</span>
+<span class="font-label-md text-label-md">Form Filler</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto flex flex-col gap-sm">
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-4 p-md rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">contact_support</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<button class="primary-btn mt-md w-full">Go Premium</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 relative min-h-screen bg-surface">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-margin-desktop py-md border-b border-outline-variant bg-surface">
+<div class="flex items-center gap-4 md:hidden">
+<span class="material-symbols-outlined text-on-surface text-2xl">menu</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Aspirant Portal</span>
+</div>
+<div class="hidden md:flex flex-col">
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">Answer Key Checker</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Match your responses against the official key and estimate your score.</p>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-sm rounded-full transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-sm rounded-full transition-colors">help</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-sm rounded-full transition-colors">account_circle</span>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-margin-desktop">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter max-w-[1200px] mx-auto">
+<!-- Left Column (Inputs) -->
+<div class="xl:col-span-2 flex flex-col gap-gutter">
+<!-- Exam Setup -->
+<section class="bento-card">
+<h3 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm mb-lg">Exam Setup</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div>
+<label class="form-label">Exam</label>
+<select class="form-input">
+<option value="">Select Exam</option>
+<option value="ibps-po">IBPS PO Prelims</option>
+<option value="sbi-po">SBI PO Prelims</option>
+<option value="ssc-cgl">SSC CGL Tier 1</option>
+<option value="rbi-assistant">RBI Assistant Prelims</option>
+</select>
+</div>
+<div>
+<label class="form-label">Question Set / Booklet</label>
+<input class="form-input" placeholder="E.g., Set A" type="text">
+</div>
+<div>
+<label class="form-label">Marks per Correct Answer</label>
+<input class="form-input" placeholder="E.g., 1" step="0.25" type="number" value="1">
+</div>
+<div>
+<label class="form-label">Negative Marking (per wrong)</label>
+<input class="form-input" placeholder="E.g., 0.25" step="0.01" type="number" value="0.25">
+</div>
+</div>
+</section>
+<!-- Response Entry -->
+<section class="bento-card">
+<div class="flex justify-between items-center border-b border-outline-variant pb-sm mb-lg">
+<h3 class="font-headline-md text-headline-md text-on-surface">Responses vs. Official Key</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">One answer per line (A / B / C / D)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div>
+<label class="form-label">Your Responses</label>
+<textarea class="form-input" placeholder="A&#10;C&#10;B&#10;D&#10;..." rows="10"></textarea>
+</div>
+<div>
+<label class="form-label">Official Answer Key</label>
+<textarea class="form-input" placeholder="A&#10;B&#10;B&#10;D&#10;..." rows="10"></textarea>
+</div>
+</div>
+<div class="flex flex-wrap gap-md mt-lg">
+<button class="primary-btn flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-xl">calculate</span>
+Calculate Score
+</button>
+<button class="secondary-btn flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-xl">restart_alt</span>
+Reset
+</button>
+</div>
+</section>
+</div>
+<!-- Right Column (Result Summary) -->
+<div class="flex flex-col gap-gutter">
+<!-- Score Card -->
+<section class="bento-card bg-surface-container-low border-none text-center">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Estimated Score</p>
+<p class="font-headline-xl text-headline-xl text-primary mt-sm">—</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Enter responses and calculate to see your score.</p>
+</section>
+<!-- Breakdown -->
+<section class="bento-card">
+<h3 class="font-headline-md text-headline-md text-on-surface border-b border-outline-variant pb-sm mb-lg">Breakdown</h3>
+<div class="flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Correct
+</span>
+<span class="font-label-md text-label-md text-on-surface">0</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface">
+<span class="w-2 h-2 rounded-full bg-error"></span> Incorrect
+</span>
+<span class="font-label-md text-label-md text-on-surface">0</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface">
+<span class="w-2 h-2 rounded-full bg-outline"></span> Unattempted
+</span>
+<span class="font-label-md text-label-md text-on-surface">0</span>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant pt-md">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Accuracy</span>
+<span class="font-label-md text-label-md text-on-surface">—</span>
+</div>
+</div>
+</section>
+<!-- Export -->
+<section class="bento-card flex flex-col gap-md">
+<button class="secondary-btn flex items-center justify-center gap-2 w-full">
+<span class="material-symbols-outlined text-xl">download</span>
+Download Result
+</button>
+</section>
+</div>
+</div>
+</div>
+</main>
+</body>
+</html>

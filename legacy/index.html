@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!-- Aspirant Portal Dashboard -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Aspirant Portal - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="assets/styles.css" rel="stylesheet">
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col p-lg gap-sm h-screen w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface-container-lowest z-40">
+<div class="flex items-center gap-md mb-xl px-sm">
+<img class="w-10 h-10 rounded-lg object-cover bg-surface-variant" data-alt="A clean, professional minimalist logo for an exam preparation portal featuring an abstract open book or ascending graph rendered in deep indigo and slate gray tones. The style is modern, corporate, and precise, set against a pure white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8m6BpvGt1lacoiSaMUn9vXNxEVXvUtU31pvXtrm-bsM2i_gE4q98JTyNBG9xRoDRcfwL9Lv6QiWb9ccX3FMK60Kkqi9U6V7P3zpuAPOA1-vHnMU-aM4GjmViO0FYPGRaGpiPCM7uxDK-VGy630Z9bu81Ldf7wZcUkAv7mf7g2yLgdkTgLf_ZISqjA5ythu4F52Ou0PTqKfdxWQVwzReOZYsH-62GIW6b07pwVj6GKwtOjIinuyldZ">
+<div>
+<h1 class="font-headline-md text-headline-md font-extrabold text-primary">Aspirant Portal</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Exam Prep Tools</p>
+</div>
+</div>
+<div class="flex-1 space-y-sm">
+<a class="flex items-center gap-md p-md bg-primary-container text-on-primary-container font-bold rounded-xl hover:bg-surface-container transition-all group" href="index.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all rounded-xl group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">photo_size_select_large</span>
+<span class="font-label-md text-label-md">Image Resizer</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all rounded-xl group" href="key-checker.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">fact_check</span>
+<span class="font-label-md text-label-md">Key Checker</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all rounded-xl group" href="form-filler.html">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">edit_note</span>
+<span class="font-label-md text-label-md">Form Filler</span>
+</a>
+<div class="ml-12 mt-xs space-y-xs">
+<a href="form-filler.html" class="block py-1 px-md text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg transition-colors">IBPS PO</a>
+<a href="#" class="block py-1 px-md text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg transition-colors">SBI PO</a>
+<a href="#" class="block py-1 px-md text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg transition-colors">SSC CGL</a>
+</div>
+</div>
+<div class="mt-auto space-y-sm pb-xl">
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all rounded-xl group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all rounded-xl group" href="#">
+<span class="material-symbols-outlined group-hover:translate-x-1 duration-200">contact_support</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<button class="w-full mt-md py-sm bg-primary text-on-primary font-label-md text-label-md rounded-lg hover:bg-on-primary-fixed-variant transition-colors">
+Go Premium
+</button>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-64 min-w-0">
+<!-- TopAppBar (Mobile & Desktop) -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-md bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<!-- Mobile Menu Toggle -->
+<button class="md:hidden text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[24px]">menu</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary md:hidden">Aspirant Portal</div>
+<!-- Desktop Search -->
+<div class="hidden md:flex items-center bg-surface-container-lowest border border-outline-variant rounded-full px-md py-sm w-96 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant mr-sm">search</span>
+<input class="bg-transparent border-none outline-none w-full font-body-sm text-body-sm text-on-surface placeholder-on-surface-variant p-0 focus:ring-0" placeholder="Search tools, exams, or resources..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="p-sm text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors cursor-pointer active:scale-95 duration-150 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-sm text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<div class="p-margin-mobile md:p-margin-desktop max-w-[1200px] w-full mx-auto space-y-xl">
+<!-- Welcome Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-md">
+<div>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Welcome back, Aspirant</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Your exam preparation toolkit is ready. What would you like to do today?</p>
+</div>
+<div class="flex items-center gap-sm text-on-surface-variant font-label-sm text-label-sm bg-surface-container-lowest px-md py-sm rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Next Exam: IBPS PO Prelims (14 Days)</span>
+</div>
+</div>
+<!-- Core Tools Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Tool 1: Image Resizer -->
+<a href="#" class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow group relative overflow-hidden block">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary-container/20 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
+<div class="w-12 h-12 bg-primary-container text-primary rounded-lg flex items-center justify-center mb-md">
+<span class="material-symbols-outlined text-[24px]">photo_size_select_large</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs">Image Resizer</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-lg">Format your photos and signatures exactly to IBPS/SBI specifications. Avoid rejection.</p>
+<span class="flex items-center gap-xs font-label-md text-label-md text-primary group-hover:translate-x-1 transition-transform">
+Resize Now <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</span>
+</a>
+<!-- Tool 2: Key Checker -->
+<a href="key-checker.html" class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow group relative overflow-hidden block">
+<div class="absolute top-0 right-0 w-32 h-32 bg-tertiary-container/10 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
+<div class="w-12 h-12 bg-tertiary-container text-on-tertiary rounded-lg flex items-center justify-center mb-md">
+<span class="material-symbols-outlined text-[24px]">fact_check</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs">Key Checker</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-lg">Instantly verify your OMR or digital responses against official answer keys to calculate scores.</p>
+<span class="flex items-center gap-xs font-label-md text-label-md text-tertiary group-hover:translate-x-1 transition-transform">
+Check Key <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</span>
+</a>
+<!-- Tool 3: Form Filler -->
+<a href="form-filler.html" class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow group relative overflow-hidden block">
+<div class="absolute top-0 right-0 w-32 h-32 bg-secondary-container/30 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
+<div class="w-12 h-12 bg-secondary-container text-on-secondary-container rounded-lg flex items-center justify-center mb-md">
+<span class="material-symbols-outlined text-[24px]">edit_note</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs">Pre Form-Filler</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-lg">Draft and validate your application details for IBPS PO before actual submission.</p>
+<span class="flex items-center gap-xs font-label-md text-label-md text-on-secondary-fixed-variant group-hover:translate-x-1 transition-transform">
+Start Draft <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</span>
+</a>
+</div>
+<!-- Bottom Section Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Recent Activity (Takes up 2 columns on large screens) -->
+<div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Recent Activity</h3>
+<button class="text-primary font-label-sm text-label-sm hover:underline">View All</button>
+</div>
+<div class="space-y-0">
+<!-- Activity Item 1 -->
+<div class="flex items-start gap-md py-md border-b border-surface-variant hover:bg-surface-bright transition-colors px-sm -mx-sm rounded-lg">
+<div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center flex-shrink-0 mt-1">
+<span class="material-symbols-outlined text-[16px]">photo_size_select_large</span>
+</div>
+<div class="flex-1">
+<p class="font-body-sm text-body-sm text-on-surface"><span class="font-medium">Resized Signature</span> for SBI Clerk Application</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-xs">2 hours ago</p>
+</div>
+<span class="px-2 py-1 bg-[#d1fae5] text-[#065f46] text-[10px] font-bold uppercase tracking-wider rounded">Success</span>
+</div>
+<!-- Activity Item 2 -->
+<div class="flex items-start gap-md py-md border-b border-surface-variant hover:bg-surface-bright transition-colors px-sm -mx-sm rounded-lg">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary flex items-center justify-center flex-shrink-0 mt-1">
+<span class="material-symbols-outlined text-[16px]">fact_check</span>
+</div>
+<div class="flex-1">
+<p class="font-body-sm text-body-sm text-on-surface"><span class="font-medium">Checked Answer Key</span> for IBPS PO Mock Test #4</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-xs">Yesterday, 4:30 PM</p>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Score: 68/100</span>
+</div>
+<!-- Activity Item 3 -->
+<div class="flex items-start gap-md py-md hover:bg-surface-bright transition-colors px-sm -mx-sm rounded-lg">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center flex-shrink-0 mt-1">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+</div>
+<div class="flex-1">
+<p class="font-body-sm text-body-sm text-on-surface"><span class="font-medium">Drafted Form</span> for RBI Assistant Prelims</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-xs">Oct 12, 2023</p>
+</div>
+<span class="px-2 py-1 bg-[#fef3c7] text-[#92400e] text-[10px] font-bold uppercase tracking-wider rounded">Draft</span>
+</div>
+</div>
+</div>
+<!-- Upcoming Deadlines -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col">
+<div class="flex justify-between items-center mb-md border-b border-outline-variant pb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Deadlines</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">event</span>
+</div>
+<div class="flex-1 space-y-md">
+<!-- Deadline 1 -->
+<div class="bg-surface-container p-md rounded-lg border-l-4 border-error">
+<p class="font-label-md text-label-md text-on-surface">IBPS PO Form Submission</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Last date: Tomorrow, 11:59 PM</p>
+<a href="form-filler.html" class="mt-sm text-xs font-semibold text-error hover:underline flex items-center gap-1">
+Complete Now <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+<!-- Deadline 2 -->
+<div class="bg-surface-container p-md rounded-lg border-l-4 border-primary">
+<p class="font-label-md text-label-md text-on-surface">SBI Clerk Admit Card</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Expected release: 24 Oct</p>
+</div>
+<!-- Deadline 3 -->
+<div class="bg-surface-container p-md rounded-lg border-l-4 border-outline-variant">
+<p class="font-label-md text-label-md text-on-surface">RBI Grade B Phase 1</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Exam Date: 15 Nov</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body>
+</html>

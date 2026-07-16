@@ -1,0 +1,78 @@
+/*
+ * Shared component styles for the Aspirant Portal.
+ * These complement the Tailwind utility classes with a few reusable
+ * component classes (cards, form controls, buttons) that were previously
+ * duplicated inside each page's <style> block.
+ */
+
+body {
+  font-family: "Inter", sans-serif;
+  background-color: #f8f9ff; /* surface / background */
+  color: #0b1c30; /* on-surface */
+}
+
+/* --- Cards ------------------------------------------------------------- */
+.bento-card {
+  background-color: #ffffff; /* surface-container-lowest */
+  border: 1px solid #dee2ed; /* secondary-fixed */
+  border-radius: 0.5rem; /* xl */
+  padding: 24px; /* lg */
+}
+
+/* --- Form controls ----------------------------------------------------- */
+.form-input {
+  width: 100%;
+  border: 1px solid #c4c5d9; /* outline-variant */
+  border-radius: 0.25rem; /* lg */
+  padding: 8px 12px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #0b1c30;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+.form-input:focus {
+  outline: none;
+  border-color: #0040e0; /* primary */
+  box-shadow: 0 0 0 2px rgba(0, 64, 224, 0.2);
+}
+.form-label {
+  display: block;
+  margin-bottom: 4px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #434656; /* on-surface-variant */
+}
+
+/* --- Buttons ----------------------------------------------------------- */
+.primary-btn {
+  background-color: #0040e0; /* primary */
+  color: #ffffff;
+  border-radius: 0.25rem;
+  padding: 10px 20px;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.2s ease-in-out;
+  cursor: pointer;
+  border: none;
+}
+.primary-btn:hover {
+  background-color: #0035be; /* on-primary-fixed-variant */
+}
+.secondary-btn {
+  background-color: transparent;
+  color: #0040e0;
+  border: 1px solid #0040e0;
+  border-radius: 0.25rem;
+  padding: 10px 20px;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+.secondary-btn:hover {
+  background-color: #eff4ff; /* surface-container-low */
+}
