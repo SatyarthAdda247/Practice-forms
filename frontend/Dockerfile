@@ -27,8 +27,7 @@ WORKDIR /app
 ENV PORT=8080
 COPY --from=build /app/dist ./dist
 COPY server.js ./server.js
-COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Entrypoint injects runtime config, then starts the server.
 # Liveness is a K8s livenessProbe against /healthz on the Deployment, not a
