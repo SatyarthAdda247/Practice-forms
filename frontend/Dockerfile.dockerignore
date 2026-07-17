@@ -1,0 +1,16 @@
+# Build context is the repo root (see frontend/Dockerfile) — patterns here
+# are resolved relative to the repo root, not this directory.
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+frontend/*.local
+.git/
+.gitignore
+*.log
+.DS_Store
+
+# Not needed for the frontend image — keep them out of the build context.
+backend/
+legacy/
