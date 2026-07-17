@@ -30,11 +30,7 @@ COPY server.js ./server.js
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-EXPOSE 8080
-
-# Liveness probe hits the server's /healthz on the runtime port.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/healthz" >/dev/null 2>&1 || exit 1
-
 # Entrypoint injects runtime config, then starts the server.
+# Liveness is a K8s livenessProbe against /healthz on the Deployment, not a
+# Dockerfile HEALTHCHECK — the kubelet never reads the latter.
 CMD ["./docker-entrypoint.sh"]
