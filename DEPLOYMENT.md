@@ -43,7 +43,7 @@ All runtime config comes from the ConfigMap (`envFrom`). Same image for both env
 | | |
 |---|---|
 | Dockerfile | `frontend/Dockerfile` |
-| Build context | `frontend/` |
+| Build context | repo root (`.`) — Dockerfile COPY paths are prefixed `frontend/` |
 | Port | `8080` (listens on `$PORT`) |
 | Server | zero-dependency Node static server (`server.js`), SPA fallback → `index.html` |
 | Healthcheck | `GET /healthz` → `200 "ok"` (interval 30s, timeout 5s, start-period 5s, retries 3) |
@@ -54,7 +54,7 @@ baked in. The build embeds `__VITE_*__` placeholder tokens; at container start
 in both staging and prod** — no `--build-arg` needed.
 
 ```bash
-docker build -t <registry>/omr-answer-fe:green frontend/
+docker build -f frontend/Dockerfile -t <registry>/omr-answer-fe:green .
 docker push <registry>/omr-answer-fe:green
 ```
 
