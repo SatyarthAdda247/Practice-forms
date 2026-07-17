@@ -1,4 +1,4 @@
-FROM docker-central.adda247.com/base-images/pyhton3:12:0.0.1
+FROM docker-central.adda247.com/base-images/python3:12:0.0.1
 
 ENV PORT=5000 \
     HOST=0.0.0.0
