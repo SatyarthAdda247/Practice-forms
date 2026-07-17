@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Payment & Final Submission — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  
+  .payment-card {
+    border-radius: 8px;
+    border: 1px dashed #4c56c0;
+    background-color: #f8fafc;
+    padding: 2.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  #captchaImg {
+    font-family: monospace;
+    font-size: 22px;
+    letter-spacing: 5px;
+    background: #eee repeating-linear-gradient(45deg,#eee,#eee 4px,#e2e2e2 4px,#e2e2e2 8px);
+    padding: 6px 18px;
+    border: 1px solid #ccc;
+    user-select: none;
+    text-decoration: line-through;
+    display: inline-block;
+  }
+  
+  .receipt-box {
+    display: none;
+    border: 2px solid #16a34a;
+    border-radius: 8px;
+    background-color: #fff;
+    padding: 2.5rem;
+    margin-top: 1.5rem;
+  }
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-3">
+        <li class="first unactive"><a href="index.html"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+        <li class="unactive"><a href="verification.html"><i class="bi bi-ui-checks"></i><span>Verification</span></a></li>
+        <li class="unactive"><a href="photo_signature.html"><i class="bi bi-images"></i><span>Photo & Signature</span></a></li>
+        <li class="unactive"><a href="details.html"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+        <li class="unactive"><a href="preview.html"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+        <li class="unactive"><a href="uploads.html"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+        <li class="active"><a href="#"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Payment Form Panel -->
+  <div class="basic_details_form p-4 p-md-5" id="paymentPanel">
+    <div class="border-bottom pb-2 mb-4">
+      <h1 class="m-0">Payment Details</h1>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="payment-card mb-4 text-center">
+          <h3 class="mb-4 font-weight-bold text-dark"><i class="bi bi-credit-card-2-front text-primary"></i> Application Fee Payment</h3>
+          
+          <div class="text-left mb-4 bg-white p-3 border rounded shadow-sm">
+            <div class="row mb-2">
+              <div class="col-5 text-muted font-weight-bold">Registration No:</div>
+              <div class="col-7 font-weight-bold" id="payRegNo">1620984371</div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-5 text-muted font-weight-bold">Candidate Name:</div>
+              <div class="col-7 font-weight-bold text-uppercase" id="payName">SATYARTH SRIVASTAVA</div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-5 text-muted font-weight-bold">Category:</div>
+              <div class="col-7 font-weight-bold text-uppercase" id="payCategory">UR</div>
+            </div>
+            <hr>
+            <div class="row text-success align-items-center">
+              <div class="col-5 h5 mb-0 font-weight-bold">Amount to Pay:</div>
+              <div class="col-7 h4 mb-0 font-weight-bold">₹ <span id="payAmount">850.00</span></div>
+            </div>
+          </div>
+
+          <form id="payForm" class="text-left">
+            <div class="form-group mb-4">
+              <label for="txtCode" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+              <div class="row align-items-center">
+                <div class="col-sm-6 mb-3 mb-sm-0">
+                  <input name="txtCode" type="text" id="txtCode" class="form-control" placeholder="ENTER SECURITY CODE">
+                  <div class="invalid-feedback" id="err_txtCode"></div>
+                </div>
+                <div class="col-auto">
+                  <span id="captchaImg"></span>
+                </div>
+                <div class="col-auto">
+                  <a href="javascript:void(0);" class="btn btn-sm btn-outline-secondary" id="refreshCaptcha"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="row justify-content-center pt-3 border-top">
+              <button type="button" class="btn btn-success btn-lg px-5 py-3 shadow font-weight-bold" id="btnPay" style="background-color: #16a34a; border-color: #16a34a;">
+                <i class="bi bi-shield-check"></i> Pay & Submit Application
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS RECEIPT PANEL (Visible after Payment) -->
+  <div class="receipt-box text-center p-4 p-md-5" id="receiptPanel">
+    <div class="mb-4">
+      <i class="bi bi-check-circle-fill text-success animate-bounce" style="font-size: 5rem; display: inline-block;"></i>
+    </div>
+    
+    <h1 class="text-success font-weight-bold mb-2">Application Submitted Successfully!</h1>
+    <p class="lead text-muted mb-4">Your practice fee transaction has been simulated successfully.</p>
+    
+    <div class="card shadow-sm mb-5 text-left border-success" style="max-width: 650px; margin: 0 auto;">
+      <div class="card-header bg-success text-white py-3">
+        <h4 class="m-0 font-weight-bold"><i class="bi bi-file-earmark-check"></i> Official Rehearsal E-Receipt</h4>
+      </div>
+      <div class="card-body bg-white p-4">
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Registration No:</div>
+          <div class="col-7 font-weight-bold" id="recRegNo">1620984371</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Candidate Name:</div>
+          <div class="col-7 font-weight-bold text-uppercase" id="recName">SATYARTH SRIVASTAVA</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Category:</div>
+          <div class="col-7 font-weight-bold" id="recCategory">UR</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Transaction Status:</div>
+          <div class="col-7 text-success font-weight-bold"><i class="bi bi-check2-circle"></i> SUCCESS / COMPLETED</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Transaction Reference:</div>
+          <div class="col-7 font-weight-bold text-monospace" id="recTxn">TXN9843217439</div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-5 text-muted font-weight-bold">Amount Paid:</div>
+          <div class="col-7 font-weight-bold text-success h5 mb-0">₹ <span id="recAmount">850.00</span></div>
+        </div>
+        <hr>
+        <p class="text-center font-weight-bold text-dark mb-0"><i class="bi bi-award-fill text-warning"></i> Rehearsal Complete — 100% Prepared!</p>
+      </div>
+    </div>
+
+    <div class="row justify-content-center align-items-center">
+      <button class="btn btn-outline-primary btn-lg px-4 mr-3" onclick="window.print()"><i class="bi bi-printer"></i> Print E-Receipt</button>
+      <a href="index.html" class="btn btn-primary btn-lg px-4" style="background-color: #4c56c0; border-color: #4c56c0;"><i class="bi bi-arrow-clockwise"></i> Try Again</a>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+var regNo = sessionStorage.getItem('ibps_reg_no') || '1620984371';
+var nameVal = sessionStorage.getItem('ibps_fullname') || 'SATYARTH SRIVASTAVA';
+var category = sessionStorage.getItem('ibps_category') || 'UR';
+var disability = sessionStorage.getItem('ibps_disability') || 'N';
+
+// Calculate fee
+var fee = 850;
+if (category === 'SC' || category === 'ST' || disability === 'Y') {
+  fee = 175;
+}
+
+// Populate payment values
+$('payRegNo').textContent = regNo;
+$('payName').textContent = nameVal;
+$('payCategory').textContent = category;
+$('payAmount').textContent = fee.toFixed(2);
+
+// Captcha setup
+var currentCaptcha = '';
+function genCaptcha(){
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var s = '';
+  for(var i=0;i<6;i++){ s += chars.charAt(Math.floor(Math.random()*chars.length)); }
+  currentCaptcha = s;
+  $('captchaImg').textContent = s;
+}
+genCaptcha();
+
+$('refreshCaptcha').addEventListener('click', function(){
+  genCaptcha();
+  $('txtCode').value = '';
+  clearError('txtCode');
+});
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnPay').addEventListener('click', function() {
+  var result = $('result');
+  result.style.display = 'none';
+  clearError('txtCode');
+
+  var code = ($('txtCode').value || '').trim();
+  if(!code) {
+    showError('txtCode', 'Security code is required.');
+    return;
+  } else if (code.toUpperCase() !== currentCaptcha.toUpperCase()) {
+    showError('txtCode', 'Security code does not match. Try again.');
+    genCaptcha();
+    $('txtCode').value = '';
+    return;
+  }
+
+  // Populate e-receipt values
+  $('recRegNo').textContent = regNo;
+  $('recName').textContent = nameVal;
+  $('recCategory').textContent = category;
+  $('recAmount').textContent = fee.toFixed(2);
+  
+  // Generate random transaction ID
+  var txnId = 'TXN' + Math.floor(10000000000 + Math.random() * 90000000000);
+  $('recTxn').textContent = txnId;
+
+  // Show receipt, hide payment form
+  $('paymentPanel').style.display = 'none';
+  $('receiptPanel').style.display = 'block';
+  
+  // Clear sessionStorage after success so that user can restart fresh next time
+  sessionStorage.clear();
+});
+</script>
+
+</body>
+</html>

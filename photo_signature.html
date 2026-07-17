@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Photo & Signature Upload — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  
+  .upload-box {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  
+  .upload-box:hover {
+    border-color: #4c56c0;
+    background: #f1f5f9;
+  }
+  
+  .upload-preview {
+    max-width: 150px;
+    max-height: 180px;
+    margin: 1rem auto 0;
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    display: none;
+  }
+  
+  .upload-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-3">
+        <li class="first unactive"><a href="index.html"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+        <li class="unactive"><a href="verification.html"><i class="bi bi-ui-checks"></i><span>Verification</span></a></li>
+        <li class="active"><a href="#"><i class="bi bi-images"></i><span>Photo & Signature</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="photo_sig_frm" name="photo_sig_frm" autocomplete="off" novalidate>
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
+      <h1 class="m-0">Photo & Signature Upload</h1>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoData"><i class="bi bi-magic"></i> Use Demo Photo & Signature</button>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <div class="row">
+      <!-- Photograph Upload -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-light font-weight-bold"><i class="bi bi-person-bounding-box text-primary"></i> Upload Photograph of the Candidate</div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">File should be between 20 KB and 50 KB in JPG or JPEG format.</p>
+            
+            <div class="upload-box" id="photoBox" onclick="$('photoFile').click()">
+              <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2.5rem;"></i>
+              <p class="mb-0 mt-2 font-weight-bold">Drag & Drop or Click to Upload Photograph</p>
+              <input type="file" id="photoFile" accept=".jpg,.jpeg" style="display:none">
+            </div>
+            
+            <div class="upload-preview" id="photoPreview">
+              <img id="photoImg" src="" alt="Candidate Photo">
+            </div>
+            
+            <div class="custom-control custom-checkbox mt-3">
+              <input type="checkbox" class="custom-control-input" id="confirmPhoto" name="confirmPhoto">
+              <label class="custom-control-label small text-dark" for="confirmPhoto">I confirm that this is my valid photograph and it matches the specified guidelines.</label>
+            </div>
+            <div class="invalid-feedback" id="err_confirmPhoto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signature Upload -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-light font-weight-bold"><i class="bi bi-pencil-square text-primary"></i> Upload Signature of the Candidate</div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">File should be between 10 KB and 20 KB in JPG or JPEG format. Do not sign in Capital Letters.</p>
+            
+            <div class="upload-box" id="sigBox" onclick="$('sigFile').click()">
+              <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2.5rem;"></i>
+              <p class="mb-0 mt-2 font-weight-bold">Drag & Drop or Click to Upload Signature</p>
+              <input type="file" id="sigFile" accept=".jpg,.jpeg" style="display:none">
+            </div>
+            
+            <div class="upload-preview" id="sigPreview">
+              <img id="sigImg" src="" alt="Candidate Signature">
+            </div>
+            
+            <div class="custom-control custom-checkbox mt-3">
+              <input type="checkbox" class="custom-control-input" id="confirmSig" name="confirmSig">
+              <label class="custom-control-label small text-dark" for="confirmSig">I confirm that this is my valid signature and it matches the specified guidelines.</label>
+            </div>
+            <div class="invalid-feedback" id="err_confirmSig"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-4">
+      <input class="btn sbtn" type="button" id="btnNext" value="Save & Next" style="background-color: #4c56c0; border-color: #4c56c0;">
+    </div>
+  </form>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Setup file reader previews
+$('photoFile').addEventListener('change', function(e) {
+  handleFileSelect(e.target.files[0], 'photoImg', 'photoPreview');
+});
+
+$('sigFile').addEventListener('change', function(e) {
+  handleFileSelect(e.target.files[0], 'sigImg', 'sigPreview');
+});
+
+function handleFileSelect(file, imgId, previewId) {
+  if (!file) return;
+  
+  if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
+    alert('Please upload only JPG or JPEG files.');
+    return;
+  }
+  
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    $(imgId).src = evt.target.result;
+    $(previewId).style.display = 'block';
+    
+    // Store in sessionStorage for preview page
+    sessionStorage.setItem('ibps_' + imgId, evt.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// Demo data generator
+$('btnDemoData').addEventListener('click', function() {
+  // Use high-quality placeholders for demo
+  var demoPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23e2e8f0'/><circle cx='75' cy='70' r='30' fill='%2394a3b8'/><path d='M35,140 C35,110 115,110 115,140 L115,180 L35,180 Z' fill='%2394a3b8'/><text x='50%23' y='160' font-family='sans-serif' font-size='12' fill='%23475569' text-anchor='middle'>DEMO PHOTO</text></svg>";
+  var demoSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80' viewBox='0 0 200 80'><rect width='200' height='80' fill='%23f1f5f9'/><path d='M20,40 Q40,10 60,40 T100,40 T140,40 T180,30' fill='none' stroke='%230f172a' stroke-width='2'/><text x='100' y='65' font-family='sans-serif' font-size='10' fill='%2364748b' text-anchor='middle'>Demo Signature (No Caps)</text></svg>";
+  
+  $('photoImg').src = demoPhoto;
+  $('photoPreview').style.display = 'block';
+  sessionStorage.setItem('ibps_photoImg', demoPhoto);
+  
+  $('sigImg').src = demoSig;
+  $('sigPreview').style.display = 'block';
+  sessionStorage.setItem('ibps_sigImg', demoSig);
+  
+  $('confirmPhoto').checked = true;
+  $('confirmSig').checked = true;
+  
+  clearError('confirmPhoto');
+  clearError('confirmSig');
+});
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var errors = [];
+  var result = $('result');
+  
+  clearError('confirmPhoto');
+  clearError('confirmSig');
+  result.style.display = 'none';
+
+  var hasPhoto = sessionStorage.getItem('ibps_photoImg') || $('photoImg').src;
+  var hasSig = sessionStorage.getItem('ibps_sigImg') || $('sigImg').src;
+
+  if (!hasPhoto) {
+    errors.push('photoFile');
+    alert('Please upload your photograph.');
+    return;
+  }
+  
+  if (!$('confirmPhoto').checked) {
+    showError('confirmPhoto', 'Please confirm that the photograph matches your details.');
+    errors.push('confirmPhoto');
+  }
+
+  if (!hasSig) {
+    errors.push('sigFile');
+    alert('Please upload your signature.');
+    return;
+  }
+  
+  if (!$('confirmSig').checked) {
+    showError('confirmSig', 'Please confirm that the signature is correct.');
+    errors.push('confirmSig');
+  }
+
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please confirm both declarations by checking the boxes above before continuing.';
+    return;
+  }
+
+  // Go to Details Page
+  window.location.href = 'details.html';
+});
+</script>
+
+</body>
+</html>

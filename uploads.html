@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Document Uploads — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  
+  .upload-box {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .upload-box:hover {
+    border-color: #4c56c0;
+    background: #f1f5f9;
+  }
+  
+  .upload-preview {
+    max-width: 100%;
+    max-height: 150px;
+    margin: 1rem auto 0;
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    display: none;
+  }
+  
+  .upload-preview img {
+    max-height: 140px;
+    width: auto;
+    max-width: 100%;
+    display: block;
+    margin: 0 auto;
+  }
+  
+  #captchaImg {
+    font-family: monospace;
+    font-size: 22px;
+    letter-spacing: 5px;
+    background: #eee repeating-linear-gradient(45deg,#eee,#eee 4px,#e2e2e2 4px,#e2e2e2 8px);
+    padding: 6px 18px;
+    border: 1px solid #ccc;
+    user-select: none;
+    text-decoration: line-through;
+    display: inline-block;
+  }
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-3">
+        <li class="first unactive"><a href="index.html"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+        <li class="unactive"><a href="verification.html"><i class="bi bi-ui-checks"></i><span>Verification</span></a></li>
+        <li class="unactive"><a href="photo_signature.html"><i class="bi bi-images"></i><span>Photo & Signature</span></a></li>
+        <li class="unactive"><a href="details.html"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+        <li class="unactive"><a href="preview.html"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+        <li class="active"><a href="#"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="uploads_frm" name="uploads_frm" autocomplete="off" novalidate>
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-4">
+      <h1 class="m-0">Document Uploads</h1>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoUploads"><i class="bi bi-magic"></i> Use Demo Documents</button>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <div class="row">
+      <!-- Left Thumb Impression -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-light font-weight-bold"><i class="bi bi-fingerprint text-primary"></i> Left Thumb Impression</div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">File should be between 20 KB and 50 KB in JPG or JPEG format, clearly showing the ridges.</p>
+            
+            <div class="upload-box" id="thumbBox" onclick="$('thumbFile').click()">
+              <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2rem;"></i>
+              <p class="mb-0 mt-2 font-weight-bold">Upload Left Thumb Impression</p>
+              <input type="file" id="thumbFile" accept=".jpg,.jpeg" style="display:none">
+            </div>
+            
+            <div class="upload-preview" id="thumbPreview">
+              <img id="thumbImg" src="" alt="Thumb Impression">
+            </div>
+            
+            <div class="custom-control custom-checkbox mt-3">
+              <input type="checkbox" class="custom-control-input" id="confirmThumb" name="confirmThumb">
+              <label class="custom-control-label small text-dark" for="confirmThumb">I confirm that this is a clear upload of my Left Thumb Impression.</label>
+            </div>
+            <div class="invalid-feedback" id="err_confirmThumb"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Handwritten Declaration -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-header bg-light font-weight-bold"><i class="bi bi-file-earmark-text text-primary"></i> Handwritten Declaration</div>
+          <div class="card-body">
+            <p class="small text-muted mb-3">File should be between 50 KB and 100 KB in JPG or JPEG format, written by yourself on white paper.</p>
+            
+            <div class="upload-box" id="declBox" onclick="$('declFile').click()">
+              <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2rem;"></i>
+              <p class="mb-0 mt-2 font-weight-bold">Upload Handwritten Declaration</p>
+              <input type="file" id="declFile" accept=".jpg,.jpeg" style="display:none">
+            </div>
+            
+            <div class="upload-preview" id="declPreview">
+              <img id="declImg" src="" alt="Handwritten Declaration">
+            </div>
+            
+            <div class="custom-control custom-checkbox mt-3">
+              <input type="checkbox" class="custom-control-input" id="confirmDecl" name="confirmDecl">
+              <label class="custom-control-label small text-dark" for="confirmDecl">I confirm that the handwritten declaration is written by me in English.</label>
+            </div>
+            <div class="invalid-feedback" id="err_confirmDecl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Captcha -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-2">
+      <label for="txtCode" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-fill-exclamation"></i></span></div>
+            <input name="txtCode" type="text" id="txtCode" class="form-control" placeholder="ENTER CAPTCHA">
+          </div>
+          <div class="invalid-feedback" id="err_txtCode"></div>
+        </div>
+        <div class="col-auto">
+          <span id="captchaImg"></span>
+        </div>
+        <div class="col-auto">
+          <a href="javascript:void(0);" class="btn btn-sm btn-outline-secondary" id="refreshCaptcha"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-5 mb-3">
+      <input class="btn sbtn" type="button" id="btnNext" value="Save & Next" style="background-color: #4c56c0; border-color: #4c56c0;">
+    </div>
+  </form>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Captcha setup
+var currentCaptcha = '';
+function genCaptcha(){
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var s = '';
+  for(var i=0;i<6;i++){ s += chars.charAt(Math.floor(Math.random()*chars.length)); }
+  currentCaptcha = s;
+  $('captchaImg').textContent = s;
+}
+genCaptcha();
+
+$('refreshCaptcha').addEventListener('click', function(){
+  genCaptcha();
+  $('txtCode').value = '';
+  clearError('txtCode');
+});
+
+// Setup file reader previews
+$('thumbFile').addEventListener('change', function(e) {
+  handleFileSelect(e.target.files[0], 'thumbImg', 'thumbPreview');
+});
+
+$('declFile').addEventListener('change', function(e) {
+  handleFileSelect(e.target.files[0], 'declImg', 'declPreview');
+});
+
+function handleFileSelect(file, imgId, previewId) {
+  if (!file) return;
+  if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
+    alert('Please upload only JPG or JPEG files.');
+    return;
+  }
+  
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    $(imgId).src = evt.target.result;
+    $(previewId).style.display = 'block';
+    sessionStorage.setItem('ibps_' + imgId, evt.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// Demo data generator
+$('btnDemoUploads').addEventListener('click', function() {
+  var demoThumb = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='%23e0f2fe'/><circle cx='60' cy='60' r='35' fill='none' stroke='%230369a1' stroke-width='4' stroke-dasharray='10 5'/><circle cx='60' cy='60' r='25' fill='none' stroke='%230369a1' stroke-width='3' stroke-dasharray='5 5'/><circle cx='60' cy='60' r='15' fill='none' stroke='%230369a1' stroke-width='2'/><text x='50%23' y='110' font-family='sans-serif' font-size='10' fill='%230369a1' text-anchor='middle'>DEMO THUMB</text></svg>";
+  var demoDecl = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='100' viewBox='0 0 300 100'><rect width='300' height='100' fill='%23fff'/><text x='15' y='25' font-family='cursive' font-size='12' fill='%230f172a'>I, SATYARTH SRIVASTAVA, hereby declare that all the</text><text x='15' y='45' font-family='cursive' font-size='12' fill='%230f172a'>information submitted by me in the application form is</text><text x='15' y='65' font-family='cursive' font-size='12' fill='%230f172a'>correct, true and valid. I will present the supporting</text><text x='15' y='85' font-family='cursive' font-size='12' fill='%230f172a'>documents as and when required.</text></svg>";
+  
+  $('thumbImg').src = demoThumb;
+  $('thumbPreview').style.display = 'block';
+  sessionStorage.setItem('ibps_thumbImg', demoThumb);
+  
+  $('declImg').src = demoDecl;
+  $('declPreview').style.display = 'block';
+  sessionStorage.setItem('ibps_declImg', demoDecl);
+  
+  $('confirmThumb').checked = true;
+  $('confirmDecl').checked = true;
+  
+  clearError('confirmThumb');
+  clearError('confirmDecl');
+  $('txtCode').value = currentCaptcha;
+  clearError('txtCode');
+});
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var errors = [];
+  var result = $('result');
+  result.style.display = 'none';
+
+  clearError('confirmThumb');
+  clearError('confirmDecl');
+  clearError('txtCode');
+
+  var hasThumb = sessionStorage.getItem('ibps_thumbImg') || $('thumbImg').src;
+  var hasDecl = sessionStorage.getItem('ibps_declImg') || $('declImg').src;
+
+  if (!hasThumb) {
+    alert('Please upload your Left Thumb Impression.');
+    return;
+  }
+  if (!$('confirmThumb').checked) {
+    showError('confirmThumb', 'Please check the box to confirm details.');
+    errors.push('confirmThumb');
+  }
+
+  if (!hasDecl) {
+    alert('Please upload your Handwritten Declaration.');
+    return;
+  }
+  if (!$('confirmDecl').checked) {
+    showError('confirmDecl', 'Please check the box to confirm details.');
+    errors.push('confirmDecl');
+  }
+
+  var code = ($('txtCode').value || '').trim();
+  if (!code) {
+    showError('txtCode', 'Security code is required.');
+    errors.push('txtCode');
+  } else if (code.toUpperCase() !== currentCaptcha.toUpperCase()) {
+    showError('txtCode', 'Security code does not match. Try again.');
+    errors.push('txtCode');
+    genCaptcha();
+    $('txtCode').value = '';
+  }
+
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please correct the highlighted issues before proceeding.';
+    return;
+  }
+
+  // Go to Payment Page
+  window.location.href = 'payment.html';
+});
+</script>
+
+</body>
+</html>

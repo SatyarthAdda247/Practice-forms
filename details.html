@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Details & Qualifications — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  
+  .section-header {
+    background-color: #f1f5f9;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid #4c56c0;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1e293b;
+    margin-top: 2rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .bank-item {
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    cursor: grab;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-3">
+        <li class="first unactive"><a href="index.html"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+        <li class="unactive"><a href="verification.html"><i class="bi bi-ui-checks"></i><span>Verification</span></a></li>
+        <li class="unactive"><a href="photo_signature.html"><i class="bi bi-images"></i><span>Photo & Signature</span></a></li>
+        <li class="active"><a href="#"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="details_frm" name="details_frm" autocomplete="off" novalidate>
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+      <h1 class="m-0">Details (Basic & Qualification)</h1>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoDetails"><i class="bi bi-magic"></i> Auto Fill Demo Details</button>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <!-- 1. Basic Details -->
+    <div class="section-header">Basic Details</div>
+    
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label>Category <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="UR" name="category" id="cat_ur" class="custom-control-input">
+            <label class="custom-control-label" for="cat_ur">UR / General</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="OBC" name="category" id="cat_obc" class="custom-control-input">
+            <label class="custom-control-label" for="cat_obc">OBC</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="SC" name="category" id="cat_sc" class="custom-control-input">
+            <label class="custom-control-label" for="cat_sc">SC</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="ST" name="category" id="cat_st" class="custom-control-input">
+            <label class="custom-control-label" for="cat_st">ST</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="EWS" name="category" id="cat_ews" class="custom-control-input">
+            <label class="custom-control-label" for="cat_ews">EWS</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_category"></div>
+      </div>
+
+      <div class="form-group col-md-6">
+        <label>Are you a person with benchmark disability of 40% & above? <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="Y" name="disability" id="dis_y" class="custom-control-input">
+            <label class="custom-control-label" for="dis_y">Yes</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="N" name="disability" id="dis_n" class="custom-control-input">
+            <label class="custom-control-label" for="dis_n">No</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_disability"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selReligion">Religion to which you belong <sup class="error">*</sup></label>
+        <select class="custom-select" name="religion" id="selReligion">
+          <option value="" selected>Select Religion</option>
+          <option value="HINDU">HINDU</option>
+          <option value="MUSLIM">MUSLIM</option>
+          <option value="CHRISTIAN">CHRISTIAN</option>
+          <option value="SIKH">SIKH</option>
+          <option value="BUDDHIST">BUDDHIST</option>
+          <option value="JAIN">JAIN</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+        <div class="invalid-feedback" id="err_religion"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="selNationality">Nationality / Citizenship <sup class="error">*</sup></label>
+        <select class="custom-select" name="nationality" id="selNationality">
+          <option value="INDIAN" selected>INDIAN</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+        <div class="invalid-feedback" id="err_nationality"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="selState">State / UT to which you belong <sup class="error">*</sup></label>
+        <select class="custom-select" name="state" id="selState">
+          <option value="" selected>Select State</option>
+          <option value="ANDHRA PRADESH">ANDHRA PRADESH</option>
+          <option value="BIHAR">BIHAR</option>
+          <option value="DELHI">DELHI</option>
+          <option value="GUJARAT">GUJARAT</option>
+          <option value="HARYANA">HARYANA</option>
+          <option value="KARNATAKA">KARNATAKA</option>
+          <option value="MADHYA PRADESH">MADHYA PRADESH</option>
+          <option value="MAHARASHTRA">MAHARASHTRA</option>
+          <option value="PUNJAB">PUNJAB</option>
+          <option value="RAJASTHAN">RAJASTHAN</option>
+          <option value="TAMIL NADU">TAMIL NADU</option>
+          <option value="UTTAR PRADESH">UTTAR PRADESH</option>
+          <option value="WEST BENGAL">WEST BENGAL</option>
+        </select>
+        <div class="invalid-feedback" id="err_state"></div>
+      </div>
+    </div>
+
+    <!-- 2. Personal Details -->
+    <div class="section-header">Personal Details</div>
+    
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="dob">Date of Birth <sup class="error">*</sup></label>
+        <input type="date" class="form-control" name="dob" id="dob">
+        <div class="invalid-feedback" id="err_dob"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label>Gender <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="MALE" name="gender" id="gender_m" class="custom-control-input">
+            <label class="custom-control-label" for="gender_m">Male</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="FEMALE" name="gender" id="gender_f" class="custom-control-input">
+            <label class="custom-control-label" for="gender_f">Female</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="TRANSGENDER" name="gender" id="gender_t" class="custom-control-input">
+            <label class="custom-control-label" for="gender_t">Transgender</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_gender"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="selMarital">Marital Status <sup class="error">*</sup></label>
+        <select class="custom-select" name="marital" id="selMarital">
+          <option value="" selected>Select Marital Status</option>
+          <option value="SINGLE">SINGLE</option>
+          <option value="MARRIED">MARRIED</option>
+          <option value="DIVORCED">DIVORCED</option>
+          <option value="WIDOWED">WIDOWED</option>
+        </select>
+        <div class="invalid-feedback" id="err_marital"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtFather">Father's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="father_name" id="txtFather" placeholder="ENTER FATHER'S NAME">
+        <div class="invalid-feedback" id="err_father_name"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="txtMother">Mother's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="mother_name" id="txtMother" placeholder="ENTER MOTHER'S NAME">
+        <div class="invalid-feedback" id="err_mother_name"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="txtAddress">Address for Correspondence <sup class="error">*</sup></label>
+      <textarea class="form-control" name="address" id="txtAddress" rows="2" placeholder="ENTER COMPLETE CORRESPONDENCE ADDRESS"></textarea>
+      <div class="invalid-feedback" id="err_address"></div>
+    </div>
+
+    <!-- 3. Educational Qualifications -->
+    <div class="section-header">Educational Qualifications (Graduation)</div>
+    
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selDegree">Degree / Subject / Stream <sup class="error">*</sup></label>
+        <select class="custom-select" name="degree" id="selDegree">
+          <option value="" selected>Select Degree</option>
+          <option value="ARTS">ARTS (B.A.)</option>
+          <option value="SCIENCE">SCIENCE (B.Sc.)</option>
+          <option value="COMMERCE">COMMERCE (B.Com.)</option>
+          <option value="ENGINEERING">ENGINEERING (B.E. / B.Tech.)</option>
+          <option value="MANAGEMENT">MANAGEMENT (B.B.A. / B.M.S.)</option>
+          <option value="COMPUTERS">COMPUTERS (B.C.A. / B.Sc. IT)</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+        <div class="invalid-feedback" id="err_degree"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="txtDegreeYear">Year of Passing <sup class="error">*</sup></label>
+        <select class="custom-select" name="passing_year" id="txtDegreeYear">
+          <option value="" selected>Select Year</option>
+          <!-- Populate dynamically in script -->
+        </select>
+        <div class="invalid-feedback" id="err_passing_year"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="txtPercentage">Percentage of Marks (%) <sup class="error">*</sup></label>
+        <input type="number" step="0.01" min="0" max="100" class="form-control" name="percentage" id="txtPercentage" placeholder="e.g. 74.50">
+        <div class="invalid-feedback" id="err_percentage"></div>
+      </div>
+    </div>
+
+    <!-- 4. Bank Preferences -->
+    <div class="section-header">Participating Bank Preferences</div>
+    <p class="small text-muted mb-3"><i class="bi bi-info-circle-fill"></i> Arrange the list below in your order of preference. Check the banks to include/rank them.</p>
+    
+    <div class="row">
+      <div class="col-md-8">
+        <div id="bankList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-5 mb-5">
+      <input class="btn sbtn" type="button" id="btnNext" value="Save & Next" style="background-color: #4c56c0; border-color: #4c56c0;">
+    </div>
+  </form>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Populate passing years
+var yearSelect = $('txtDegreeYear');
+var currentYear = new Date().getFullYear();
+for (var y = currentYear; y >= currentYear - 15; y--) {
+  var opt = document.createElement('option');
+  opt.value = y;
+  opt.textContent = y;
+  yearSelect.appendChild(opt);
+}
+
+// Participating banks list
+var banks = [
+  "BANK OF BARODA", "BANK OF INDIA", "BANK OF MAHARASHTRA", "CANARA BANK",
+  "CENTRAL BANK OF INDIA", "INDIAN BANK", "INDIAN OVERSEAS BANK",
+  "PUNJAB NATIONAL BANK", "PUNJAB & SIND BANK", "UCO BANK", "UNION BANK OF INDIA"
+];
+
+var bankList = $('bankList');
+banks.forEach(function(bank, idx) {
+  var div = document.createElement('div');
+  div.className = 'bank-item shadow-sm';
+  div.innerHTML = '<span>' + (idx + 1) + '. ' + bank + '</span> <div class="custom-control custom-checkbox"><input type="checkbox" checked class="custom-control-input bank-pref" id="bank_' + idx + '" value="' + bank + '"><label class="custom-control-label" for="bank_' + idx + '">Preferred</label></div>';
+  bankList.appendChild(div);
+});
+
+// Enforce text fields to uppercase on input
+['txtFather','txtMother','txtAddress'].forEach(function(id){
+  var el = $(id);
+  if(el) el.addEventListener('input', function(){
+    this.value = this.value.toUpperCase();
+  });
+});
+
+// Autofill Demo Data
+$('btnDemoDetails').addEventListener('click', function() {
+  $('cat_ur').checked = true;
+  $('dis_n').checked = true;
+  $('selReligion').value = "HINDU";
+  $('selNationality').value = "INDIAN";
+  $('selState').value = "UTTAR PRADESH";
+  $('dob').value = "2001-05-15";
+  $('gender_m').checked = true;
+  $('selMarital').value = "SINGLE";
+  $('txtFather').value = "RAMESH SRIVASTAVA";
+  $('txtMother').value = "SUSHMA SRIVASTAVA";
+  $('txtAddress').value = "123/A, SECTOR-4, NOIDA, UTTAR PRADESH - 201301";
+  $('selDegree').value = "ENGINEERING";
+  $('txtDegreeYear').value = "2023";
+  $('txtPercentage').value = "78.45";
+  
+  // Clear all validation errors
+  ['category','disability','religion','nationality','state','dob','gender','marital','father_name','mother_name','address','degree','passing_year','percentage'].forEach(clearError);
+});
+
+function val(id){ return ($(id) && $(id).value || '').trim(); }
+
+function radioVal(name){
+  var els = document.getElementsByName(name);
+  for(var i=0;i<els.length;i++){ if(els[i].checked) return els[i].value; }
+  return '';
+}
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var errors = [];
+  var result = $('result');
+  result.style.display = 'none';
+
+  // Clear errors first
+  ['category','disability','religion','nationality','state','dob','gender','marital','father_name','mother_name','address','degree','passing_year','percentage'].forEach(clearError);
+
+  // Validate Basic Details
+  var cat = radioVal('category');
+  if(!cat){ showError('category','Category is required.'); errors.push('category'); }
+  
+  var dis = radioVal('disability');
+  if(!dis){ showError('disability','Disability option is required.'); errors.push('disability'); }
+
+  var rel = val('selReligion');
+  if(!rel){ showError('religion','Religion is required.'); errors.push('religion'); }
+
+  var nat = val('selNationality');
+  if(!nat){ showError('nationality','Nationality is required.'); errors.push('nationality'); }
+
+  var st = val('selState');
+  if(!st){ showError('state','State is required.'); errors.push('state'); }
+
+  // Validate Personal Details
+  var dobVal = val('dob');
+  if(!dobVal){ showError('dob','Date of Birth is required.'); errors.push('dob'); }
+
+  var gen = radioVal('gender');
+  if(!gen){ showError('gender','Gender is required.'); errors.push('gender'); }
+
+  var mar = val('selMarital');
+  if(!mar){ showError('marital','Marital Status is required.'); errors.push('marital'); }
+
+  var fatherName = val('txtFather');
+  if(!fatherName){ showError('father_name',"Father's name is required."); errors.push('father_name'); }
+
+  var motherName = val('txtMother');
+  if(!motherName){ showError('mother_name',"Mother's name is required."); errors.push('mother_name'); }
+
+  var addr = val('txtAddress');
+  if(!addr){ showError('address','Address is required.'); errors.push('address'); }
+
+  // Validate Qualifications
+  var deg = val('selDegree');
+  if(!deg){ showError('degree','Degree is required.'); errors.push('degree'); }
+
+  var yr = val('txtDegreeYear');
+  if(!yr){ showError('passing_year','Passing year is required.'); errors.push('passing_year'); }
+
+  var pct = val('txtPercentage');
+  if(!pct || isNaN(pct) || pct < 0 || pct > 100){ showError('percentage','Enter a valid graduation percentage between 0 and 100.'); errors.push('percentage'); }
+
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please correct the ' + errors.length + ' highlighted error(s) below before continuing.';
+    var firstBad = $(errors[0]);
+    if(firstBad) firstBad.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  // Store data in sessionStorage for preview page
+  sessionStorage.setItem('ibps_category', cat);
+  sessionStorage.setItem('ibps_disability', dis);
+  sessionStorage.setItem('ibps_religion', rel);
+  sessionStorage.setItem('ibps_nationality', nat);
+  sessionStorage.setItem('ibps_state', st);
+  sessionStorage.setItem('ibps_dob', dobVal);
+  sessionStorage.setItem('ibps_gender', gen);
+  sessionStorage.setItem('ibps_marital', mar);
+  sessionStorage.setItem('ibps_father', fatherName);
+  sessionStorage.setItem('ibps_mother', motherName);
+  sessionStorage.setItem('ibps_address', addr);
+  sessionStorage.setItem('ibps_degree', deg);
+  sessionStorage.setItem('ibps_year', yr);
+  sessionStorage.setItem('ibps_percentage', pct);
+
+  // Bank Preferences Ordered List
+  var selectedBanks = [];
+  document.querySelectorAll('.bank-pref:checked').forEach(function(el) {
+    selectedBanks.push(el.value);
+  });
+  sessionStorage.setItem('ibps_banks', JSON.stringify(selectedBanks));
+
+  // Redirect to Preview page
+  window.location.href = 'preview.html';
+});
+</script>
+
+</body>
+</html>

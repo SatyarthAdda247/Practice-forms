@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Application Preview — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  
+  .preview-section-header {
+    background-color: #334155;
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .preview-table th {
+    background-color: #f8fafc;
+    width: 30%;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .preview-photo {
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    width: 140px;
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-sig {
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    width: 180px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-3">
+        <li class="first unactive"><a href="index.html"><i class="bi bi-ui-checks"></i><span>Basic Information</span></a></li>
+        <li class="unactive"><a href="verification.html"><i class="bi bi-ui-checks"></i><span>Verification</span></a></li>
+        <li class="unactive"><a href="photo_signature.html"><i class="bi bi-images"></i><span>Photo & Signature</span></a></li>
+        <li class="unactive"><a href="details.html"><i class="bi bi-file-earmark-text-fill"></i><span>Details</span></a></li>
+        <li class="active"><a href="#"><i class="bi bi-eye-fill"></i><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-file-earmark-arrow-up-fill"></i><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><i class="bi bi-currency-rupee"></i><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="basic_details_form p-4 p-md-5">
+    <div class="border-bottom pb-2 mb-4 d-flex justify-content-between align-items-center">
+      <h1 class="m-0">Application Preview</h1>
+      <span class="badge badge-secondary p-2">Practice Mode</span>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <div class="row mb-4">
+      <div class="col-sm-8">
+        <h4 class="font-weight-bold mb-1">Registration Details Summary</h4>
+        <p class="text-muted small">Please verify all the details before clicking "Complete Registration". No modifications will be allowed after this step.</p>
+      </div>
+      <div class="col-sm-4 d-flex justify-content-end">
+        <div class="preview-photo shadow-sm">
+          <img id="prevPhoto" src="" alt="Photo Preview" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Basic Info -->
+    <div class="preview-section-header">Basic Details</div>
+    <div class="table-responsive">
+      <table class="table table-bordered preview-table bg-white">
+        <tbody>
+          <tr>
+            <th>Full Name</th>
+            <td id="prevFullName"></td>
+          </tr>
+          <tr>
+            <th>Mobile Number</th>
+            <td>+91 <span id="prevMobile"></span></td>
+          </tr>
+          <tr>
+            <th>Email Address</th>
+            <td id="prevEmail"></td>
+          </tr>
+          <tr>
+            <th>Category</th>
+            <td id="prevCategory"></td>
+          </tr>
+          <tr>
+            <th>Benchmark Disability (>= 40%)</th>
+            <td id="prevDisability"></td>
+          </tr>
+          <tr>
+            <th>Religion / Nationality</th>
+            <td><span id="prevReligion"></span> / <span id="prevNationality"></span></td>
+          </tr>
+          <tr>
+            <th>State / UT belonging to</th>
+            <td id="prevState"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 2: Personal Details -->
+    <div class="preview-section-header">Personal Info</div>
+    <div class="table-responsive">
+      <table class="table table-bordered preview-table bg-white">
+        <tbody>
+          <tr>
+            <th>Date of Birth</th>
+            <td id="prevDob"></td>
+          </tr>
+          <tr>
+            <th>Gender / Marital Status</th>
+            <td><span id="prevGender"></span> / <span id="prevMarital"></span></td>
+          </tr>
+          <tr>
+            <th>Father's Name</th>
+            <td id="prevFather"></td>
+          </tr>
+          <tr>
+            <th>Mother's Name</th>
+            <td id="prevMother"></td>
+          </tr>
+          <tr>
+            <th>Address for Correspondence</th>
+            <td id="prevAddress"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 3: Educational Qualifications -->
+    <div class="preview-section-header">Educational Qualifications & Preferences</div>
+    <div class="table-responsive">
+      <table class="table table-bordered preview-table bg-white">
+        <tbody>
+          <tr>
+            <th>Graduation Stream / Year</th>
+            <td><span id="prevDegree"></span> (Passed in <span id="prevYear"></span>)</td>
+          </tr>
+          <tr>
+            <th>Marks Obtained (%)</th>
+            <td><span id="prevPercentage"></span>%</td>
+          </tr>
+          <tr>
+            <th>Participating Bank Order</th>
+            <td>
+              <ol id="prevBanks" class="pl-3 mb-0">
+                <!-- Populated dynamically -->
+              </ol>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row align-items-center mt-5 mb-4">
+      <div class="col-sm-8">
+        <div class="custom-control custom-checkbox mb-2">
+          <input type="checkbox" class="custom-control-input" id="confirmAgree">
+          <label class="custom-control-label font-weight-bold" for="confirmAgree">I agree to the terms and declarations mentioned in the application guidelines.</label>
+        </div>
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="confirmData">
+          <label class="custom-control-label font-weight-bold" for="confirmData">I confirm that my name in this application matches the identity proof produced at the exam.</label>
+        </div>
+        <div class="invalid-feedback" id="err_confirmAgree"></div>
+      </div>
+      <div class="col-sm-4 d-flex justify-content-end">
+        <div class="preview-sig shadow-sm">
+          <img id="prevSig" src="" alt="Signature Preview" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-5 mb-3">
+      <input class="btn sbtn" type="button" id="btnNext" value="Complete Registration" style="background-color: #4c56c0; border-color: #4c56c0;">
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Load details from sessionStorage
+(function() {
+  $('prevPhoto').src = sessionStorage.getItem('ibps_photoImg') || '';
+  $('prevSig').src = sessionStorage.getItem('ibps_sigImg') || '';
+  $('prevFullName').textContent = sessionStorage.getItem('ibps_fullname') || 'N/A';
+  $('prevMobile').textContent = sessionStorage.getItem('ibps_mobile') || 'N/A';
+  $('prevEmail').textContent = sessionStorage.getItem('ibps_email') || 'N/A';
+  $('prevCategory').textContent = sessionStorage.getItem('ibps_category') || 'N/A';
+  $('prevDisability').textContent = (sessionStorage.getItem('ibps_disability') === 'Y' ? 'YES' : 'NO');
+  $('prevReligion').textContent = sessionStorage.getItem('ibps_religion') || 'N/A';
+  $('prevNationality').textContent = sessionStorage.getItem('ibps_nationality') || 'N/A';
+  $('prevState').textContent = sessionStorage.getItem('ibps_state') || 'N/A';
+  $('prevDob').textContent = sessionStorage.getItem('ibps_dob') || 'N/A';
+  $('prevGender').textContent = sessionStorage.getItem('ibps_gender') || 'N/A';
+  $('prevMarital').textContent = sessionStorage.getItem('ibps_marital') || 'N/A';
+  $('prevFather').textContent = sessionStorage.getItem('ibps_father') || 'N/A';
+  $('prevMother').textContent = sessionStorage.getItem('ibps_mother') || 'N/A';
+  $('prevAddress').textContent = sessionStorage.getItem('ibps_address') || 'N/A';
+  $('prevDegree').textContent = sessionStorage.getItem('ibps_degree') || 'N/A';
+  $('prevYear').textContent = sessionStorage.getItem('ibps_year') || 'N/A';
+  $('prevPercentage').textContent = sessionStorage.getItem('ibps_percentage') || 'N/A';
+
+  var bankList = JSON.parse(sessionStorage.getItem('ibps_banks') || '[]');
+  var prevBanksOl = $('prevBanks');
+  if(bankList.length > 0) {
+    bankList.forEach(function(bank) {
+      var li = document.createElement('li');
+      li.textContent = bank;
+      prevBanksOl.appendChild(li);
+    });
+  } else {
+    var li = document.createElement('li');
+    li.textContent = "No preference set";
+    prevBanksOl.appendChild(li);
+  }
+})();
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var errors = [];
+  var result = $('result');
+  result.style.display = 'none';
+  clearError('confirmAgree');
+
+  if (!$('confirmAgree').checked || !$('confirmData').checked) {
+    showError('confirmAgree', 'You must agree to the declarations and confirm your name identity.');
+    errors.push('confirmAgree');
+  }
+
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please confirm all declarations by checking the boxes above before completing registration.';
+    return;
+  }
+
+  // Go to Uploads Page
+  window.location.href = 'uploads.html';
+});
+</script>
+
+</body>
+</html>
