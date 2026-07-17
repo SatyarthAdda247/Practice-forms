@@ -1,6 +1,6 @@
 # OMR GradePro backend — production image.
 # Deps (requirements.txt) are already installed in the base image.
-FROM docker-central.adda247.com/base-images/python-3-12:0.0.1
+FROM docker-central.adda247.com/base-images/python-3-12:0.0.2
 
 ENV PORT=5000 \
     HOST=0.0.0.0
