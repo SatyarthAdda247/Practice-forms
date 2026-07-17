@@ -28,14 +28,22 @@ ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # ---- serve stage ----
-FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# nginx-unprivileged runs as a non-root user (uid 101) and binds an unprivileged
+# port — required by Cloud Run / PaaS, which run the container non-root and inject
+# $PORT (default 8080).
+FROM nginxinc/nginx-unprivileged:1.27-alpine
+
+# Cloud Run/PaaS override PORT at runtime; default to 8080 for local runs.
+ENV PORT=8080
+
+# nginx.conf is a template: the base image's docker-entrypoint runs envsubst on it
+# at startup, replacing ${PORT} and writing /etc/nginx/conf.d/default.conf.
+# ($uri/$host etc. are left intact — only real env vars are substituted.)
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 
-# Liveness probe hits the lightweight /healthz route defined in nginx.conf.
+# Liveness probe hits the /healthz route on the runtime port.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -qO- http://127.0.0.1:80/healthz >/dev/null 2>&1 || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/healthz" >/dev/null 2>&1 || exit 1
