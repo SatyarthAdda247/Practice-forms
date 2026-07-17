@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import FormFiller from "./pages/FormFiller.jsx";
 import ExamsList from "./pages/ExamsList.jsx";
 import AnswerKeyConfig from "./pages/AnswerKeyConfig.jsx";
 import BulkUpload from "./pages/BulkUpload.jsx";
@@ -44,7 +46,9 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<Navigate to="/exams" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/form-filler" element={<FormFiller />} />
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/new" element={<AnswerKeyConfig />} />
           <Route path="/exams/:id" element={<AnswerKeyConfig />} />

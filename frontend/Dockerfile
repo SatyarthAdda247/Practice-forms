@@ -1,11 +1,16 @@
-# OMR GradePro frontend — build the Vite SPA, serve it with nginx.
+# Aspirant Portal frontend — build the Vite SPA, serve it with nginx.
 #
-# VITE_* vars are baked in at BUILD time, so pass them as build args (the image
-# is environment-specific: build one image for staging, one for prod):
+# VITE_* vars are baked in at BUILD time. The ARG defaults below target the
+# PRODUCTION split-domain deployment (frontend and backend on separate domains):
+#   Frontend: https://aspirant-portal.adda247.com
+#   Backend : https://aspirant-portal-api.adda247.com
+#
+# A plain `docker build` produces a production image. Override per environment
+# (e.g. staging) by passing build args:
 #   docker build \
-#     --build-arg VITE_API_BASE_URL=https://omrchecker-api.adda247.com \
+#     --build-arg VITE_API_BASE_URL=https://staging-api.adda247.com \
 #     --build-arg VITE_GOOGLE_CLIENT_ID=<oauth-web-client-id> \
-#     -t omrchecker-frontend .
+#     -t aspirant-portal-frontend .
 
 # ---- build stage ----
 FROM node:20-alpine AS build
@@ -15,8 +20,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-ARG VITE_API_BASE_URL
-ARG VITE_GOOGLE_CLIENT_ID
+# Production defaults; override with --build-arg for other environments.
+ARG VITE_API_BASE_URL=https://aspirant-portal-api.adda247.com
+ARG VITE_GOOGLE_CLIENT_ID=903201516918-273gsp8a45pema0fj3mg84vbveqp2765.apps.googleusercontent.com
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm run build

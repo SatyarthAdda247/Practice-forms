@@ -1,7 +1,7 @@
 // Thin fetch wrapper around the Flask API.
 // - Dev: leave VITE_API_BASE_URL unset -> "/api" (Vite proxies it to :5000).
 // - Split-domain prod: set VITE_API_BASE_URL to the backend origin at build
-//   time (e.g. https://omrchecker-api.adda247.com) -> "<origin>/api".
+//   time (e.g. https://aspirant-portal-api.adda247.com) -> "<origin>/api".
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 const BASE = `${API_ORIGIN}/api`;
 const TOKEN_KEY = "omr_token";
