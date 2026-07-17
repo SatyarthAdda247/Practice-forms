@@ -9,39 +9,50 @@ export function useAuth() {
   return useContext(AuthCtx);
 }
 
+// --- TEMPORARY: fake dev user until login is re-enabled ---
+const _DEV_USER = {
+  id: 0,
+  email: "dev@localhost",
+  name: "Dev User",
+  picture: null,
+  role: "super_admin",
+  active: true,
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // --- ORIGINAL (commented out until login is re-enabled) ---
+  // const [user, setUser] = useState(null);
+  // const [loading, setLoading] = useState(true);
+  //
+  // useEffect(() => {
+  //   setUnauthorizedHandler(() => setUser(null));
+  //   if (tokenStore.get()) {
+  //     api
+  //       .me()
+  //       .then(setUser)
+  //       .catch(() => tokenStore.clear())
+  //       .finally(() => setLoading(false));
+  //   } else {
+  //     setLoading(false);
+  //   }
+  // }, []);
+  //
+  // const login = (token, u) => {
+  //   tokenStore.set(token);
+  //   setUser(u);
+  // };
+  //
+  // const logout = async () => {
+  //   try { await api.logout(); } catch { }
+  //   tokenStore.clear();
+  //   setUser(null);
+  // };
 
-  useEffect(() => {
-    // Any 401 (expired/invalid token) drops us back to signed-out state.
-    setUnauthorizedHandler(() => setUser(null));
-
-    if (tokenStore.get()) {
-      api
-        .me()
-        .then(setUser)
-        .catch(() => tokenStore.clear())
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const login = (token, u) => {
-    tokenStore.set(token);
-    setUser(u);
-  };
-
-  const logout = async () => {
-    try {
-      await api.logout();
-    } catch {
-      /* stateless logout — ignore network errors */
-    }
-    tokenStore.clear();
-    setUser(null);
-  };
+  const user = _DEV_USER;
+  const loading = false;
+  const login = () => {};
+  const logout = () => {};
+  // --- END TEMPORARY ---
 
   return (
     <AuthCtx.Provider value={{ user, loading, login, logout }}>
@@ -49,3 +60,4 @@ export function AuthProvider({ children }) {
     </AuthCtx.Provider>
   );
 }
+

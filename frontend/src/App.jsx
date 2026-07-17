@@ -1,7 +1,8 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import Layout from "./components/Layout.jsx";
-import Login from "./pages/Login.jsx";
+// --- TEMPORARY: Login page commented out until re-enabled ---
+// import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import FormFiller from "./pages/FormFiller.jsx";
 import ExamsList from "./pages/ExamsList.jsx";
@@ -10,22 +11,21 @@ import BulkUpload from "./pages/BulkUpload.jsx";
 import Results from "./pages/Results.jsx";
 import Admin from "./pages/Admin.jsx";
 
-// Gate: while the persisted session is validated, show nothing; then either
-// render the app shell (authed) or bounce to /login remembering where we were.
+// --- TEMPORARY: Auth gate bypassed — always render the shell ---
 function RequireAuth() {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-secondary font-body-md">
-        Loading…
-      </div>
-    );
-  }
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  }
+  // Original code (commented out until login is re-enabled):
+  // const { user, loading } = useAuth();
+  // const location = useLocation();
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center text-secondary font-body-md">
+  //       Loading…
+  //     </div>
+  //   );
+  // }
+  // if (!user) {
+  //   return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  // }
   return (
     <Layout>
       <Outlet />
@@ -34,9 +34,11 @@ function RequireAuth() {
 }
 
 // Admin-only gate (used inside the authed layout). Non-admins are redirected.
+// --- TEMPORARY: bypassed — always allow admin access ---
 function RequireAdmin() {
-  const { user } = useAuth();
-  if (!["admin", "super_admin"].includes(user?.role)) return <Navigate to="/exams" replace />;
+  // Original code:
+  // const { user } = useAuth();
+  // if (!["admin", "super_admin"].includes(user?.role)) return <Navigate to="/exams" replace />;
   return <Admin />;
 }
 
@@ -44,7 +46,8 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        {/* --- TEMPORARY: /login redirects to /dashboard --- */}
+        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -63,3 +66,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
