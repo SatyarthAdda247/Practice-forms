@@ -16,6 +16,7 @@ Config via environment variables:
 """
 
 import os
+import re
 from functools import wraps
 
 from flask import g, jsonify, request
@@ -30,12 +31,22 @@ SECRET = os.environ.get("OMR_SECRET", "dev-insecure-secret-change-me")
 SESSION_MAX_AGE = int(os.environ.get("OMR_SESSION_MAX_AGE", 7 * 24 * 3600))
 
 # Only these email domains may sign in (comma-separated env override).
+# Values are normalised to a bare host: any scheme (http://, https://), a
+# leading "www.", and path/whitespace are stripped — so a copy-pasted
+# "http://adda247.com/" is treated the same as "adda247.com" rather than
+# silently matching no one and locking every user out.
+def _norm_domain(value):
+    d = value.strip().lower()
+    d = re.sub(r"^[a-z][a-z0-9+.-]*://", "", d)  # drop scheme
+    d = d.split("/", 1)[0]                         # drop any path
+    return d[4:] if d.startswith("www.") else d
+
 ALLOWED_DOMAINS = {
-    d.strip().lower()
+    _norm_domain(d)
     for d in os.environ.get(
         "OMR_ALLOWED_DOMAINS", "adda247.com,studyiq.com,addaeducation.com"
     ).split(",")
-    if d.strip()
+    if _norm_domain(d)
 }
 
 # Emails auto-granted the super-admin role on sign-in (comma-separated).
