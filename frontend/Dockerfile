@@ -1,16 +1,10 @@
-# Aspirant Portal frontend — build the Vite SPA, serve it with nginx.
+# Aspirant Portal frontend — build the Vite SPA, serve it with a tiny Node
+# static server.
 #
-# VITE_* vars are baked in at BUILD time. The ARG defaults below target the
-# PRODUCTION split-domain deployment (frontend and backend on separate domains):
-#   Frontend: https://aspirant-portal.adda247.com
-#   Backend : https://aspirant-portal-api.adda247.com
-#
-# A plain `docker build` produces a production image. Override per environment
-# (e.g. staging) by passing build args:
-#   docker build \
-#     --build-arg VITE_API_BASE_URL=https://staging-api.adda247.com \
-#     --build-arg VITE_GOOGLE_CLIENT_ID=<oauth-web-client-id> \
-#     -t aspirant-portal-frontend .
+# Docker ONLY builds. NO environment-specific values are baked in: the build
+# uses __VITE_*__ placeholder tokens, and docker-entrypoint.sh replaces them at
+# container startup with values from the K8s ConfigMap (VITE_API_BASE_URL,
+# VITE_GOOGLE_CLIENT_ID). => one image works for both staging and prod.
 
 # ---- build stage ----
 FROM node:20-alpine AS build
@@ -20,30 +14,27 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-# Production defaults; override with --build-arg for other environments.
-ARG VITE_API_BASE_URL=https://aspirant-portal-api.adda247.com
-ARG VITE_GOOGLE_CLIENT_ID=903201516918-273gsp8a45pema0fj3mg84vbveqp2765.apps.googleusercontent.com
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+# Placeholder tokens only — real values are injected at runtime (see entrypoint).
+ENV VITE_API_BASE_URL=__VITE_API_BASE_URL__
+ENV VITE_GOOGLE_CLIENT_ID=__VITE_GOOGLE_CLIENT_ID__
 RUN npm run build
 
-# ---- serve stage ----
-# nginx-unprivileged runs as a non-root user (uid 101) and binds an unprivileged
-# port — required by Cloud Run / PaaS, which run the container non-root and inject
-# $PORT (default 8080).
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+# ---- runtime stage ----
+FROM node:20-alpine
+WORKDIR /app
 
-# Cloud Run/PaaS override PORT at runtime; default to 8080 for local runs.
+# nginx-free: served by the zero-dependency Node server (no prod deps to install).
 ENV PORT=8080
-
-# nginx.conf is a template: the base image's docker-entrypoint runs envsubst on it
-# at startup, replacing ${PORT} and writing /etc/nginx/conf.d/default.conf.
-# ($uri/$host etc. are left intact — only real env vars are substituted.)
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist ./dist
+COPY server.js ./server.js
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 8080
 
-# Liveness probe hits the /healthz route on the runtime port.
+# Liveness probe hits the server's /healthz on the runtime port.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/healthz" >/dev/null 2>&1 || exit 1
+
+# Entrypoint injects runtime config, then starts the server.
+CMD ["./docker-entrypoint.sh"]
