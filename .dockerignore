@@ -1,0 +1,36 @@
+# Build context is the repo root (docker build -f backend/Dockerfile .),
+# so THIS file — not backend/.dockerignore — is what Docker honors.
+# Keep secrets and local cruft out of the image.
+
+# Secrets — provided at runtime via mounted K8s secret, never baked in.
+**/.env
+**/.env.*
+!**/.env.example
+**/credential/
+*.sa.json
+service-account*.json
+
+# VCS / tooling
+.git/
+.gitignore
+.vscode/
+.claude/
+
+# Python local
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.db
+**/*.sqlite3
+
+# Node / frontend (backend image doesn't need these)
+frontend/node_modules/
+frontend/dist/
+
+# Local uploads (mounted volume at runtime)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+.DS_Store
+*.log

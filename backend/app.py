@@ -33,6 +33,23 @@ def _load_dotenv(path):
 # Must run before importing `auth`, which reads these vars at import time.
 _load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
+
+def _resolve_credentials():
+    """Make GOOGLE_APPLICATION_CREDENTIALS robust to the launch directory.
+
+    The Google auth library resolves a relative path against the current
+    working directory; anchor a relative value to this file's directory so the
+    SA key is found whether the server is started from ``backend/`` or the repo
+    root."""
+    cred = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if cred and not os.path.isabs(cred):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(
+            os.path.dirname(__file__), cred
+        )
+
+
+_resolve_credentials()
+
 from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -280,8 +297,7 @@ def admin_delete_user(user_id):
 @login_required
 def list_exams():
     """List all exams, newest first."""
-    with db.get_conn() as conn:
-        rows = conn.execute("SELECT * FROM exams ORDER BY id DESC").fetchall()
+    rows = db.list_exams()
     return jsonify([db.row_to_exam(r) for r in rows])
 
 
@@ -312,16 +328,11 @@ def create_exam():
     except ValueError as exc:
         return error(str(exc))
 
-    with db.get_conn() as conn:
-        row = conn.execute(
-            """INSERT INTO exams (name, exam_date, num_questions, marks_correct,
-                                  marks_penalty, answer_key)
-               VALUES (%s, %s, %s, %s, %s, %s)
-               RETURNING *""",
-            (name, data.get("date"), num_q,
-             float(data.get("marksCorrect", 4)), float(data.get("marksPenalty", 1)),
-             json.dumps(key)),
-        ).fetchone()
+    row = db.create_exam(
+        name, data.get("date"), num_q,
+        float(data.get("marksCorrect", 4)), float(data.get("marksPenalty", 1)),
+        key,
+    )
     return jsonify(db.row_to_exam(row)), 201
 
 
@@ -329,8 +340,7 @@ def create_exam():
 @login_required
 def get_exam(exam_id):
     """Fetch a single exam by id."""
-    with db.get_conn() as conn:
-        row = conn.execute("SELECT * FROM exams WHERE id = %s", (exam_id,)).fetchone()
+    row = db.get_exam(exam_id)
     if row is None:
         return error("exam not found", 404)
     return jsonify(db.row_to_exam(row))
@@ -342,31 +352,26 @@ def update_exam(exam_id):
     """Update mutable fields of an exam. Accepts the same body as create;
     every field is optional and only provided fields are changed."""
     data = request.get_json(silent=True) or {}
-    with db.get_conn() as conn:
-        row = conn.execute("SELECT * FROM exams WHERE id = %s", (exam_id,)).fetchone()
-        if row is None:
-            return error("exam not found", 404)
+    row = db.get_exam(exam_id)
+    if row is None:
+        return error("exam not found", 404)
 
-        num_q = int(data.get("numQuestions", row["num_questions"]))
-        try:
-            key = (_validate_answer_key(data["answerKey"], num_q)
-                   if "answerKey" in data else json.loads(row["answer_key"]))
-        except ValueError as exc:
-            return error(str(exc))
+    num_q = int(data.get("numQuestions", row["num_questions"]))
+    try:
+        key = (_validate_answer_key(data["answerKey"], num_q)
+               if "answerKey" in data else json.loads(row["answer_key"]))
+    except ValueError as exc:
+        return error(str(exc))
 
-        row = conn.execute(
-            """UPDATE exams SET name = %s, exam_date = %s, num_questions = %s,
-                   marks_correct = %s, marks_penalty = %s, answer_key = %s
-               WHERE id = %s
-               RETURNING *""",
-            (data.get("name", row["name"]),
-             data.get("date", row["exam_date"]),
-             num_q,
-             float(data.get("marksCorrect", row["marks_correct"])),
-             float(data.get("marksPenalty", row["marks_penalty"])),
-             json.dumps(key),
-             exam_id),
-        ).fetchone()
+    row = db.update_exam(
+        exam_id,
+        data.get("name", row["name"]),
+        data.get("date", row["exam_date"]),
+        num_q,
+        float(data.get("marksCorrect", row["marks_correct"])),
+        float(data.get("marksPenalty", row["marks_penalty"])),
+        key,
+    )
     return jsonify(db.row_to_exam(row))
 
 
@@ -374,9 +379,7 @@ def update_exam(exam_id):
 @login_required
 def delete_exam(exam_id):
     """Delete an exam and cascade-remove its sheets and results."""
-    with db.get_conn() as conn:
-        cur = conn.execute("DELETE FROM exams WHERE id = %s", (exam_id,))
-    if cur.rowcount == 0:
+    if not db.delete_exam(exam_id):
         return error("exam not found", 404)
     return "", 204
 
@@ -388,10 +391,7 @@ def delete_exam(exam_id):
 @login_required
 def list_sheets(exam_id):
     """List every uploaded sheet for an exam (the upload queue)."""
-    with db.get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM sheets WHERE exam_id = %s ORDER BY id DESC", (exam_id,)
-        ).fetchall()
+    rows = db.list_sheets(exam_id)
     return jsonify([db.row_to_sheet(r) for r in rows])
 
 
@@ -405,8 +405,7 @@ def upload_sheets(exam_id):
     (stubbed) mark detector, and marked ``validated``; unrecognised files are
     recorded with status ``failed``. Returns the created sheet records.
     """
-    with db.get_conn() as conn:
-        exam = conn.execute("SELECT * FROM exams WHERE id = %s", (exam_id,)).fetchone()
+    exam = db.get_exam(exam_id)
     if exam is None:
         return error("exam not found", 404)
 
@@ -415,34 +414,28 @@ def upload_sheets(exam_id):
         return error("no files provided under form field 'files'")
 
     created = []
-    with db.get_conn() as conn:
-        for f in files:
-            fname = secure_filename(f.filename or "unnamed")
-            ext = os.path.splitext(fname)[1].lower()
-            blob = f.read()
-            size = len(blob)
+    for f in files:
+        fname = secure_filename(f.filename or "unnamed")
+        ext = os.path.splitext(fname)[1].lower()
+        blob = f.read()
+        size = len(blob)
 
-            if ext not in ALLOWED_EXT:
-                row = conn.execute(
-                    """INSERT INTO sheets (exam_id, filename, size_bytes, status, error)
-                       VALUES (%s, %s, %s, 'failed', 'Unrecognized format')
-                       RETURNING *""",
-                    (exam_id, fname, size),
-                ).fetchone()
-            else:
-                path = os.path.join(UPLOAD_DIR, f"{exam_id}_{fname}")
-                with open(path, "wb") as out:
-                    out.write(blob)
-                answers = detect_answers(fname, exam["num_questions"])
-                roll = f"R{1000 + (abs(hash(fname)) % 9000)}"
-                row = conn.execute(
-                    """INSERT INTO sheets (exam_id, filename, size_bytes, status,
-                                           roll_number, answers)
-                       VALUES (%s, %s, %s, 'validated', %s, %s)
-                       RETURNING *""",
-                    (exam_id, fname, size, roll, json.dumps(answers)),
-                ).fetchone()
-            created.append(db.row_to_sheet(row))
+        if ext not in ALLOWED_EXT:
+            row = db.create_sheet(
+                exam_id, fname, size, status="failed",
+                error="Unrecognized format",
+            )
+        else:
+            path = os.path.join(UPLOAD_DIR, f"{exam_id}_{fname}")
+            with open(path, "wb") as out:
+                out.write(blob)
+            answers = detect_answers(fname, exam["num_questions"])
+            roll = f"R{1000 + (abs(hash(fname)) % 9000)}"
+            row = db.create_sheet(
+                exam_id, fname, size, status="validated",
+                roll_number=roll, answers=answers,
+            )
+        created.append(db.row_to_sheet(row))
     return jsonify(created), 201
 
 
@@ -450,9 +443,7 @@ def upload_sheets(exam_id):
 @login_required
 def delete_sheet(sheet_id):
     """Remove a single sheet from the queue (and its result, if graded)."""
-    with db.get_conn() as conn:
-        cur = conn.execute("DELETE FROM sheets WHERE id = %s", (sheet_id,))
-    if cur.rowcount == 0:
+    if not db.delete_sheet(sheet_id):
         return error("sheet not found", 404)
     return "", 204
 
@@ -469,10 +460,7 @@ def validation_summary(exam_id):
           "issueDetails": ["Roll number missing on 1 sheet."]
         }
     """
-    with db.get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM sheets WHERE exam_id = %s", (exam_id,)
-        ).fetchall()
+    rows = db.list_sheets(exam_id)
 
     total = len(rows)
     ready = sum(1 for r in rows if r["status"] == "validated" and r["roll_number"])
@@ -504,32 +492,29 @@ def grade_exam(exam_id):
     Requires a non-empty answer key. Idempotent: existing results are replaced.
     Returns ``{"graded": <n>}``.
     """
-    with db.get_conn() as conn:
-        exam = conn.execute("SELECT * FROM exams WHERE id = %s", (exam_id,)).fetchone()
-        if exam is None:
-            return error("exam not found", 404)
+    exam = db.get_exam(exam_id)
+    if exam is None:
+        return error("exam not found", 404)
 
-        answer_key = json.loads(exam["answer_key"])
-        if not answer_key:
-            return error("answer key is empty; configure it before grading")
+    answer_key = json.loads(exam["answer_key"])
+    if not answer_key:
+        return error("answer key is empty; configure it before grading")
 
-        sheets = conn.execute(
-            "SELECT * FROM sheets WHERE exam_id = %s AND status = 'validated'", (exam_id,)
-        ).fetchall()
+    sheets = db.list_validated_sheets(exam_id)
 
-        graded = 0
-        for s in sheets:
-            res = grade(answer_key, json.loads(s["answers"]),
-                        exam["marks_correct"], exam["marks_penalty"])
-            conn.execute("DELETE FROM results WHERE sheet_id = %s", (s["id"],))
-            conn.execute(
-                """INSERT INTO results (sheet_id, exam_id, correct, wrong,
-                                        unattempted, score, max_score)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (s["id"], exam_id, res["correct"], res["wrong"],
-                 res["unattempted"], res["score"], res["maxScore"]),
-            )
-            graded += 1
+    computed = []
+    for s in sheets:
+        res = grade(answer_key, json.loads(s["answers"]),
+                    exam["marks_correct"], exam["marks_penalty"])
+        computed.append({
+            "sheetId": s["id"],
+            "correct": res["correct"],
+            "wrong": res["wrong"],
+            "unattempted": res["unattempted"],
+            "score": res["score"],
+            "maxScore": res["maxScore"],
+        })
+    graded = db.replace_results(exam_id, computed)
     return jsonify({"graded": graded})
 
 
@@ -549,16 +534,10 @@ def results(exam_id):
 
     ``passRate`` uses a 40% threshold of ``maxScore``.
     """
-    with db.get_conn() as conn:
-        exam = conn.execute("SELECT * FROM exams WHERE id = %s", (exam_id,)).fetchone()
-        if exam is None:
-            return error("exam not found", 404)
-        rows = conn.execute(
-            """SELECT r.*, s.roll_number, s.student_name, s.filename
-                 FROM results r JOIN sheets s ON s.id = r.sheet_id
-                WHERE r.exam_id = %s ORDER BY r.score DESC""",
-            (exam_id,),
-        ).fetchall()
+    exam = db.get_exam(exam_id)
+    if exam is None:
+        return error("exam not found", 404)
+    rows = db.list_results(exam_id)
 
     result_rows = [{
         "sheetId": r["sheet_id"],
