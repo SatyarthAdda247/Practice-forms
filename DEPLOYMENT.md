@@ -23,14 +23,14 @@ Data stores (both **external**, provisioned per environment):
 | | |
 |---|---|
 | Dockerfile | `backend/Dockerfile` |
-| Build context | `backend/` |
+| Build context | repo root (`.`) — Dockerfile COPY paths are prefixed `backend/` |
 | Port | `5000` (listens on `$PORT`, binds `0.0.0.0`) |
 | Server | `gunicorn app:app`, 4 workers (`WEB_CONCURRENCY`) |
 | Healthcheck | `GET /api/health` → `200 {"status":"ok"}` (interval 30s, timeout 5s, start-period 10s, retries 3) |
 
-Build & push:
+Build & push (invoke from the repo root, like the frontend):
 ```bash
-docker build -t <registry>/omr-answer-key-checker-be:green backend/
+docker build -f backend/Dockerfile -t <registry>/omr-answer-key-checker-be:green .
 docker push <registry>/omr-answer-key-checker-be:green
 ```
 

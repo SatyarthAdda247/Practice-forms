@@ -1,5 +1,13 @@
 # OMR GradePro backend — production image.
-# Deps (requirements.txt) are already installed in the base image.
+#
+# Build context is the REPO ROOT (not backend/) — paths below are prefixed with
+# backend/ to match, mirroring frontend/Dockerfile. Invoke as:
+#   docker build -f backend/Dockerfile -t <tag> .
+#
+# The image contains ONLY code + deps. No env-specific values are baked in:
+# provide GOOGLE_APPLICATION_CREDENTIALS (plus the mounted SA key file) and
+# OMR_SECRET at runtime via the K8s ConfigMap/Secret — see
+# configmap.backend.*.yaml and secret.backend.*.yaml.example.
 FROM docker-central.adda247.com/base-images/python-3-12:0.0.2
 
 ENV PORT=5000 \
@@ -7,13 +15,16 @@ ENV PORT=5000 \
 
 WORKDIR /app
 
-COPY . .
+# Install deps first for layer caching. The base image ships most deps, but
+# requirements.txt is the source of truth (it now includes google-cloud-bigquery,
+# which the base image predates), so install it explicitly.
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# DB is external (BigQuery for users, Cloud SQL/Postgres for exams/sheets/
-# results). Only uploaded scan files are local; mount a volume if they must
-# survive restarts. Provide DATABASE_URL, GOOGLE_APPLICATION_CREDENTIALS
-# (plus the mounted key file) and OMR_SECRET at runtime — see
-# configmap.backend.*.yaml and secret.backend.*.yaml.example.
+# App code. Build context is the repo root, so app.py lands at /app/app.py and
+# gunicorn's `app:app` module reference resolves.
+COPY backend/ .
+
 RUN mkdir -p uploads
 VOLUME ["/app/uploads"]
 
