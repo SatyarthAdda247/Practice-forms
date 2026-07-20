@@ -3,11 +3,9 @@ import Icon from "./Icon.jsx";
 import { useAuth } from "../auth.jsx";
 
 const BASE_NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: "dashboard" },
   { to: "/exams", label: "Exams", icon: "assignment" },
   { to: "/upload", label: "Uploads", icon: "cloud_upload" },
   { to: "/results", label: "Results", icon: "analytics" },
-  { to: "/form-filler", label: "Form Filler", icon: "edit_note" },
 ];
 const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_settings" };
 const SETTINGS_NAV = { to: "/settings", label: "Settings", icon: "settings" };

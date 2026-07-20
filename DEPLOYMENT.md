@@ -84,7 +84,7 @@ data:
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
   BQ_PROJECT: "adda247-dev"
   BQ_DATASET: "Aspirant_portal"
-  GOOGLE_APPLICATION_CREDENTIALS: "/var/secrets/gcp/key.json"
+  GOOGLE_APPLICATION_CREDENTIALS: "/var/secrets/google/key.json"
 ```
 
 ### Backend — Prod
@@ -107,7 +107,7 @@ data:
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
   BQ_PROJECT: "adda247-dev"
   BQ_DATASET: "Aspirant_portal"
-  GOOGLE_APPLICATION_CREDENTIALS: "/var/secrets/gcp/key.json"
+  GOOGLE_APPLICATION_CREDENTIALS: "/var/secrets/google/key.json"
 ```
 
 ### Frontend — Staging
@@ -135,14 +135,34 @@ data:
 ```
 
 > The GCP service-account key (`key.json`) cannot be an env value — mount it as a
-> file at `GOOGLE_APPLICATION_CREDENTIALS`. Recommended: a Secret volume.
+> file at `GOOGLE_APPLICATION_CREDENTIALS`. Use a Secret volume.
+>
+> **INVARIANT:** the ConfigMap's `GOOGLE_APPLICATION_CREDENTIALS` must equal the
+> volume `mountPath` + `/key.json`. If they disagree the pod crashes at boot with
+> `DefaultCredentialsError: File ... was not found`. Here both use
+> `/var/secrets/google`.
+>
+> 1. Create the Secret from the SA JSON key (once per env/namespace):
+> ```bash
+> kubectl create secret generic omr-answer-key-checker-be-adda-stg-green-gcp-sa \
+>   --from-file=key.json=backend/credential/adda247-dev-omr.json \
+>   -n <namespace>
+> ```
+> 2. Mount it in the backend Deployment's pod spec:
 > ```yaml
-> volumeMounts:
->   - { name: gcp-sa, mountPath: /var/secrets/gcp, readOnly: true }
+> containers:
+>   - name: backend
+>     # ...envFrom the ConfigMap above...
+>     volumeMounts:
+>       - { name: gcp-sa, mountPath: /var/secrets/google, readOnly: true }
 > volumes:
 >   - name: gcp-sa
->     secret: { secretName: omr-answer-key-checker-be-adda-stg-green-gcp-sa }
+>     secret:
+>       secretName: omr-answer-key-checker-be-adda-stg-green-gcp-sa
+>       items:
+>         - { key: key.json, path: key.json }   # -> /var/secrets/google/key.json
 > ```
+> (Prod: swap `-stg-` → `-prod-` in the secret name.)
 
 ---
 

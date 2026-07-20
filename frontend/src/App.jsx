@@ -3,8 +3,6 @@ import { AuthProvider, useAuth } from "./auth.jsx";
 import Layout from "./components/Layout.jsx";
 // --- TEMPORARY: Login page commented out until re-enabled ---
 // import Login from "./pages/Login.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import FormFiller from "./pages/FormFiller.jsx";
 import ExamsList from "./pages/ExamsList.jsx";
 import AnswerKeyConfig from "./pages/AnswerKeyConfig.jsx";
 import BulkUpload from "./pages/BulkUpload.jsx";
@@ -46,12 +44,10 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* --- TEMPORARY: /login redirects to /dashboard --- */}
-        <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+        {/* --- TEMPORARY: /login redirects to /exams --- */}
+        <Route path="/login" element={<Navigate to="/exams" replace />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/form-filler" element={<FormFiller />} />
+          <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/new" element={<AnswerKeyConfig />} />
           <Route path="/exams/:id" element={<AnswerKeyConfig />} />
