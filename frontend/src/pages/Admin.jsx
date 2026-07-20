@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import Icon from "../components/Icon.jsx";
+import Loading from "../components/Loading.jsx";
 
 function initials(name, email) {
   const base = (name || email || "?").trim();
@@ -33,6 +34,10 @@ export default function Admin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState("member");
+  const [adding, setAdding] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -70,6 +75,27 @@ export default function Admin() {
   // Super-admins manage everyone; regular admins manage only members.
   const canManage = (u) => isSuper || (me.role === "admin" && u.role === "member");
 
+  const addUser = async () => {
+    const email = newEmail.trim().toLowerCase();
+    if (!email) {
+      setError("Enter an email to add.");
+      return;
+    }
+    setAdding(true);
+    setError("");
+    try {
+      await api.adminCreateUser({ email, role: newRole });
+      setNewEmail("");
+      setNewRole("member");
+      setShowAdd(false);
+      load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
   const changeRole = (u, role) => act(u.id, () => api.adminUpdateUser(u.id, { role }));
   const toggleActive = (u) => act(u.id, () => api.adminUpdateUser(u.id, { active: !u.active }));
   const removeUser = (u) => {
@@ -103,6 +129,10 @@ export default function Admin() {
         </div>
       )}
 
+      {loading ? (
+        <Loading />
+      ) : (
+        <>
       {/* Counts */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg flex justify-around items-center mb-xl">
         {[
@@ -123,21 +153,82 @@ export default function Admin() {
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden">
         <div className="px-lg py-md border-b border-outline-variant bg-surface-bright flex flex-wrap gap-sm justify-between items-center">
           <h4 className="font-headline-sm text-headline-sm text-on-background">People ({rows.length})</h4>
-          <div className="relative">
-            <Icon name="search" size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-outline" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name / email"
-              className="bg-surface border border-outline-variant rounded-lg pl-xl pr-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
-            />
+          <div className="flex items-center gap-sm">
+            <div className="relative">
+              <Icon name="search" size={18} className="absolute left-sm top-1/2 -translate-y-1/2 text-outline" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name / email"
+                className="bg-surface border border-outline-variant rounded-lg pl-xl pr-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            {isSuper && (
+              <button
+                onClick={() => setShowAdd((s) => !s)}
+                className="px-md py-1.5 bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-xs shrink-0"
+              >
+                <Icon name="person_add" size={18} />
+                <span className="hidden sm:inline">Add User</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {loading ? (
-          <p className="p-lg text-secondary font-body-md">Loading…</p>
-        ) : (
-          <ul className="divide-y divide-outline-variant">
+        {showAdd && isSuper && (
+          <div className="px-lg py-md border-b border-outline-variant bg-surface flex flex-wrap gap-sm items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block font-label-md text-label-md text-on-surface-variant mb-xs">
+                Email
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !adding && addUser()}
+                placeholder="name@adda247.com"
+                autoFocus
+                className="w-full bg-surface border border-outline-variant rounded-lg px-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface-variant mb-xs">
+                Role
+              </label>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="bg-surface border border-outline-variant rounded-lg px-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="member">Member</option>
+                {isSuper && <option value="admin">Admin</option>}
+                {isSuper && <option value="super_admin">Super admin</option>}
+              </select>
+            </div>
+            <button
+              onClick={addUser}
+              disabled={adding}
+              className="px-lg py-1.5 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors disabled:opacity-60"
+            >
+              {adding ? "Adding…" : "Add"}
+            </button>
+            <button
+              onClick={() => {
+                setShowAdd(false);
+                setNewEmail("");
+              }}
+              className="px-md py-1.5 border border-outline-variant rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
+              Cancel
+            </button>
+            <p className="w-full font-body-sm text-body-sm text-on-surface-variant">
+              They can sign in immediately with their Google account on an allowed
+              domain; this record links to it on first login.
+            </p>
+          </div>
+        )}
+
+        <ul className="divide-y divide-outline-variant">
             {rows.map((u) => {
               const isSelf = u.id === me.id;
               const busy = pendingId === u.id;
@@ -213,21 +304,24 @@ export default function Admin() {
                     >
                       {u.active ? "Revoke" : "Restore"}
                     </button>
-                    <button
-                      onClick={() => removeUser(u)}
-                      disabled={isSelf || busy || !canManage(u)}
-                      title="Delete user"
-                      className="p-xs rounded-full text-outline hover:text-error hover:bg-error-container transition-colors disabled:opacity-40"
-                    >
-                      <Icon name="delete" size={20} />
-                    </button>
+                    {isSuper && (
+                      <button
+                        onClick={() => removeUser(u)}
+                        disabled={isSelf || busy}
+                        title="Delete user"
+                        className="p-xs rounded-full text-outline hover:text-error hover:bg-error-container transition-colors disabled:opacity-40"
+                      >
+                        <Icon name="delete" size={20} />
+                      </button>
+                    )}
                   </div>
                 </li>
               );
             })}
           </ul>
-        )}
       </div>
+        </>
+      )}
     </>
   );
 }

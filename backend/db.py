@@ -32,7 +32,9 @@ from datetime import datetime, timezone
 from bigquery_users import (  # noqa: F401
     count_super_admins,
     create_local_user,
+    create_user,
     delete_user,
+    get_user_by_email,
     get_user_by_id,
     get_user_row_by_email,
     list_users,

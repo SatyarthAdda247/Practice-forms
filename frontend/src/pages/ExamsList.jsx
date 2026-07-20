@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
+import Loading from "../components/Loading.jsx";
 
 export default function ExamsList() {
   const [exams, setExams] = useState([]);
@@ -54,7 +55,7 @@ export default function ExamsList() {
       )}
 
       {loading ? (
-        <p className="text-secondary">Loading…</p>
+        <Loading />
       ) : exams.length === 0 ? (
         <div className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl p-xl text-center text-on-surface-variant">
           <Icon name="assignment" size={40} className="text-outline" />

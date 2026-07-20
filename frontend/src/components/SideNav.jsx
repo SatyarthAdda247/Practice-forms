@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
+import BetaBadge from "./BetaBadge.jsx";
 import { useAuth } from "../auth.jsx";
 
 const BASE_NAV = [
@@ -8,7 +9,6 @@ const BASE_NAV = [
   { to: "/results", label: "Results", icon: "analytics" },
 ];
 const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_settings" };
-const SETTINGS_NAV = { to: "/settings", label: "Settings", icon: "settings" };
 
 function Item({ to, label, icon }) {
   return (
@@ -44,7 +44,6 @@ export default function SideNav() {
   const navItems = [
     ...BASE_NAV,
     ...(["admin", "super_admin"].includes(user?.role) ? [ADMIN_NAV] : []),
-    SETTINGS_NAV,
   ];
 
   return (
@@ -55,9 +54,12 @@ export default function SideNav() {
           <Icon name="domain" filled />
         </div>
         <div className="flex flex-col overflow-hidden">
-          <span className="font-headline-sm text-headline-sm text-primary truncate">
-            Admin Dashboard
-          </span>
+          <div className="flex items-center gap-sm min-w-0">
+            <span className="font-headline-sm text-headline-sm text-primary truncate">
+              OMR GradePro
+            </span>
+            <BetaBadge className="shrink-0" />
+          </div>
           <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
             Academic Session 2026-2027
           </span>
@@ -70,7 +72,7 @@ export default function SideNav() {
         className="mb-xl mx-sm py-sm px-md bg-primary-container text-on-primary rounded-xl font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors shadow-sm flex items-center justify-center gap-sm"
       >
         <Icon name="add" size={18} />
-        Process New Batch
+        New Exam
       </button>
 
       {/* Main nav */}

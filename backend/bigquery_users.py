@@ -257,10 +257,41 @@ def upsert_user(google_sub, email, name, picture, role="member"):
     ever promoted (bootstrap admins/super-admins are never demoted by a normal
     login) — same semantics as the old SQLite ``ON CONFLICT`` path."""
     c = COLS
-    new_id = None
+    existing = get_user_by_google_sub(google_sub)
+
+    # No account for this Google identity yet: if an admin pre-authorised this
+    # email (an invite whose google_sub is still NULL), link the identity to
+    # that row instead of creating a duplicate — preserving the granted role.
+    if existing is None:
+        _, pending = _execute(
+            f"SELECT {_select_cols()} FROM {_FQN} "
+            f"WHERE LOWER({c['email']}) = @email AND {c['google_sub']} IS NULL LIMIT 1",
+            [_p("email", "STRING", (email or "").lower())],
+        )
+        if pending:
+            uid = pending[0]["id"]
+            _execute(
+                f"""UPDATE {_FQN} SET
+                    {c['google_sub']} = @sub, {c['name']} = @name,
+                    {c['picture']} = @picture,
+                    {c['role']} = CASE
+                      WHEN @role = 'super_admin' OR {c['role']} = 'super_admin' THEN 'super_admin'
+                      WHEN @role = 'admin' OR {c['role']} = 'admin' THEN 'admin'
+                      ELSE {c['role']} END
+                    WHERE {c['id']} = @id AND {c['google_sub']} IS NULL""",
+                [
+                    _p("sub", "STRING", google_sub),
+                    _p("name", "STRING", name),
+                    _p("picture", "STRING", picture),
+                    _p("role", "STRING", role),
+                    _p("id", _id_type(), uid),
+                ],
+            )
+            _invalidate(uid)
+            return get_user_by_id(uid)
+
     # Only pay for id generation when the user might be new. MERGE needs the id
     # value bound regardless; it is ignored on the MATCHED branch.
-    existing = get_user_by_google_sub(google_sub)
     new_id = existing["id"] if existing else _new_id()
 
     sql = f"""

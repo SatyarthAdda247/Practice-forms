@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import GoogleSignIn from "../components/GoogleSignIn.jsx";
 import Icon from "../components/Icon.jsx";
+import BetaBadge from "../components/BetaBadge.jsx";
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -37,7 +38,10 @@ export default function Login() {
           <div className="w-14 h-14 rounded-full bg-primary-container flex items-center justify-center text-on-primary mb-md">
             <Icon name="domain" filled size={28} />
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-primary">OMR GradePro</h1>
+          <div className="flex items-center gap-sm">
+            <h1 className="font-headline-lg text-headline-lg text-primary">OMR GradePro</h1>
+            <BetaBadge />
+          </div>
           <p className="font-body-md text-body-md text-on-surface-variant mt-xs">
             Academic Session 2026-2027
           </p>

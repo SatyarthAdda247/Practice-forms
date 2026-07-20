@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import Layout from "./components/Layout.jsx";
+import Loading from "./components/Loading.jsx";
 import Login from "./pages/Login.jsx";
 import ExamsList from "./pages/ExamsList.jsx";
 import AnswerKeyConfig from "./pages/AnswerKeyConfig.jsx";
@@ -13,11 +14,7 @@ function RequireAuth() {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-secondary font-body-md">
-        Loading…
-      </div>
-    );
+    return <Loading className="min-h-screen" />;
   }
   if (!user) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;

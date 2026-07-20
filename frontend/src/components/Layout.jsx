@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import SideNav from "./SideNav.jsx";
 import BottomNav from "./BottomNav.jsx";
 import Icon from "./Icon.jsx";
+import BetaBadge from "./BetaBadge.jsx";
 import { useAuth } from "../auth.jsx";
 
 // App shell: fixed side nav on desktop; on mobile a sticky top app bar plus a
@@ -28,6 +29,7 @@ export default function Layout({ children }) {
           <span className="font-headline-sm text-headline-sm text-primary tracking-tight">
             OMR GradePro
           </span>
+          <BetaBadge className="shrink-0" />
         </div>
         <div className="flex items-center gap-sm">
           <button className="text-primary p-xs rounded-full hover:bg-surface-container transition-colors">
