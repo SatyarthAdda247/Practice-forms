@@ -1,33 +1,11 @@
-"""Grading + OMR mark-detection helpers.
+"""Grading helpers.
 
-Real optical-mark recognition from a scanned image requires a computer-vision
-pipeline (deskew -> locate fiducial markers -> sample bubble intensities ->
-threshold). That is out of scope for this reference implementation, so
-:func:`detect_answers` is a deterministic stub that fabricates plausible
-answers for a sheet. Swap it out for an OpenCV pipeline in production; the rest
-of the app only depends on its return shape: ``{ "1": "A", "2": "C", ... }``.
+Scoring only. Optical-mark *recognition* — turning a scanned sheet into an
+``{"1": "A", ...}`` answer map — lives in :mod:`omr_pipeline` (a real OpenCV
+pipeline). This module just compares a detected answer map against the key.
 """
 
-import hashlib
-
 OPTIONS = ["A", "B", "C", "D"]
-
-
-def detect_answers(filename, num_questions, seed_extra=""):
-    """Return a deterministic set of marked answers for a sheet.
-
-    Deterministic (seeded by filename) so repeated processing is stable and
-    demos are reproducible. Roughly 8% of questions are left blank to simulate
-    unattempted bubbles.
-    """
-    digest = hashlib.sha256(f"{filename}{seed_extra}".encode()).digest()
-    answers = {}
-    for q in range(1, num_questions + 1):
-        b = digest[q % len(digest)]
-        if b % 12 == 0:  # ~8% left unattempted
-            continue
-        answers[str(q)] = OPTIONS[b % 4]
-    return answers
 
 
 def grade(answer_key, answers, marks_correct, marks_penalty):

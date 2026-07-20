@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
+import { violationLabel } from "../violations.js";
 
 function StatCard({ icon, label, value, accent = "text-on-background", sub }) {
   return (
@@ -51,16 +52,19 @@ export default function Results() {
     return data.rows.filter(
       (r) =>
         (r.rollNumber || "").toLowerCase().includes(q) ||
+        (r.studentName || "").toLowerCase().includes(q) ||
         (r.filename || "").toLowerCase().includes(q)
     );
   }, [data, query]);
 
   const exportCsv = () => {
     if (!data) return;
-    const header = "Rank,Roll Number,File,Correct,Wrong,Unattempted,Score,Max,Percent";
+    const header = "Rank,Roll Number,Student Name,File,Correct,Wrong,Unattempted,Score,Max,Percent,Flags";
+    const csvCell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = data.rows.map((r, i) => {
       const pct = r.maxScore ? ((r.score / r.maxScore) * 100).toFixed(1) : "0";
-      return [i + 1, r.rollNumber, r.filename, r.correct, r.wrong, r.unattempted, r.score, r.maxScore, pct].join(",");
+      const flags = (r.flags || []).map(violationLabel).join("; ");
+      return [i + 1, csvCell(r.rollNumber), csvCell(r.studentName), csvCell(r.filename), r.correct, r.wrong, r.unattempted, r.score, r.maxScore, pct, csvCell(flags)].join(",");
     });
     const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -166,7 +170,7 @@ export default function Results() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search roll / file"
+                  placeholder="Search name / roll / file"
                   className="bg-surface border border-outline-variant rounded-lg pl-xl pr-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
                 />
               </div>
@@ -177,16 +181,17 @@ export default function Results() {
               {rows.map((r) => {
                 const rank = data.rows.indexOf(r) + 1;
                 const pct = r.maxScore ? (r.score / r.maxScore) * 100 : 0;
-                const flagged = pct < 40;
+                const violations = r.flags || [];
+                const flagged = pct < 40 || violations.length > 0;
                 return (
                   <li key={r.sheetId} className="p-md">
                     <div className="flex justify-between items-start mb-sm">
                       <div>
                         <p className="font-body-lg text-body-lg text-on-background font-semibold leading-tight">
-                          {r.rollNumber || "—"}
+                          {r.studentName || "—"}
                         </p>
                         <p className="font-data-mono text-body-sm text-secondary">
-                          Rank #{rank} • {r.filename}
+                          {r.rollNumber || "—"} • Rank #{rank}
                         </p>
                       </div>
                       <span
@@ -199,6 +204,19 @@ export default function Results() {
                         {flagged ? "REVIEW REQ" : "VERIFIED"}
                       </span>
                     </div>
+                    {violations.length > 0 && (
+                      <div className="flex flex-wrap gap-xs mb-sm">
+                        {violations.map((code) => (
+                          <span
+                            key={code}
+                            className="inline-flex items-center gap-xs font-label-md text-[11px] px-sm py-[2px] rounded-full bg-error-container/40 text-error border border-[#fca5a5]"
+                          >
+                            <Icon name="warning" size={12} filled />
+                            {violationLabel(code)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div className="grid grid-cols-4 gap-sm mb-sm text-center">
                       {[
                         { k: "CORRECT", v: r.correct, c: "text-[#0d9488]" },
@@ -232,6 +250,7 @@ export default function Results() {
                   <tr className="bg-surface-bright text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
                     <th className="px-lg py-sm">Rank</th>
                     <th className="px-lg py-sm">Roll No.</th>
+                    <th className="px-lg py-sm">Student Name</th>
                     <th className="px-lg py-sm hidden md:table-cell">File</th>
                     <th className="px-lg py-sm text-center">Correct</th>
                     <th className="px-lg py-sm text-center">Wrong</th>
@@ -251,6 +270,19 @@ export default function Results() {
                         </td>
                         <td className="px-lg py-md font-body-md text-body-md text-on-background font-medium">
                           {r.rollNumber || "—"}
+                        </td>
+                        <td className="px-lg py-md font-body-md text-body-md text-on-background">
+                          <span className="inline-flex items-center gap-xs">
+                            {r.studentName || "—"}
+                            {(r.flags || []).length > 0 && (
+                              <span
+                                className="inline-flex items-center text-error"
+                                title={`Filling issues: ${(r.flags || []).map(violationLabel).join(", ")}`}
+                              >
+                                <Icon name="warning" size={16} filled />
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td className="px-lg py-md font-body-sm text-body-sm text-secondary hidden md:table-cell truncate max-w-[200px]">
                           {r.filename}
