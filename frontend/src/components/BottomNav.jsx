@@ -4,7 +4,6 @@ import { useAuth } from "../auth.jsx";
 
 // Mobile-only bottom tab bar (hidden on md+, where the side nav takes over).
 const TABS = [
-  { to: "/dashboard", label: "Home", icon: "dashboard" },
   { to: "/exams", label: "Exams", icon: "assignment" },
   { to: "/upload", label: "Uploads", icon: "cloud_upload" },
   { to: "/results", label: "Results", icon: "analytics" },

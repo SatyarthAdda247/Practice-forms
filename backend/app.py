@@ -14,6 +14,7 @@ full human-readable reference lives in ``API.md``.
 
 import json
 import os
+import tempfile
 
 
 def _load_dotenv(path):
@@ -35,12 +36,31 @@ _load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 
 def _resolve_credentials():
-    """Make GOOGLE_APPLICATION_CREDENTIALS robust to the launch directory.
+    """Make GOOGLE_APPLICATION_CREDENTIALS work regardless of how the SA key is
+    supplied.
 
-    The Google auth library resolves a relative path against the current
-    working directory; anchor a relative value to this file's directory so the
-    SA key is found whether the server is started from ``backend/`` or the repo
-    root."""
+    Two supported forms:
+
+    1. ``GOOGLE_APPLICATION_CREDENTIALS_JSON`` — the full service-account key
+       JSON provided inline as an env var. This is the right choice when the
+       platform only injects env vars (no mounted key file, no Kubernetes
+       Secret): we materialize it to a temp file and point the standard var at
+       it. Put the key minified onto a single line in your config file.
+
+    2. ``GOOGLE_APPLICATION_CREDENTIALS`` — a path to a key file. The Google
+       auth library resolves a relative path against the current working
+       directory; anchor a relative value to this file's directory so the SA
+       key is found whether the server is started from ``backend/`` or the repo
+       root."""
+    inline = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON", "").strip()
+    if inline:
+        key_path = os.path.join(tempfile.gettempdir(), "gcp-sa-key.json")
+        with open(key_path, "w") as fh:
+            fh.write(inline)
+        os.chmod(key_path, 0o600)
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = key_path
+        return
+
     cred = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
     if cred and not os.path.isabs(cred):
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(
