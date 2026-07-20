@@ -196,6 +196,9 @@ def auth_google():
     Body: ``{ "credential": "<google-id-token>" }`` — the JWT produced by the
     GIS button in the browser. On success returns
     ``{ "token": "<session>", "user": {...} }``; ``401`` on an invalid token.
+
+    Access is **invitation-only**: the email must be on an allowed domain AND
+    already added by an admin (or a bootstrap admin from env). Otherwise ``403``.
     """
     data = request.get_json(silent=True) or {}
     credential = data.get("credential")
@@ -210,6 +213,17 @@ def auth_google():
     if not is_allowed_domain(email):
         return error(
             "Access is restricted to " + ", ".join(sorted(ALLOWED_DOMAINS)) + " accounts.",
+            403,
+        )
+
+    # Invitation-only: an allowed-domain account is NOT enough — the user must
+    # have been added by an admin (a row already exists for their email, whether
+    # a linked account or a pending invite) unless they are a bootstrap admin
+    # configured via env. This stops any allowed-domain user self-registering.
+    if role_for_email(email) == "member" and db.get_user_by_email(email) is None:
+        return error(
+            "Your account hasn't been granted access yet. "
+            "Please ask an administrator to add you.",
             403,
         )
 
