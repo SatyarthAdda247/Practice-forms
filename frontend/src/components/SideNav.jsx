@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
 import BetaBadge from "./BetaBadge.jsx";
 import { useAuth } from "../auth.jsx";
+
+const SUPPORT_EMAIL = "umesh.rao@adda247.com";
 
 const BASE_NAV = [
   { to: "/exams", label: "Exams", icon: "assignment" },
@@ -35,6 +38,7 @@ function Item({ to, label, icon }) {
 export default function SideNav() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -106,14 +110,27 @@ export default function SideNav() {
             </div>
           </div>
         )}
-        <a
-          href="mailto:umesh.rao@adda247.com?subject=OMR%20GradePro%20Support"
-          className="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-xl font-label-md text-label-md transition-all duration-200"
-          title="Contact support: umesh.rao@adda247.com"
+        <button
+          onClick={() => setShowHelp((s) => !s)}
+          className="w-full flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-xl font-label-md text-label-md transition-all duration-200"
+          title="Contact support"
         >
           <Icon name="help" size={20} />
           <span>Help Center</span>
-        </a>
+        </button>
+        {showHelp && (
+          <div className="mx-md mb-xs px-md py-sm rounded-xl bg-surface-container-high">
+            <p className="font-body-sm text-body-sm text-on-surface-variant mb-xs">
+              Need help? Email us at:
+            </p>
+            <a
+              href={`mailto:${SUPPORT_EMAIL}?subject=OMR%20GradePro%20Support`}
+              className="font-body-sm text-body-sm text-primary break-all hover:underline"
+            >
+              {SUPPORT_EMAIL}
+            </a>
+          </div>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-xl font-label-md text-label-md transition-all duration-200"
