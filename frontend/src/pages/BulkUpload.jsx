@@ -230,12 +230,7 @@ export default function BulkUpload() {
                           >
                             {s.status === "failed" ? s.error : humanSize(s.sizeBytes)}
                             {s.studentName ? ` • ${s.studentName}` : ""}
-                            {s.status === "validated" &&
-                              (s.rollNumber ? (
-                                ` • ${s.rollNumber}`
-                              ) : (
-                                <span className="text-error font-medium"> • Roll missing</span>
-                              ))}
+                            {s.rollNumber ? ` • ${s.rollNumber}` : ""}
                           </p>
                           {flags.length > 0 && (
                             <div className="flex flex-wrap gap-xs mt-xs">

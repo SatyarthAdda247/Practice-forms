@@ -514,26 +514,27 @@ def validation_summary(exam_id):
           "flagged": 3,
           "issues": 4,
           "issueDetails": [
-            "Roll number missing on 1 sheet.",
+            "1 sheet(s) could not be read.",
             "3 sheet(s) violate the filling instructions and need review."
           ]
         }
+
+    A missing roll number does **not** block grading — any sheet that was read
+    successfully is counted in ``readyForGrading``.
     """
     rows = [db.row_to_sheet(r) for r in db.list_sheets(exam_id)]
 
     total = len(rows)
     failed = [r for r in rows if r["status"] == "failed"]
-    missing_roll = [r for r in rows if r["status"] == "validated" and not r["rollNumber"]]
     # Sheets that were read fine but violate the filling instructions
     # (incomplete darkening, double/stray marks, erasing, pencil, …).
-    flagged = [r for r in rows if r["status"] == "validated" and r["rollNumber"] and r["flags"]]
-    ready = sum(1 for r in rows if r["status"] == "validated" and r["rollNumber"])
+    flagged = [r for r in rows if r["status"] == "validated" and r["flags"]]
+    # Every readable sheet is gradeable, roll number or not.
+    ready = sum(1 for r in rows if r["status"] == "validated")
 
     details = []
     if failed:
         details.append(f"{len(failed)} sheet(s) could not be read.")
-    if missing_roll:
-        details.append(f"Roll number missing on {len(missing_roll)} sheet(s).")
     if flagged:
         details.append(
             f"{len(flagged)} sheet(s) violate the filling instructions and need review."
@@ -543,7 +544,7 @@ def validation_summary(exam_id):
         "totalDetected": total,
         "readyForGrading": ready,
         "flagged": len(flagged),
-        "issues": len(failed) + len(missing_roll) + len(flagged),
+        "issues": len(failed) + len(flagged),
         "issueDetails": details,
     })
 

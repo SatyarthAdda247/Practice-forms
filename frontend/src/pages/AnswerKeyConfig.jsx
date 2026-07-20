@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 
 const OPTIONS = ["A", "B", "C", "D"];
+const PRESETS = [50, 100, 200];
 
 // One question row: number + four radio bubbles.
 function QuestionRow({ q, value, onChange }) {
@@ -50,6 +51,7 @@ export default function AnswerKeyConfig() {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [numQuestions, setNumQuestions] = useState(50);
+  const [custom, setCustom] = useState(false); // "Custom…" OMR format selected
   const [marksCorrect, setMarksCorrect] = useState(4);
   const [marksPenalty, setMarksPenalty] = useState(1);
   const [answers, setAnswers] = useState({}); // { "1": "B", ... }
@@ -66,6 +68,7 @@ export default function AnswerKeyConfig() {
         setName(e.name);
         setDate(e.date || "");
         setNumQuestions(e.numQuestions);
+        setCustom(!PRESETS.includes(e.numQuestions));
         setMarksCorrect(e.marksCorrect);
         setMarksPenalty(e.marksPenalty);
         setAnswers(e.answerKey || {});
@@ -108,14 +111,24 @@ export default function AnswerKeyConfig() {
       setError("Exam name is required.");
       return;
     }
+    const nq = Number(numQuestions);
+    if (!Number.isInteger(nq) || nq < 1 || nq > 200) {
+      setError("Number of questions must be between 1 and 200.");
+      return;
+    }
+    // Drop any answers for questions beyond the (possibly reduced) count so the
+    // backend doesn't reject the key as out of range.
+    const answerKey = Object.fromEntries(
+      Object.entries(answers).filter(([q]) => Number(q) >= 1 && Number(q) <= nq)
+    );
     setSaving(true);
     const payload = {
       name: name.trim(),
       date: date || null,
-      numQuestions: Number(numQuestions),
+      numQuestions: nq,
       marksCorrect: Number(marksCorrect),
       marksPenalty: Number(marksPenalty),
-      answerKey: answers,
+      answerKey,
     };
     try {
       const exam = id
@@ -200,14 +213,41 @@ export default function AnswerKeyConfig() {
                   OMR Format
                 </label>
                 <select
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(Number(e.target.value))}
+                  value={custom ? "custom" : numQuestions}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setCustom(true);
+                    } else {
+                      setCustom(false);
+                      setNumQuestions(Number(e.target.value));
+                    }
+                  }}
                   className="w-full bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-shadow"
                 >
                   <option value={50}>50 Questions (Standard)</option>
                   <option value={100}>100 Questions</option>
                   <option value={200}>200 Questions (Extended)</option>
+                  <option value="custom">Custom…</option>
                 </select>
+                {custom && (
+                  <div className="mt-sm">
+                    <label className="block font-label-md text-label-md text-on-surface-variant mb-xs">
+                      Number of Questions
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="200"
+                      value={numQuestions}
+                      onChange={(e) => setNumQuestions(Number(e.target.value))}
+                      placeholder="e.g., 35"
+                      className="w-full bg-surface border border-outline-variant rounded-lg px-sm py-2 font-data-mono text-data-mono text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-shadow"
+                    />
+                    <p className="mt-xs font-body-sm text-body-sm text-on-surface-variant">
+                      Only these questions are graded, even if the printed sheet has more.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-md">
                 <div className="flex-1">
