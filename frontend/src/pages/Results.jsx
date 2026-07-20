@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
+import Loading from "../components/Loading.jsx";
 import { violationLabel } from "../violations.js";
 
 function StatCard({ icon, label, value, accent = "text-on-background", sub }) {
@@ -120,7 +121,7 @@ export default function Results() {
       )}
 
       {loading ? (
-        <p className="text-secondary">Loading…</p>
+        <Loading />
       ) : !stats || stats.graded === 0 ? (
         <div className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-xl p-xl text-center text-on-surface-variant">
           <Icon name="analytics" size={40} className="text-outline" />

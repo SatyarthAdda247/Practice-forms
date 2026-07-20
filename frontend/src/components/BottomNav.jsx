@@ -9,14 +9,12 @@ const TABS = [
   { to: "/results", label: "Results", icon: "analytics" },
 ];
 const ADMIN_TAB = { to: "/admin", label: "Admin", icon: "admin_panel_settings" };
-const SETTINGS_TAB = { to: "/settings", label: "Settings", icon: "settings" };
 
 export default function BottomNav() {
   const { user } = useAuth();
   const tabs = [
     ...TABS,
     ...(["admin", "super_admin"].includes(user?.role) ? [ADMIN_TAB] : []),
-    SETTINGS_TAB,
   ];
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-container-low border-t border-outline-variant flex justify-around items-stretch h-16 pb-[env(safe-area-inset-bottom)]">

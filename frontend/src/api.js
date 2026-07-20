@@ -19,7 +19,29 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;
 }
 
+// --- Lightweight GET cache -------------------------------------------------
+// Caches successful GET responses in memory for a short window so revisiting a
+// page renders instantly instead of waiting on a network round-trip. Any write
+// (POST/PUT/PATCH/DELETE) or a 401 clears the cache so data never goes stale
+// after a change.
+const GET_CACHE_TTL = 30_000; // ms
+const getCache = new Map(); // path -> { ts, body }
+
+export function clearApiCache() {
+  getCache.clear();
+}
+
 async function request(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const isGet = method === "GET";
+
+  if (isGet) {
+    const hit = getCache.get(path);
+    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
+      return hit.body; // instant — served from cache
+    }
+  }
+
   const token = tokenStore.get();
   const headers = { ...(options.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -28,15 +50,25 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     tokenStore.clear();
+    clearApiCache();
     if (onUnauthorized) onUnauthorized();
     throw new Error("Your session has expired. Please sign in again.");
   }
-  if (res.status === 204) return null;
+  if (res.status === 204) {
+    clearApiCache(); // a successful mutation may have changed anything
+    return null;
+  }
 
   const isJson = res.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await res.json() : await res.text();
   if (!res.ok) {
     throw new Error((body && body.error) || `Request failed (${res.status})`);
+  }
+
+  if (isGet) {
+    getCache.set(path, { ts: Date.now(), body });
+  } else {
+    clearApiCache(); // writes invalidate cached reads
   }
   return body;
 }
@@ -57,6 +89,7 @@ export const api = {
 
   // Admin — manage access
   adminListUsers: () => request("/admin/users"),
+  adminCreateUser: (data) => request("/admin/users", json("POST", data)),
   adminUpdateUser: (id, data) => request(`/admin/users/${id}`, json("PATCH", data)),
   adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
 

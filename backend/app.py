@@ -162,6 +162,7 @@ def api_index():
             {"method": "GET", "path": "/api/auth/me", "desc": "Return the signed-in user"},
             {"method": "POST", "path": "/api/auth/logout", "desc": "Client-side logout (stateless)"},
             {"method": "GET", "path": "/api/admin/users", "desc": "List users + allowed domains (admin)"},
+            {"method": "POST", "path": "/api/admin/users", "desc": "Pre-authorise a user by email (admin)"},
             {"method": "PATCH", "path": "/api/admin/users/<id>", "desc": "Set a user's role / access (admin)"},
             {"method": "DELETE", "path": "/api/admin/users/<id>", "desc": "Delete a user (admin)"},
             {"method": "GET", "path": "/api/exams", "desc": "List exams"},
@@ -257,6 +258,39 @@ def admin_list_users():
     })
 
 
+@app.post("/api/admin/users")
+@admin_required
+def admin_create_user():
+    """Pre-authorise a user by email so they can sign in with the given role.
+
+    Body: ``{ "email": "...", "role": "member|admin|super_admin", "name": "?" }``.
+    The email must be on an allowed domain. **Super-admins only.** The Google
+    identity links to this record on the user's first sign-in.
+    """
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can add users", 403)
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    role = data.get("role") or "member"
+    name = (data.get("name") or "").strip() or email.split("@")[0]
+
+    if not email or "@" not in email:
+        return error("a valid email is required")
+    if not is_allowed_domain(email):
+        return error(
+            "email must be on an allowed domain: " + ", ".join(sorted(ALLOWED_DOMAINS))
+        )
+    if role not in ("member", "admin", "super_admin"):
+        return error("role must be 'member', 'admin', or 'super_admin'")
+
+    try:
+        user = db.create_user(email, name, role)
+    except ValueError as exc:  # duplicate email
+        return error(str(exc), 409)
+    return jsonify(user), 201
+
+
 def _can_manage(actor, target):
     """Access/deletion rights: super-admins manage everyone; regular admins may
     only manage members (not other admins or super-admins)."""
@@ -315,15 +349,15 @@ def admin_update_user(user_id):
 @app.delete("/api/admin/users/<int:user_id>")
 @admin_required
 def admin_delete_user(user_id):
-    """Delete a user. Regular admins may only delete members; nobody can delete
-    themselves or the last active super-admin."""
+    """Delete a user. **Super-admins only.** Nobody can delete themselves or the
+    last active super-admin."""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can delete users", 403)
     target = db.get_user_by_id(user_id)
     if target is None:
         return error("user not found", 404)
     if user_id == g.user["id"]:
         return error("you cannot delete your own account")
-    if not _can_manage(g.user, target):
-        return error("you don't have permission to delete this user", 403)
     if target["role"] == "super_admin" and target["active"] and db.count_super_admins() <= 1:
         return error("cannot delete the last active super admin")
     db.delete_user(user_id)
