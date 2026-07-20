@@ -222,13 +222,15 @@ Aggregated summary for the upload screen:
   "flagged": 3,
   "issues": 4,
   "issueDetails": [
-    "Roll number missing on 1 sheet.",
+    "1 sheet(s) could not be read.",
     "3 sheet(s) violate the filling instructions and need review."
   ]
 }
 ```
-`flagged` counts readable sheets that violate the filling instructions; they
-still count toward `readyForGrading` (a flag is a review warning, not a block).
+`readyForGrading` counts every sheet that was read successfully — a **missing
+roll number does not block grading**. `flagged` counts readable sheets that
+violate the filling instructions; they too still count toward `readyForGrading`
+(a flag is a review warning, not a block).
 
 ---
 
