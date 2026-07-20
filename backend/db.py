@@ -179,6 +179,8 @@ def _table_specs():
             F("roll_number", "STRING"),
             F("student_name", "STRING"),
             F("answers", "STRING", mode="REQUIRED"),
+            # JSON array of filling-rule violation codes (see grading.py).
+            F("flags", "STRING"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
         ], ["exam_id", "id"]),
         (_RESULTS_ID, [
@@ -207,7 +209,28 @@ def init_db():
     for table_id, schema, clustering in _table_specs():
         table = bigquery.Table(table_id, schema=schema)
         table.clustering_fields = clustering
-        client.create_table(table, exists_ok=True)
+        created = client.create_table(table, exists_ok=True)
+        _reconcile_columns(client, created, schema)
+
+
+def _reconcile_columns(client, table, desired_schema):
+    """Additively add any missing (nullable) columns to an existing table.
+
+    ``create_table(exists_ok=True)`` returns the *existing* table untouched, so
+    columns introduced after a table was first created (e.g. ``flags``) would
+    otherwise never appear. BigQuery permits appending NULLABLE columns in
+    place; we never drop or retype existing ones."""
+    have = {f.name for f in table.schema}
+    missing = [f for f in desired_schema if f.name not in have]
+    if not missing:
+        return
+    for f in missing:
+        if f.mode == "REQUIRED":
+            # Can't add a REQUIRED column to a populated table; skip loudly
+            # rather than fail boot. (No such case today.)
+            continue
+    table.schema = list(table.schema) + [f for f in missing if f.mode != "REQUIRED"]
+    client.update_table(table, ["schema"])
 
 
 # --------------------------------------------------------------------------- #
@@ -244,6 +267,7 @@ def row_to_sheet(row):
         "rollNumber": row["roll_number"],
         "studentName": row["student_name"],
         "answers": json.loads(row["answers"]),
+        "flags": json.loads(row["flags"]) if row.get("flags") else [],
         "createdAt": _ts(row["created_at"]),
     }
 
@@ -348,7 +372,7 @@ def list_sheets(exam_id):
     """All sheets for an exam as physical-column dicts, newest first."""
     _, rows = _execute(
         f"SELECT id, exam_id, filename, size_bytes, status, error, "
-        f"roll_number, student_name, answers, created_at FROM {_SHEETS} "
+        f"roll_number, student_name, answers, flags, created_at FROM {_SHEETS} "
         f"WHERE exam_id = @exam_id ORDER BY id DESC",
         [_p("exam_id", "INT64", exam_id)],
     )
@@ -359,7 +383,7 @@ def list_validated_sheets(exam_id):
     """Sheets for an exam with status ``validated`` (grading input)."""
     _, rows = _execute(
         f"SELECT id, exam_id, filename, size_bytes, status, error, "
-        f"roll_number, student_name, answers, created_at FROM {_SHEETS} "
+        f"roll_number, student_name, answers, flags, created_at FROM {_SHEETS} "
         f"WHERE exam_id = @exam_id AND status = 'validated'",
         [_p("exam_id", "INT64", exam_id)],
     )
@@ -367,18 +391,20 @@ def list_validated_sheets(exam_id):
 
 
 def create_sheet(exam_id, filename, size_bytes, status, error=None,
-                 roll_number=None, student_name=None, answers=None):
+                 roll_number=None, student_name=None, answers=None, flags=None):
     """Insert a sheet and return it as a physical-column dict. ``answers`` is a
-    dict (defaults to ``{}``), stored as a JSON string."""
+    dict (defaults to ``{}``) and ``flags`` is a list of violation codes
+    (defaults to ``[]``); both are stored as JSON strings."""
     sheet_id = _next_id(_SHEETS)
     created_at = _now()
     answers_json = json.dumps(answers or {})
+    flags_json = json.dumps(flags or [])
     _execute(
         f"""INSERT INTO {_SHEETS}
             (id, exam_id, filename, size_bytes, status, error, roll_number,
-             student_name, answers, created_at)
+             student_name, answers, flags, created_at)
             VALUES (@id, @exam_id, @filename, @size_bytes, @status, @error,
-                    @roll_number, @student_name, @answers, @created_at)""",
+                    @roll_number, @student_name, @answers, @flags, @created_at)""",
         [
             _p("id", "INT64", sheet_id),
             _p("exam_id", "INT64", exam_id),
@@ -389,6 +415,7 @@ def create_sheet(exam_id, filename, size_bytes, status, error=None,
             _p("roll_number", "STRING", roll_number),
             _p("student_name", "STRING", student_name),
             _p("answers", "STRING", answers_json),
+            _p("flags", "STRING", flags_json),
             _p("created_at", "TIMESTAMP", created_at),
         ],
     )
@@ -402,6 +429,7 @@ def create_sheet(exam_id, filename, size_bytes, status, error=None,
         "roll_number": roll_number,
         "student_name": student_name,
         "answers": answers_json,
+        "flags": flags_json,
         "created_at": created_at,
     }
 
@@ -462,11 +490,12 @@ def replace_results(exam_id, results):
 def list_results(exam_id):
     """Results joined with their sheet metadata, highest score first. Returns
     dicts with keys: ``sheet_id``, ``roll_number``, ``student_name``,
-    ``filename``, ``correct``, ``wrong``, ``unattempted``, ``score``,
-    ``max_score``."""
+    ``filename``, ``flags``, ``correct``, ``wrong``, ``unattempted``,
+    ``score``, ``max_score``."""
     _, rows = _execute(
         f"""SELECT r.sheet_id AS sheet_id, s.roll_number AS roll_number,
                    s.student_name AS student_name, s.filename AS filename,
+                   s.flags AS flags,
                    r.correct AS correct, r.wrong AS wrong,
                    r.unattempted AS unattempted, r.score AS score,
                    r.max_score AS max_score

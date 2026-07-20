@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
+import { violationLabel } from "../violations.js";
 
 const STATUS_STYLES = {
   validated: {
@@ -205,6 +206,7 @@ export default function BulkUpload() {
               <ul className="divide-y divide-outline-variant">
                 {sheets.map((s) => {
                   const st = STATUS_STYLES[s.status] || STATUS_STYLES.processing;
+                  const flags = s.flags || [];
                   return (
                     <li
                       key={s.id}
@@ -227,8 +229,27 @@ export default function BulkUpload() {
                             }`}
                           >
                             {s.status === "failed" ? s.error : humanSize(s.sizeBytes)}
-                            {s.rollNumber ? ` • ${s.rollNumber}` : ""}
+                            {s.studentName ? ` • ${s.studentName}` : ""}
+                            {s.status === "validated" &&
+                              (s.rollNumber ? (
+                                ` • ${s.rollNumber}`
+                              ) : (
+                                <span className="text-error font-medium"> • Roll missing</span>
+                              ))}
                           </p>
+                          {flags.length > 0 && (
+                            <div className="flex flex-wrap gap-xs mt-xs">
+                              {flags.map((code) => (
+                                <span
+                                  key={code}
+                                  className="inline-flex items-center gap-xs font-label-md text-[11px] px-sm py-[2px] rounded-full bg-error-container/40 text-error border border-[#fca5a5]"
+                                >
+                                  <Icon name="warning" size={12} filled />
+                                  {violationLabel(code)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-lg shrink-0">
@@ -238,9 +259,13 @@ export default function BulkUpload() {
                           </div>
                         </div>
                         <span
-                          className={`font-label-md text-label-md px-sm py-xs rounded-full border hidden sm:inline-block ${st.badge}`}
+                          className={`font-label-md text-label-md px-sm py-xs rounded-full border hidden sm:inline-block ${
+                            flags.length > 0 && s.status === "validated"
+                              ? "text-error bg-error-container border-[#f87171]"
+                              : st.badge
+                          }`}
                         >
-                          {st.label}
+                          {flags.length > 0 && s.status === "validated" ? "Review" : st.label}
                         </span>
                         <button
                           onClick={() => removeSheet(s.id)}

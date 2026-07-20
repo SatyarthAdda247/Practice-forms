@@ -12,6 +12,7 @@ A machine-readable summary of every route is served at ``GET /api`` and the
 full human-readable reference lives in ``API.md``.
 """
 
+import io
 import json
 import os
 import tempfile
@@ -85,7 +86,8 @@ from auth import (
     role_for_email,
     verify_google_token,
 )
-from grading import detect_answers, grade
+import omr_pipeline
+from grading import grade
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
@@ -111,6 +113,21 @@ db.init_db()
 # --------------------------------------------------------------------------- #
 def error(message, status=400):
     return jsonify({"error": message}), status
+
+
+def _pdf_page_count(blob):
+    """Return the number of pages in a PDF blob, or 1 if it can't be parsed.
+
+    A batch scan often packs one student's OMR sheet per page, so the page
+    count is how many sheets a single uploaded PDF actually contains."""
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(io.BytesIO(blob))
+        return max(1, len(reader.pages))
+    except Exception:
+        # Corrupt/unreadable PDF: fall back to treating it as a single sheet.
+        return 1
 
 
 def _validate_answer_key(key, num_questions):
@@ -445,17 +462,35 @@ def upload_sheets(exam_id):
                 exam_id, fname, size, status="failed",
                 error="Unrecognized format",
             )
-        else:
-            path = os.path.join(UPLOAD_DIR, f"{exam_id}_{fname}")
-            with open(path, "wb") as out:
-                out.write(blob)
-            answers = detect_answers(fname, exam["num_questions"])
-            roll = f"R{1000 + (abs(hash(fname)) % 9000)}"
-            row = db.create_sheet(
-                exam_id, fname, size, status="validated",
-                roll_number=roll, answers=answers,
-            )
-        created.append(db.row_to_sheet(row))
+            created.append(db.row_to_sheet(row))
+            continue
+
+        path = os.path.join(UPLOAD_DIR, f"{exam_id}_{fname}")
+        with open(path, "wb") as out:
+            out.write(blob)
+
+        # A single PDF can bundle several students' sheets (one per page), so
+        # register one sheet record per page. Images are always a single sheet.
+        pages = _pdf_page_count(blob) if ext == ".pdf" else 1
+        base, base_ext = os.path.splitext(fname)
+        for page in range(pages):
+            sheet_name = f"{base} [page {page + 1}]{base_ext}" if pages > 1 else fname
+            try:
+                # Real OMR: read the actually-marked bubbles off the scan. The
+                # reader also flags filling-rule issues (double / faint marks).
+                read = omr_pipeline.read_sheet(path, page=page)
+                row = db.create_sheet(
+                    exam_id, sheet_name, size, status="validated",
+                    roll_number=None, student_name=None,
+                    answers=read["answers"], flags=read["flags"],
+                )
+            except Exception as exc:  # unreadable scan / unexpected layout
+                app.logger.exception("OMR read failed for %s page %s", fname, page)
+                row = db.create_sheet(
+                    exam_id, sheet_name, size, status="failed",
+                    error=f"Could not read sheet: {exc}",
+                )
+            created.append(db.row_to_sheet(row))
     return jsonify(created), 201
 
 
@@ -476,27 +511,39 @@ def validation_summary(exam_id):
         {
           "totalDetected": 51,
           "readyForGrading": 50,
-          "issues": 1,
-          "issueDetails": ["Roll number missing on 1 sheet."]
+          "flagged": 3,
+          "issues": 4,
+          "issueDetails": [
+            "Roll number missing on 1 sheet.",
+            "3 sheet(s) violate the filling instructions and need review."
+          ]
         }
     """
-    rows = db.list_sheets(exam_id)
+    rows = [db.row_to_sheet(r) for r in db.list_sheets(exam_id)]
 
     total = len(rows)
-    ready = sum(1 for r in rows if r["status"] == "validated" and r["roll_number"])
     failed = [r for r in rows if r["status"] == "failed"]
-    missing_roll = [r for r in rows if r["status"] == "validated" and not r["roll_number"]]
+    missing_roll = [r for r in rows if r["status"] == "validated" and not r["rollNumber"]]
+    # Sheets that were read fine but violate the filling instructions
+    # (incomplete darkening, double/stray marks, erasing, pencil, …).
+    flagged = [r for r in rows if r["status"] == "validated" and r["rollNumber"] and r["flags"]]
+    ready = sum(1 for r in rows if r["status"] == "validated" and r["rollNumber"])
 
     details = []
     if failed:
         details.append(f"{len(failed)} sheet(s) could not be read.")
     if missing_roll:
         details.append(f"Roll number missing on {len(missing_roll)} sheet(s).")
+    if flagged:
+        details.append(
+            f"{len(flagged)} sheet(s) violate the filling instructions and need review."
+        )
 
     return jsonify({
         "totalDetected": total,
         "readyForGrading": ready,
-        "issues": len(failed) + len(missing_roll),
+        "flagged": len(flagged),
+        "issues": len(failed) + len(missing_roll) + len(flagged),
         "issueDetails": details,
     })
 
@@ -564,6 +611,7 @@ def results(exam_id):
         "rollNumber": r["roll_number"],
         "studentName": r["student_name"],
         "filename": r["filename"],
+        "flags": json.loads(r["flags"]) if r.get("flags") else [],
         "correct": r["correct"],
         "wrong": r["wrong"],
         "unattempted": r["unattempted"],

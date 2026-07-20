@@ -171,11 +171,26 @@ The `Sheet` object:
   "status": "validated",          // processing | validated | failed
   "error": null,                   // set when status == failed
   "rollNumber": "R1234",
-  "studentName": null,
+  "studentName": "Aarav Sharma",
   "answers": { "1": "A", "2": "C" },
+  "flags": ["MULTIPLE_MARKS"],      // filling-rule violations; [] when clean
   "createdAt": "2024-03-01 10:25:00"
 }
 ```
+
+A multi-page PDF is treated as one sheet **per page** (one student per page),
+so uploading a 4-student batch PDF creates 4 `Sheet` records.
+
+**Filling-rule violation codes** (`flags`) — mirror the printed *Instructions
+for Filling the Sheet*:
+
+| Code | Meaning |
+|------|---------|
+| `MULTIPLE_MARKS`  | More than one option darkened for a question |
+| `INCOMPLETE_FILL` | Circle not darkened completely/properly |
+| `LIGHT_MARK`      | Faint mark — likely pencil, not pen |
+| `STRAY_MARKS`     | Stray marks on the sheet |
+| `ERASING`         | Cutting / erasing / white-fluid correction |
 
 ### `GET /api/exams/{id}/sheets`
 List every uploaded sheet for an exam (the upload queue). → `200` `Sheet[]`
@@ -204,10 +219,16 @@ Aggregated summary for the upload screen:
 {
   "totalDetected": 51,
   "readyForGrading": 50,
-  "issues": 1,
-  "issueDetails": ["Roll number missing on 1 sheet."]
+  "flagged": 3,
+  "issues": 4,
+  "issueDetails": [
+    "Roll number missing on 1 sheet.",
+    "3 sheet(s) violate the filling instructions and need review."
+  ]
 }
 ```
+`flagged` counts readable sheets that violate the filling instructions; they
+still count toward `readyForGrading` (a flag is a review warning, not a block).
 
 ---
 
@@ -238,8 +259,9 @@ Full dashboard payload:
     {
       "sheetId": 12,
       "rollNumber": "R1234",
-      "studentName": null,
+      "studentName": "Aarav Sharma",
       "filename": "scan_12.pdf",
+      "flags": ["MULTIPLE_MARKS"],
       "correct": 40,
       "wrong": 8,
       "unattempted": 2,
@@ -256,8 +278,14 @@ threshold. → `200` · `404`.
 
 ## Notes on OMR detection
 
-Mark detection (`backend/grading.py :: detect_answers`) is a **deterministic
-stub** — it fabricates reproducible answers seeded by the filename rather than
-reading pixels. Replace it with a real OpenCV pipeline (deskew → locate fiducial
-markers → sample bubble intensity → threshold) in production; nothing else in
-the app changes as long as it returns `{ "<question>": "<A|B|C|D>" }`.
+Mark detection is a **real OpenCV pipeline** in `backend/omr_pipeline.py`
+(`read_sheet`). For each page it renders the scan (PyMuPDF), finds the five
+answer-column blocks, clusters bubble contours into a 20×4 grid per block, and
+measures per-bubble darkness to decide the marked option. It also flags filling
+issues (`MULTIPLE_MARKS`, `LIGHT_MARK`). It is calibrated for the Adda247
+100-question A/B/C/D template; an unrecognised layout makes the sheet `failed`
+with an error rather than guessing.
+
+**Not yet auto-detected:** roll number (empty bubble grid on the sample) and the
+handwritten student name — both return `null` pending a filled sample to
+calibrate/validate against. Grading itself (`grading.py :: grade`) is unchanged.
