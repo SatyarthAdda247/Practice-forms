@@ -92,6 +92,9 @@ from grading import grade
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
 MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB, per the upload screen copy
+# OCR the handwritten student name via Google Vision (best-effort). Off with
+# OMR_NAME_OCR=0 — e.g. when the Vision API isn't enabled on the project.
+NAME_OCR = os.environ.get("OMR_NAME_OCR", "1") != "0"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_BYTES
@@ -477,11 +480,12 @@ def upload_sheets(exam_id):
             sheet_name = f"{base} [page {page + 1}]{base_ext}" if pages > 1 else fname
             try:
                 # Real OMR: read the actually-marked bubbles off the scan. The
-                # reader also flags filling-rule issues (double / faint marks).
-                read = omr_pipeline.read_sheet(path, page=page)
+                # reader also flags filling-rule issues (double / faint marks),
+                # and optionally OCRs the handwritten student name.
+                read = omr_pipeline.read_sheet(path, page=page, read_name=NAME_OCR)
                 row = db.create_sheet(
                     exam_id, sheet_name, size, status="validated",
-                    roll_number=None, student_name=None,
+                    roll_number=None, student_name=read.get("name"),
                     answers=read["answers"], flags=read["flags"],
                 )
             except Exception as exc:  # unreadable scan / unexpected layout

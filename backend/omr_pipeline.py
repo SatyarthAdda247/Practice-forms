@@ -156,13 +156,15 @@ def _classify(darkness):
     return None, []
 
 
-def read_sheet(path, page=0, dpi=200):
+def read_sheet(path, page=0, dpi=200, read_name=False):
     """Read a scanned answer sheet.
 
-    Returns ``{"answers": {"1": "A", ...}, "flags": [...]}`` where ``answers``
-    holds only the questions with a single clean mark and ``flags`` is the set
-    of filling-rule issues found on the sheet. Raises :class:`OMRError` if the
-    page doesn't look like the expected 5-block template."""
+    Returns ``{"answers": {"1": "A", ...}, "flags": [...], "name": str|None}``
+    where ``answers`` holds only the questions with a single clean mark and
+    ``flags`` is the set of filling-rule issues found on the sheet. When
+    ``read_name`` is set, the handwritten name strip is OCR'd (best-effort;
+    ``None`` if unavailable). Raises :class:`OMRError` if the page doesn't look
+    like the expected 5-block template."""
     gray = _render_gray(path, page=page, dpi=dpi)
     blocks = _find_answer_blocks(gray)
     if len(blocks) < 1:
@@ -180,4 +182,10 @@ def read_sheet(path, page=0, dpi=200):
             if answer is not None:
                 answers[str(qno)] = answer
             flags.update(qflags)
-    return {"answers": answers, "flags": sorted(flags)}
+
+    name = None
+    if read_name:
+        import name_ocr  # lazy: avoids importing Vision unless enabled
+
+        name = name_ocr.read_name_from_gray(gray)
+    return {"answers": answers, "flags": sorted(flags), "name": name}

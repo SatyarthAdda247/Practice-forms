@@ -4,7 +4,7 @@ Everything lives in BigQuery now:
 
   * **Users** live in the shared ``Aspirant_portal`` dataset — see
     :mod:`bigquery_users`. Those functions are re-exported here so callers can
-    keep using ``db.get_user_by_id`` etc. (currently stubbed while login is off).
+    keep using ``db.get_user_by_id`` etc.
   * **Exams / sheets / results** live in app-owned BigQuery tables
     (``omr_exams`` / ``omr_sheets`` / ``omr_results`` by default), managed by
     this module.
@@ -27,52 +27,20 @@ import json
 import os
 from datetime import datetime, timezone
 
-# --- TEMPORARY: BigQuery user imports stubbed out (login is disabled) ---
-# Original imports:
-# from bigquery_users import (  # noqa: F401
-#     count_super_admins,
-#     create_local_user,
-#     delete_user,
-#     get_user_by_id,
-#     get_user_row_by_email,
-#     list_users,
-#     row_to_user,
-#     update_user,
-#     upsert_user,
-# )
-# from bigquery_users import init as _init_users
-
-# Stub user functions (unused while login is disabled)
-def get_user_by_id(user_id):
-    return None
-
-def upsert_user(**kwargs):
-    return None
-
-def list_users():
-    return []
-
-def update_user(user_id, **kwargs):
-    return None
-
-def delete_user(user_id):
-    return False
-
-def count_super_admins():
-    return 1
-
-def get_user_row_by_email(email):
-    return None
-
-def create_local_user(email, name, password_hash):
-    return None
-
-def row_to_user(row):
-    return None
-
-def _init_users():
-    pass
-# --- END TEMPORARY user stubs ---
+# Users live in the shared BigQuery dataset; re-export the repo functions so
+# callers keep using db.get_user_by_id etc.
+from bigquery_users import (  # noqa: F401
+    count_super_admins,
+    create_local_user,
+    delete_user,
+    get_user_by_id,
+    get_user_row_by_email,
+    list_users,
+    row_to_user,
+    update_user,
+    upsert_user,
+)
+from bigquery_users import init as _init_users
 
 
 # --------------------------------------------------------------------------- #
@@ -201,10 +169,10 @@ def init_db():
     """Ensure the exams/sheets/results tables exist in BigQuery (idempotent).
 
     Uses the metadata API (``create_table(..., exists_ok=True)``) so it does not
-    need ``bigquery.jobs.create``. BigQuery user init is temporarily stubbed out
-    while login is disabled."""
+    need ``bigquery.jobs.create``. Also provisions the shared users table schema
+    via ``bigquery_users.init()``."""
     from google.cloud import bigquery
-    _init_users()  # TEMPORARY: no-op stub
+    _init_users()  # ensure the shared users table exists with a schema
     client = _client()
     for table_id, schema, clustering in _table_specs():
         table = bigquery.Table(table_id, schema=schema)
