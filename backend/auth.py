@@ -161,32 +161,16 @@ def _current_user():
     return user, None
 
 
-# --- TEMPORARY: Auth bypassed until login is re-enabled ---
-_DEV_USER = {
-    "id": 0,
-    "email": "dev@localhost",
-    "name": "Dev User",
-    "picture": None,
-    "role": "super_admin",
-    "active": True,
-}
-
-
 def login_required(fn):
     """Decorator: require a valid session for an active user. Populates
     ``flask.g.user`` with the live user record (id, email, name, role, ...).
-
-    TEMPORARY: bypassed — injects a fake dev user so all endpoints work
-    without authentication.
-    """
+    Returns 401/403 to unauthenticated or revoked callers."""
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        # --- ORIGINAL (commented out until login is re-enabled) ---
-        # user, err = _current_user()
-        # if err:
-        #     return err
-        # g.user = user
-        g.user = _DEV_USER
+        user, err = _current_user()
+        if err:
+            return err
+        g.user = user
         return fn(*args, **kwargs)
 
     return wrapper
@@ -194,21 +178,15 @@ def login_required(fn):
 
 def admin_required(fn):
     """Decorator: like :func:`login_required` but requires an admin tier
-    (``admin`` or ``super_admin``).
-
-    TEMPORARY: bypassed — injects a fake super_admin dev user.
-    """
+    (``admin`` or ``super_admin``). Non-admins get 403."""
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        # --- ORIGINAL (commented out until login is re-enabled) ---
-        # user, err = _current_user()
-        # if err:
-        #     return err
-        # if not is_admin_role(user["role"]):
-        #     return jsonify({"error": "administrator access required"}), 403
-        # g.user = user
-        g.user = _DEV_USER
+        user, err = _current_user()
+        if err:
+            return err
+        if not is_admin_role(user["role"]):
+            return jsonify({"error": "administrator access required"}), 403
+        g.user = user
         return fn(*args, **kwargs)
 
     return wrapper
-# --- END TEMPORARY ---

@@ -144,14 +144,49 @@ def row_to_user(row):
 # --------------------------------------------------------------------------- #
 # Public API (mirrors the previous SQLite db.py user functions)
 # --------------------------------------------------------------------------- #
+def _schema():
+    """SchemaField list for the users table (all NULLABLE so the columns can be
+    added to a pre-existing/empty table in place)."""
+    from google.cloud import bigquery
+    F = bigquery.SchemaField
+    c = COLS
+    return [
+        F(c["id"], _id_type()),
+        F(c["google_sub"], "STRING"),
+        F(c["email"], "STRING"),
+        F(c["name"], "STRING"),
+        F(c["picture"], "STRING"),
+        F(c["password_hash"], "STRING"),
+        F(c["role"], "STRING"),
+        F(c["active"], "BOOL"),
+        F(c["created_at"], "TIMESTAMP"),
+    ]
+
+
 def init():
-    """Verify the users table is reachable. Metadata only — this does NOT scan
-    any rows. Does not create the table (it is shared/pre-existing)."""
+    """Ensure the users table exists **with a schema** (idempotent, additive).
+
+    Uses the metadata API only (``create_table``/``update_table`` — needs
+    ``tables.create``/``tables.update``, not ``jobs.create``). Handles the case
+    where the table pre-exists but has no/partial schema (BigQuery then errors
+    "Table ... does not have a schema" on every query): the missing NULLABLE
+    columns are added in place. Never drops or retypes existing columns."""
+    from google.cloud import bigquery
+    client = _client()
+    table_id = f"{PROJECT}.{DATASET}.{TABLE}"
+    schema = _schema()
     try:
-        _client().get_table(f"{PROJECT}.{DATASET}.{TABLE}")
+        table = client.create_table(
+            bigquery.Table(table_id, schema=schema), exists_ok=True
+        )
+        have = {f.name for f in table.schema}
+        missing = [f for f in schema if f.name not in have]
+        if missing:
+            table.schema = list(table.schema) + missing
+            client.update_table(table, ["schema"])
     except Exception as exc:  # noqa: BLE001 — surface a clear config error
         raise RuntimeError(
-            f"Cannot reach BigQuery users table {PROJECT}.{DATASET}.{TABLE}: {exc}. "
+            f"Cannot provision BigQuery users table {table_id}: {exc}. "
             "Check GOOGLE_APPLICATION_CREDENTIALS and BQ_* env vars."
         ) from exc
 
@@ -178,6 +213,41 @@ def get_user_by_google_sub(google_sub):
         [_p("sub", "STRING", google_sub)],
     )
     return row_to_user(rows[0]) if rows else None
+
+
+def get_user_by_email(email):
+    """Return a user dict by email (case-insensitive), or ``None``."""
+    _, rows = _execute(
+        f"SELECT {_select_cols()} FROM {_FQN} "
+        f"WHERE LOWER({COLS['email']}) = @email LIMIT 1",
+        [_p("email", "STRING", (email or "").lower())],
+    )
+    return row_to_user(rows[0]) if rows else None
+
+
+def create_user(email, name, role="member"):
+    """Pre-authorise ("invite") a user by email with a role, before they have
+    signed in — so ``google_sub`` is left NULL and linked on their first login
+    (see :func:`upsert_user`). Returns the created dict; raises ``ValueError``
+    if a user with that email already exists."""
+    if get_user_by_email(email) is not None:
+        raise ValueError("a user with that email already exists")
+    c = COLS
+    new_id = _new_id()
+    _execute(
+        f"""INSERT INTO {_FQN}
+            ({c['id']}, {c['email']}, {c['name']}, {c['role']}, {c['active']},
+             {c['created_at']})
+            VALUES (@id, @email, @name, @role, TRUE, CURRENT_TIMESTAMP())""",
+        [
+            _p("id", _id_type(), new_id),
+            _p("email", "STRING", email),
+            _p("name", "STRING", name or email),
+            _p("role", "STRING", role),
+        ],
+    )
+    _invalidate(new_id)
+    return get_user_by_id(new_id)
 
 
 def upsert_user(google_sub, email, name, picture, role="member"):

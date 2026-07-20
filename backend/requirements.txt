@@ -8,3 +8,4 @@ pypdf==5.1.0
 PyMuPDF==1.28.0
 opencv-python-headless==5.0.0.93
 numpy==2.5.1
+google-cloud-vision==3.10.2

@@ -105,8 +105,9 @@ export default function SideNav() {
           </div>
         )}
         <a
-          href="#"
+          href="mailto:umesh.rao@adda247.com?subject=OMR%20GradePro%20Support"
           className="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-xl font-label-md text-label-md transition-all duration-200"
+          title="Contact support: umesh.rao@adda247.com"
         >
           <Icon name="help" size={20} />
           <span>Help Center</span>

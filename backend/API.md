@@ -288,6 +288,12 @@ issues (`MULTIPLE_MARKS`, `LIGHT_MARK`). It is calibrated for the Adda247
 100-question A/B/C/D template; an unrecognised layout makes the sheet `failed`
 with an error rather than guessing.
 
-**Not yet auto-detected:** roll number (empty bubble grid on the sample) and the
-handwritten student name — both return `null` pending a filled sample to
-calibrate/validate against. Grading itself (`grading.py :: grade`) is unchanged.
+**Student name** is read by handwriting OCR (`name_ocr.py`, Google Cloud
+Vision) from the handwritten NAME strip — the A–Z name *bubble grid* is left
+empty by students, so it carries no machine-readable name. OCR is best-effort
+and non-fatal: `null` when the Vision API is unavailable/disabled
+(`OMR_NAME_OCR=0`) or the scrawl is unreadable. Handwriting recognition is
+imperfect — treat names as needing a human glance.
+
+**Roll number** is still `null` (students leave that bubble grid empty too);
+grading never depends on it. Grading itself (`grading.py :: grade`) is unchanged.

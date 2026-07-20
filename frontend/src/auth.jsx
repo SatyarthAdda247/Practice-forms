@@ -9,50 +9,37 @@ export function useAuth() {
   return useContext(AuthCtx);
 }
 
-// --- TEMPORARY: fake dev user until login is re-enabled ---
-const _DEV_USER = {
-  id: 0,
-  email: "dev@localhost",
-  name: "Dev User",
-  picture: null,
-  role: "super_admin",
-  active: true,
-};
-
 export function AuthProvider({ children }) {
-  // --- ORIGINAL (commented out until login is re-enabled) ---
-  // const [user, setUser] = useState(null);
-  // const [loading, setLoading] = useState(true);
-  //
-  // useEffect(() => {
-  //   setUnauthorizedHandler(() => setUser(null));
-  //   if (tokenStore.get()) {
-  //     api
-  //       .me()
-  //       .then(setUser)
-  //       .catch(() => tokenStore.clear())
-  //       .finally(() => setLoading(false));
-  //   } else {
-  //     setLoading(false);
-  //   }
-  // }, []);
-  //
-  // const login = (token, u) => {
-  //   tokenStore.set(token);
-  //   setUser(u);
-  // };
-  //
-  // const logout = async () => {
-  //   try { await api.logout(); } catch { }
-  //   tokenStore.clear();
-  //   setUser(null);
-  // };
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const user = _DEV_USER;
-  const loading = false;
-  const login = () => {};
-  const logout = () => {};
-  // --- END TEMPORARY ---
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null));
+    if (tokenStore.get()) {
+      api
+        .me()
+        .then(setUser)
+        .catch(() => tokenStore.clear())
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const login = (token, u) => {
+    tokenStore.set(token);
+    setUser(u);
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch {
+      /* ignore network errors on logout */
+    }
+    tokenStore.clear();
+    setUser(null);
+  };
 
   return (
     <AuthCtx.Provider value={{ user, loading, login, logout }}>
