@@ -18,10 +18,6 @@
   }
   .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
   .practice-banner .brand{color:#ffe08a;}
-  .form-control.is-invalid{border-color:#dc3545 !important;}
-  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
-  .invalid-feedback.show{display:block;}
-  .form-control.is-valid{border-color:#28a745 !important;}
   #result.show{display:block !important;}
   .alert-box.error{background:#fdecea;border:1px solid #f5c2c0;color:#842029;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
   .alert-box.success{background:#e6f6ea;border:1px solid #b7e4c3;color:#0f5132;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
@@ -408,21 +404,36 @@
     clearError('txtCode');
   });
 
+  // Uses the official portal's own error/valid classes (valid_error for the
+  // red glow, dynamic-valid-input/-wrapper for the green tick) instead of
+  // Bootstrap's is-invalid/is-valid, so the highlighting matches exactly.
   function showError(field, msg){
     var input = $(field);
     var err = $('err_' + field);
-    if(input){ input.classList.add('is-invalid'); input.classList.remove('is-valid'); }
-    if(err){ err.textContent = msg; err.classList.add('show'); }
+    if(input){
+      input.classList.add('valid_error');
+      input.classList.remove('dynamic-valid-input');
+      if(input.type === 'checkbox' || input.type === 'radio'){
+        input.parentElement.classList.remove('dynamic-valid-wrapper');
+      }
+    }
+    if(err){ err.textContent = msg; err.style.display = 'inline-block'; }
   }
   function clearError(field){
     var input = $(field);
     var err = $('err_' + field);
-    if(input) input.classList.remove('is-invalid');
-    if(err){ err.textContent = ''; err.classList.remove('show'); }
+    if(input) input.classList.remove('valid_error');
+    if(err){ err.textContent = ''; err.style.display = 'none'; }
   }
   function markValid(field){
     var input = $(field);
-    if(input){ input.classList.add('is-valid'); input.classList.remove('is-invalid'); }
+    if(!input) return;
+    input.classList.remove('valid_error');
+    if(input.type === 'checkbox' || input.type === 'radio'){
+      input.parentElement.classList.add('dynamic-valid-wrapper');
+    } else {
+      input.classList.add('dynamic-valid-input');
+    }
   }
 
   function val(id){ return ($(id) && $(id).value || '').trim(); }
@@ -430,6 +441,10 @@
     var els = document.getElementsByName(name);
     for(var i=0;i<els.length;i++){ if(els[i].checked) return els[i].value; }
     return '';
+  }
+  function markRadioGroupValid(name){
+    var els = document.getElementsByName(name);
+    for(var i=0;i<els.length;i++){ if(els[i].checked) markValid(els[i].id); }
   }
 
   function updateFullName(){
@@ -563,7 +578,7 @@
     }
 
     if(!radioVal('namechange')){ showError('namechange','Please select Yes or No.'); errors.push('namechange'); }
-    else { clearError('namechange'); }
+    else { clearError('namechange'); markRadioGroupValid('namechange'); }
 
     if(radioVal('namechange') === 'Y'){
       if(!reqName('fullname_updated','Updated First Name',35)) errors.push('fullname_updated');
@@ -589,11 +604,11 @@
       if(!$('namechange_confirmation').checked){
         showError('namechange_confirmation','Please confirm the declaration.');
         errors.push('namechange_confirmation');
-      }
+      } else { clearError('namechange_confirmation'); markValid('namechange_confirmation'); }
       if(!$('gazetted_doc_provide').checked){
         showError('gazetted_doc_provide','Please confirm you will provide the Gazette Notification / Affidavit.');
         errors.push('gazetted_doc_provide');
-      }
+      } else { clearError('gazetted_doc_provide'); markValid('gazetted_doc_provide'); }
     }
 
     var mob = val('txtmobile');
@@ -610,10 +625,10 @@
     if(alt && !/^[1-9][0-9]{9}$/.test(alt)){
       showError('txtaltphone','Enter a valid 10-digit number (no leading 0).');
       errors.push('txtaltphone');
-    } else { clearError('txtaltphone'); }
+    } else { clearError('txtaltphone'); if(alt) markValid('txtaltphone'); }
 
     if(!radioVal('mobileno_agree')){ showError('mobileno_agree','Please select an option.'); errors.push('mobileno_agree'); }
-    else { clearError('mobileno_agree'); }
+    else { clearError('mobileno_agree'); markRadioGroupValid('mobileno_agree'); }
 
     var localPart = val('txtemail');
     var domain = val('seldomain');
@@ -623,7 +638,7 @@
 
     if(!domain){ showError('seldomain','Please select a domain.'); errors.push('seldomain'); }
     else if(domain === 'Others' && !val('txtothdomain')){ showError('seldomain','Please enter the domain name.'); errors.push('seldomain'); }
-    else { clearError('seldomain'); }
+    else { clearError('seldomain'); markValid('seldomain'); }
 
     var fullEmail = composedEmail();
     if(fullEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fullEmail)){

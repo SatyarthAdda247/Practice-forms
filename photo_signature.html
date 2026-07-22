@@ -18,11 +18,7 @@
   }
   .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
   .practice-banner .brand{color:#ffe08a;}
-  
-  .form-control.is-invalid{border-color:#dc3545 !important;}
-  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
-  .invalid-feedback.show{display:block;}
-  
+
   .upload-box {
     border: 2px dashed #cbd5e1;
     border-radius: 8px;
@@ -33,10 +29,21 @@
     transition: all 0.2s;
     position: relative;
   }
-  
+
   .upload-box:hover {
     border-color: #4c56c0;
     background: #f1f5f9;
+  }
+
+  .upload-box.valid_error {
+    border-color: #dc3545;
+    background: #fbd3d6;
+  }
+
+  .upload-box.dynamic-valid-input {
+    border-color: #a4d658;
+    border-style: solid;
+    background: #f7fceb;
   }
   
   .upload-preview {
@@ -115,18 +122,19 @@
         <div class="card shadow-sm h-100">
           <div class="card-header bg-light font-weight-bold"><i class="bi bi-person-bounding-box text-primary"></i> Upload Photograph of the Candidate</div>
           <div class="card-body">
-            <p class="small text-muted mb-3">File should be between 20 KB and 50 KB in JPG or JPEG format.</p>
-            
+            <p class="small text-muted mb-3">File should be between 20 KB and 50 KB in JPG or JPEG format, with dimensions between 180&times;210 and 220&times;250 pixels (approx. 200&times;230 px).</p>
+
             <div class="upload-box" id="photoBox" onclick="$('photoFile').click()">
               <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2.5rem;"></i>
               <p class="mb-0 mt-2 font-weight-bold">Drag & Drop or Click to Upload Photograph</p>
               <input type="file" id="photoFile" accept=".jpg,.jpeg" style="display:none">
             </div>
-            
+            <div class="invalid-feedback" id="err_photoFile"></div>
+
             <div class="upload-preview" id="photoPreview">
               <img id="photoImg" src="" alt="Candidate Photo">
             </div>
-            
+
             <div class="custom-control custom-checkbox mt-3">
               <input type="checkbox" class="custom-control-input" id="confirmPhoto" name="confirmPhoto">
               <label class="custom-control-label small text-dark" for="confirmPhoto">I confirm that this is my valid photograph and it matches the specified guidelines.</label>
@@ -141,18 +149,19 @@
         <div class="card shadow-sm h-100">
           <div class="card-header bg-light font-weight-bold"><i class="bi bi-pencil-square text-primary"></i> Upload Signature of the Candidate</div>
           <div class="card-body">
-            <p class="small text-muted mb-3">File should be between 10 KB and 20 KB in JPG or JPEG format. Do not sign in Capital Letters.</p>
-            
+            <p class="small text-muted mb-3">File should be between 10 KB and 20 KB in JPG or JPEG format, with dimensions between 120&times;50 and 160&times;70 pixels (approx. 140&times;60 px). Do not sign in Capital Letters.</p>
+
             <div class="upload-box" id="sigBox" onclick="$('sigFile').click()">
               <i class="bi bi-cloud-arrow-up text-muted" style="font-size: 2.5rem;"></i>
               <p class="mb-0 mt-2 font-weight-bold">Drag & Drop or Click to Upload Signature</p>
               <input type="file" id="sigFile" accept=".jpg,.jpeg" style="display:none">
             </div>
-            
+            <div class="invalid-feedback" id="err_sigFile"></div>
+
             <div class="upload-preview" id="sigPreview">
               <img id="sigImg" src="" alt="Candidate Signature">
             </div>
-            
+
             <div class="custom-control custom-checkbox mt-3">
               <input type="checkbox" class="custom-control-input" id="confirmSig" name="confirmSig">
               <label class="custom-control-label small text-dark" for="confirmSig">I confirm that this is my valid signature and it matches the specified guidelines.</label>
@@ -186,67 +195,116 @@ var $ = function(id){ return document.getElementById(id); };
   $('bannerPwd').textContent = pwd;
 })();
 
-// Setup file reader previews
+// Real client-side image validation: format, file size (KB) and pixel
+// dimensions, matching the ranges advertised on this page.
+var FILE_SPECS = {
+  photoFile: { label: 'Photograph', minKB: 20, maxKB: 50, minW: 180, maxW: 220, minH: 210, maxH: 250 },
+  sigFile:   { label: 'Signature',  minKB: 10, maxKB: 20, minW: 120, maxW: 160, minH: 50,  maxH: 70  }
+};
+
 $('photoFile').addEventListener('change', function(e) {
-  handleFileSelect(e.target.files[0], 'photoImg', 'photoPreview');
+  handleFileSelect(e.target.files[0], 'photoFile', 'photoImg', 'photoPreview', 'photoBox');
 });
 
 $('sigFile').addEventListener('change', function(e) {
-  handleFileSelect(e.target.files[0], 'sigImg', 'sigPreview');
+  handleFileSelect(e.target.files[0], 'sigFile', 'sigImg', 'sigPreview', 'sigBox');
 });
 
-function handleFileSelect(file, imgId, previewId) {
+function handleFileSelect(file, fileFieldId, imgId, previewId, boxId) {
   if (!file) return;
-  
-  if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
-    alert('Please upload only JPG or JPEG files.');
+  var spec = FILE_SPECS[fileFieldId];
+
+  clearError(fileFieldId, boxId);
+  $(previewId).style.display = 'none';
+
+  var name = file.name || '';
+  var extOk = /\.(jpe?g)$/i.test(name);
+  var typeOk = file.type === 'image/jpeg' || file.type === 'image/jpg';
+  if (!extOk || !typeOk) {
+    showError(fileFieldId, spec.label + ' must be a JPG or JPEG file.', boxId);
+    $(fileFieldId).value = '';
     return;
   }
-  
+
+  var sizeKB = file.size / 1024;
+  if (sizeKB < spec.minKB || sizeKB > spec.maxKB) {
+    showError(fileFieldId, spec.label + ' file size is ' + sizeKB.toFixed(1) + ' KB. It must be between ' + spec.minKB + ' KB and ' + spec.maxKB + ' KB.', boxId);
+    $(fileFieldId).value = '';
+    return;
+  }
+
   var reader = new FileReader();
   reader.onload = function(evt) {
-    $(imgId).src = evt.target.result;
-    $(previewId).style.display = 'block';
-    
-    // Store in sessionStorage for preview page
-    sessionStorage.setItem('ibps_' + imgId, evt.target.result);
+    var dataUrl = evt.target.result;
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (w < spec.minW || w > spec.maxW || h < spec.minH || h > spec.maxH) {
+        showError(fileFieldId, spec.label + ' dimensions are ' + w + '×' + h + ' px. They must be between ' +
+          spec.minW + '×' + spec.minH + ' and ' + spec.maxW + '×' + spec.maxH + ' px.', boxId);
+        $(fileFieldId).value = '';
+        return;
+      }
+      $(imgId).src = dataUrl;
+      $(previewId).style.display = 'block';
+      sessionStorage.setItem('ibps_' + imgId, dataUrl);
+      clearError(fileFieldId, boxId);
+      markValidBox(boxId);
+    };
+    img.onerror = function() {
+      showError(fileFieldId, spec.label + ' could not be read as a valid image.', boxId);
+      $(fileFieldId).value = '';
+    };
+    img.src = dataUrl;
   };
   reader.readAsDataURL(file);
 }
 
-// Demo data generator
+// Demo data generator — pre-sized to satisfy the same dimension checks above
 $('btnDemoData').addEventListener('click', function() {
-  // Use high-quality placeholders for demo
-  var demoPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23e2e8f0'/><circle cx='75' cy='70' r='30' fill='%2394a3b8'/><path d='M35,140 C35,110 115,110 115,140 L115,180 L35,180 Z' fill='%2394a3b8'/><text x='50%23' y='160' font-family='sans-serif' font-size='12' fill='%23475569' text-anchor='middle'>DEMO PHOTO</text></svg>";
-  var demoSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80' viewBox='0 0 200 80'><rect width='200' height='80' fill='%23f1f5f9'/><path d='M20,40 Q40,10 60,40 T100,40 T140,40 T180,30' fill='none' stroke='%230f172a' stroke-width='2'/><text x='100' y='65' font-family='sans-serif' font-size='10' fill='%2364748b' text-anchor='middle'>Demo Signature (No Caps)</text></svg>";
-  
+  var demoPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='230' viewBox='0 0 200 230'><rect width='200' height='230' fill='%23e2e8f0'/><circle cx='100' cy='90' r='38' fill='%2394a3b8'/><path d='M45,180 C45,145 155,145 155,180 L155,230 L45,230 Z' fill='%2394a3b8'/><text x='50%23' y='210' font-family='sans-serif' font-size='14' fill='%23475569' text-anchor='middle'>DEMO PHOTO</text></svg>";
+  var demoSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='60' viewBox='0 0 140 60'><rect width='140' height='60' fill='%23f1f5f9'/><path d='M12,32 Q24,10 38,32 T66,32 T94,32 T128,22' fill='none' stroke='%230f172a' stroke-width='2'/><text x='70' y='52' font-family='sans-serif' font-size='7' fill='%2364748b' text-anchor='middle'>Demo Signature</text></svg>";
+
   $('photoImg').src = demoPhoto;
   $('photoPreview').style.display = 'block';
   sessionStorage.setItem('ibps_photoImg', demoPhoto);
-  
+  clearError('photoFile', 'photoBox'); markValidBox('photoBox');
+
   $('sigImg').src = demoSig;
   $('sigPreview').style.display = 'block';
   sessionStorage.setItem('ibps_sigImg', demoSig);
-  
+  clearError('sigFile', 'sigBox'); markValidBox('sigBox');
+
   $('confirmPhoto').checked = true;
   $('confirmSig').checked = true;
-  
+
   clearError('confirmPhoto');
   clearError('confirmSig');
 });
 
-function showError(field, msg){
+// Uses the official portal's own valid_error / dynamic-valid-input classes
+// (see index.html) so the highlighting matches exactly across pages.
+function showError(field, msg, boxId){
   var err = $('err_' + field);
   var input = $(field);
-  if(input) input.classList.add('is-invalid');
-  if(err){ err.textContent = msg; err.classList.add('show'); }
+  var box = boxId ? $(boxId) : null;
+  if(input && input.type !== 'file'){ input.classList.add('valid_error'); input.classList.remove('dynamic-valid-input'); }
+  if(box){ box.classList.add('valid_error'); box.classList.remove('dynamic-valid-input'); }
+  if(err){ err.textContent = msg; err.style.display = 'inline-block'; }
 }
 
-function clearError(field){
+function clearError(field, boxId){
   var err = $('err_' + field);
   var input = $(field);
-  if(input) input.classList.remove('is-invalid');
-  if(err){ err.textContent = ''; err.classList.remove('show'); }
+  var box = boxId ? $(boxId) : null;
+  if(input) input.classList.remove('valid_error');
+  if(box) box.classList.remove('valid_error');
+  if(err){ err.textContent = ''; err.style.display = 'none'; }
+}
+
+function markValidBox(boxId){
+  var box = $(boxId);
+  if(box) box.classList.add('dynamic-valid-input');
 }
 
 $('btnNext').addEventListener('click', function() {
