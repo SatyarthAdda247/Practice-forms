@@ -15,6 +15,7 @@ full human-readable reference lives in ``API.md``.
 import io
 import json
 import os
+import re
 import tempfile
 
 
@@ -71,7 +72,7 @@ def _resolve_credentials():
 
 _resolve_credentials()
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, Response, g, jsonify, request
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -315,7 +316,7 @@ def _can_manage(actor, target):
     return False
 
 
-@app.patch("/api/admin/users/<int:user_id>")
+@app.patch("/api/admin/users/<user_id>")
 @admin_required
 def admin_update_user(user_id):
     """Update a user's ``role`` (``member``|``admin``|``super_admin``) and/or
@@ -343,8 +344,9 @@ def admin_update_user(user_id):
     if not _can_manage(g.user, target):
         return error("you don't have permission to manage this user", 403)
 
-    # Self-protection.
-    if user_id == g.user["id"]:
+    # Self-protection. Compare as strings so it holds for both id modes
+    # (STRING uuid default and INT64), since the path value arrives as a string.
+    if str(user_id) == str(g.user["id"]):
         if active is False:
             return error("you cannot revoke your own access")
         if role is not None and role != g.user["role"]:
@@ -360,7 +362,7 @@ def admin_update_user(user_id):
     return jsonify(db.update_user(user_id, role=role, active=active))
 
 
-@app.delete("/api/admin/users/<int:user_id>")
+@app.delete("/api/admin/users/<user_id>")
 @admin_required
 def admin_delete_user(user_id):
     """Delete a user. **Super-admins only.** Nobody can delete themselves or the
@@ -370,7 +372,7 @@ def admin_delete_user(user_id):
     target = db.get_user_by_id(user_id)
     if target is None:
         return error("user not found", 404)
-    if user_id == g.user["id"]:
+    if str(user_id) == str(g.user["id"]):
         return error("you cannot delete your own account")
     if target["role"] == "super_admin" and target["active"] and db.count_super_admins() <= 1:
         return error("cannot delete the last active super admin")
@@ -544,6 +546,72 @@ def upload_sheets(exam_id):
                 )
             created.append(db.row_to_sheet(row))
     return jsonify(created), 201
+
+
+@app.patch("/api/sheets/<int:sheet_id>")
+@login_required
+def update_sheet(sheet_id):
+    """Manually set a sheet's student name and/or roll number.
+
+    Body: ``{ "studentName": "...", "rollNumber": "..." }`` — both optional;
+    only provided fields change. This overrides what OCR read (or left blank)
+    and never affects the detected answers or grading. Returns the updated
+    sheet record.
+    """
+    data = request.get_json(silent=True) or {}
+    name = data.get("studentName")
+    roll = data.get("rollNumber")
+    if name is None and roll is None:
+        return error("provide 'studentName' and/or 'rollNumber'")
+    updated = db.update_sheet_identity(
+        sheet_id,
+        student_name=name.strip() if isinstance(name, str) else None,
+        roll_number=roll.strip() if isinstance(roll, str) else None,
+    )
+    if updated is None:
+        return error("sheet not found", 404)
+    return jsonify(db.row_to_sheet(updated))
+
+
+def _sheet_source(exam_id, filename):
+    """Map a sheet's display filename back to the stored upload path + page.
+
+    A multi-page PDF is stored once under ``{exam_id}_{original}`` and each page
+    becomes a sheet named ``"<base> [page N]<ext>"``; single files keep their
+    name. Returns ``(path, page_index)``."""
+    m = re.match(r"^(.*) \[page (\d+)\](\.[^.]+)$", filename)
+    if m:
+        source = m.group(1) + m.group(3)
+        page = int(m.group(2)) - 1
+    else:
+        source, page = filename, 0
+    return os.path.join(UPLOAD_DIR, f"{exam_id}_{source}"), page
+
+
+@app.get("/api/sheets/<int:sheet_id>/image")
+@login_required
+def sheet_image(sheet_id):
+    """Render the scanned sheet (the exact page this result came from) as a PNG.
+
+    Lets a reviewer read the handwritten name off the scan and attribute the
+    score — essential when no roll number was filled and OCR is unavailable.
+    """
+    sheet = db.get_sheet(sheet_id)
+    if sheet is None:
+        return error("sheet not found", 404)
+    path, page = _sheet_source(sheet["exam_id"], sheet["filename"])
+    if not os.path.exists(path):
+        return error("scanned file is no longer on the server", 404)
+    try:
+        import cv2
+        gray = omr_pipeline._render_gray(path, page=page)
+        ok, buf = cv2.imencode(".png", gray)
+        if not ok:
+            return error("could not render sheet", 500)
+    except Exception as exc:
+        app.logger.exception("sheet image render failed for sheet %s", sheet_id)
+        return error(f"could not render sheet: {exc}", 500)
+    return Response(buf.tobytes(), mimetype="image/png")
 
 
 @app.delete("/api/sheets/<int:sheet_id>")

@@ -23,12 +23,70 @@ import logging
 import re
 
 import cv2
+import numpy as np
 
 log = logging.getLogger(__name__)
 
-# Handwriting strip on the template, as (x0, y0, x1, y1) fractions of the page.
-# Calibrated on the Adda247 100-question sheet at 200 DPI.
+# Fallback handwriting strip on the template, as (x0, y0, x1, y1) fractions of
+# the page. Only used if the bubble-matrix anchor below can't be located.
 NAME_STRIP = (0.088, 0.209, 0.362, 0.234)
+
+# Horizontal extent of the handwriting boxes (fractions of page width).
+NAME_X = (0.085, 0.37)
+
+
+def _name_matrix_top(gray):
+    """Locate the NAME block's A-Z bubble matrix and return
+    ``(top_row_y, median_radius)`` in full-page pixel coords.
+
+    The matrix is hundreds of near-identical small circles in the top-left; its
+    first row is a reliable anchor for the handwriting strip that sits just
+    above it. Raises ``ValueError`` if too few bubbles are found to be sure."""
+    H, W = gray.shape
+    x0, x1 = int(W * 0.07), int(W * 0.40)
+    y0, y1 = int(H * 0.20), int(H * 0.45)
+    sub = gray[y0:y1, x0:x1]
+    th = cv2.threshold(sub, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+    cnts, _ = cv2.findContours(th, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    sw = sub.shape[1]
+    ys, rs = [], []
+    for c in cnts:
+        (_, cy), r = cv2.minEnclosingCircle(c)
+        if r < sw * 0.008 or r > sw * 0.03:  # bubble-sized only
+            continue
+        if cv2.contourArea(c) < 0.4 * np.pi * r * r:  # roughly round / solid
+            continue
+        ys.append(cy + y0)
+        rs.append(r)
+    if len(ys) < 40:  # the matrix has hundreds; too few ⇒ not confidently found
+        raise ValueError("name bubble matrix not found")
+    return float(np.percentile(ys, 2)), float(np.median(rs))
+
+
+def _name_crop(gray):
+    """Return the handwritten-name strip to OCR.
+
+    The name is written in the row of boxes directly above the NAME block's
+    bubble matrix. Scans of this template drift vertically by a few percent, so
+    a fixed strip lands on the "NAME" title on some sheets and on the bubble
+    rows on others (which is why names weren't being read). We instead detect
+    the matrix and take a fixed-height band just above its first row, which
+    tracks the drift. Falls back to the static ``NAME_STRIP`` if detection
+    fails."""
+    H, W = gray.shape
+    x_l, x_r = int(W * NAME_X[0]), int(W * NAME_X[1])
+    try:
+        top_y, rad = _name_matrix_top(gray)
+        bot = int(top_y - rad * 2.0)   # just above the first bubble row
+        top = int(top_y - rad * 6.5)   # ~one box-row tall, below the NAME title
+        if top >= 0 and bot > top:
+            crop = gray[top:bot, x_l:x_r]
+            if crop.size:
+                return crop
+    except Exception as exc:
+        log.debug("name-matrix anchor failed, using fixed strip: %s", exc)
+    x0, y0, x1, y1 = NAME_STRIP
+    return gray[int(H * y0):int(H * y1), int(W * x0):int(W * x1)]
 
 _client = None
 _disabled = False  # flipped True after a hard auth/config failure
@@ -59,9 +117,7 @@ def read_name_from_gray(gray):
     if _disabled:
         return None
 
-    H, W = gray.shape
-    x0, y0, x1, y1 = NAME_STRIP
-    crop = gray[int(H * y0):int(H * y1), int(W * x0):int(W * x1)]
+    crop = _name_crop(gray)
     if crop.size == 0:
         return None
     # Upscale — the strip is small and OCR is far more reliable on larger text.

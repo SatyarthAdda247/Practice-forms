@@ -94,6 +94,21 @@ def _id_type():
     return "INT64" if ID_MODE == "int" else "STRING"
 
 
+def _coerce_id(user_id):
+    """Normalise an id (often arriving as a URL path string) to the id column's
+    Python type, so lookups/updates/deletes match the stored value and the query
+    parameter is the right type. UUID mode keeps it a string; INT mode casts to
+    int (a non-numeric id in INT mode simply won't match any row -> None)."""
+    if user_id is None:
+        return None
+    if ID_MODE == "int":
+        try:
+            return int(user_id)
+        except (TypeError, ValueError):
+            return None
+    return str(user_id)
+
+
 def _new_id():
     """Generate a fresh primary key. UUID mode is scan-free; INT mode reads the
     max id (a one-column scan) and is inherently racy — prefer UUID."""
@@ -193,6 +208,7 @@ def init():
 
 def get_user_by_id(user_id):
     """Return a user dict by id (short-TTL cached), or ``None``."""
+    user_id = _coerce_id(user_id)
     if CACHE_TTL:
         hit = _cache.get(user_id)
         if hit and hit[0] > time.time():
@@ -342,6 +358,7 @@ def list_users(limit=1000):
 def update_user(user_id, role=None, active=None):
     """Patch a user's ``role`` and/or ``active`` flag; return the updated dict
     or ``None`` if the user does not exist."""
+    user_id = _coerce_id(user_id)
     current = get_user_by_id(user_id)
     if current is None:
         return None
@@ -363,6 +380,7 @@ def update_user(user_id, role=None, active=None):
 
 def delete_user(user_id):
     """Delete a user by id. Returns True if a row was removed."""
+    user_id = _coerce_id(user_id)
     job, _ = _execute(
         f"DELETE FROM {_FQN} WHERE {COLS['id']} = @id",
         [_p("id", _id_type(), user_id)],
