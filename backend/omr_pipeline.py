@@ -28,8 +28,21 @@ OPTIONS = ["A", "B", "C", "D"]
 
 # Darkness thresholds, calibrated on real scans (filled bubbles measure
 # ~0.75-0.99 dark, empty ~0.13-0.26 — a wide, safe margin).
-FILL_MIN = 0.45   # >= this ⇒ the bubble is considered marked
-AMBIG_MIN = 0.30  # [AMBIG_MIN, FILL_MIN) ⇒ a faint/partial mark worth flagging
+#
+# Real scans of this template often carry uneven *block/column shading* (whole
+# answer boxes print or scan as a grey wash). Shading lifts the measured
+# darkness of *every* bubble in a block, so a fixed global cut-off both (a)
+# reads several empty-but-shaded bubbles as "filled" and trips a false
+# MULTIPLE_MARKS, dropping a clearly-filled answer, and (b) misses a genuine but
+# lighter mark that never crosses the line. We therefore classify each question
+# *relative to its own four bubbles* (see :func:`_classify`) instead of against
+# a single absolute level — the marked bubble is the one that stands clearly
+# apart from the other three, whatever the local shading baseline.
+FILL_MIN = 0.45    # >= this ⇒ a bubble is "definitely dark" (used for doubles)
+STRONG_FILL = 0.70  # >= this ⇒ unmistakably filled, even against heavy shading
+AMBIG_MIN = 0.30   # [AMBIG_MIN, FILL_MIN) ⇒ a faint/partial mark worth flagging
+MARK_MIN = 0.35    # the darkest bubble must reach this to count as a mark
+MARK_MARGIN = 0.12  # ...and lead the runner-up by this much to be unambiguous
 
 
 class OMRError(Exception):
@@ -141,17 +154,32 @@ def _read_block(gray, box, rows=20):
 
 
 def _classify(darkness):
-    """Map one question's [A,B,C,D] darkness to (answer|None, flags[])."""
-    flags = []
-    marked = [i for i, d in enumerate(darkness) if d >= FILL_MIN]
-    if len(marked) == 1:
-        return OPTIONS[marked[0]], flags
-    if len(marked) >= 2:
-        # More than one option darkened — invalid; leave unanswered for review.
+    """Map one question's [A,B,C,D] darkness to (answer|None, flags[]).
+
+    Decided relative to the row's own bubbles so block/column shading (which
+    raises every bubble's darkness together) doesn't manufacture false marks or
+    swallow real ones. Order of tests matters:
+
+      1. Two bubbles unmistakably filled  -> genuine double mark (review).
+      2. One bubble dark enough AND clearly ahead of the runner-up -> that mark.
+         This is what rescues a solid fill sitting in a shaded block: the fill
+         still leads its shaded neighbours by a wide margin.
+      3. Two bubbles both over the fill line but close together -> ambiguous
+         double (review).
+      4. Something darkened but no confident winner -> faint/partial (review).
+      5. Nothing darkened -> blank.
+    """
+    order = sorted(range(len(darkness)), key=lambda i: darkness[i], reverse=True)
+    top, runner = order[0], order[1]
+    d_top, d_runner = darkness[top], darkness[runner]
+
+    if d_top >= FILL_MIN and d_runner >= STRONG_FILL:
         return None, ["MULTIPLE_MARKS"]
-    # Nothing clearly filled: distinguish a truly blank row from a faint mark.
-    faint = [i for i, d in enumerate(darkness) if d >= AMBIG_MIN]
-    if faint:
+    if d_top >= MARK_MIN and (d_top - d_runner) >= MARK_MARGIN:
+        return OPTIONS[top], []
+    if d_top >= FILL_MIN and d_runner >= FILL_MIN:
+        return None, ["MULTIPLE_MARKS"]
+    if d_top >= AMBIG_MIN:
         return None, ["LIGHT_MARK"]
     return None, []
 

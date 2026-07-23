@@ -107,7 +107,19 @@ export const api = {
     [...files].forEach((f) => fd.append("files", f));
     return request(`/exams/${id}/upload`, { method: "POST", body: fd });
   },
+  updateSheet: (id, data) => request(`/sheets/${id}`, json("PATCH", data)),
   deleteSheet: (id) => request(`/sheets/${id}`, { method: "DELETE" }),
+  // Fetch the scanned sheet image as an object URL (blob), sending the auth
+  // token — an <img src> can't set the Authorization header. Caller must
+  // URL.revokeObjectURL() it when done.
+  sheetImageUrl: async (id) => {
+    const token = tokenStore.get();
+    const res = await fetch(`${BASE}/sheets/${id}/image`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(`Could not load sheet image (${res.status})`);
+    return URL.createObjectURL(await res.blob());
+  },
   validation: (id) => request(`/exams/${id}/validation`),
 
   // Grading + results

@@ -4,7 +4,6 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import GoogleSignIn from "../components/GoogleSignIn.jsx";
 import Icon from "../components/Icon.jsx";
-import BetaBadge from "../components/BetaBadge.jsx";
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -40,7 +39,6 @@ export default function Login() {
           </div>
           <div className="flex items-center gap-sm">
             <h1 className="font-headline-lg text-headline-lg text-primary">OMR GradePro</h1>
-            <BetaBadge />
           </div>
           <p className="font-body-md text-body-md text-on-surface-variant mt-xs">
             Academic Session 2026-2027

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
-import BetaBadge from "./BetaBadge.jsx";
 import { useAuth } from "../auth.jsx";
 
 const SUPPORT_EMAIL = "umesh.rao@adda247.com";
@@ -62,7 +61,6 @@ export default function SideNav() {
             <span className="font-headline-sm text-headline-sm text-primary truncate">
               OMR GradePro
             </span>
-            <BetaBadge className="shrink-0" />
           </div>
           <span className="font-body-sm text-body-sm text-on-surface-variant truncate">
             Academic Session 2026-2027

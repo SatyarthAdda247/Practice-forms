@@ -28,6 +28,82 @@ export default function Results() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Inline manual editing of a student's name (OCR is best-effort; this lets a
+  // reviewer set/correct it). `editing` holds the sheetId being edited.
+  const [editing, setEditing] = useState(null);
+  const [editVal, setEditVal] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (r) => {
+    setEditing(r.sheetId);
+    setEditVal(r.studentName || "");
+  };
+  const cancelEdit = () => {
+    setEditing(null);
+    setEditVal("");
+  };
+  const applyName = (sheetId, value) =>
+    setData((d) =>
+      d
+        ? { ...d, rows: d.rows.map((r) => (r.sheetId === sheetId ? { ...r, studentName: value } : r)) }
+        : d
+    );
+
+  const saveEdit = async (sheetId) => {
+    const value = editVal.trim();
+    setSaving(true);
+    try {
+      await api.updateSheet(sheetId, { studentName: value });
+      applyName(sheetId, value);
+      setEditing(null);
+      setEditVal("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // "Who is this?" — view the scanned sheet and set the name in one place.
+  const [viewRow, setViewRow] = useState(null);
+  const [viewUrl, setViewUrl] = useState("");
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewName, setViewName] = useState("");
+
+  const openView = async (r) => {
+    setViewRow(r);
+    setViewName(r.studentName || "");
+    setViewUrl("");
+    setViewLoading(true);
+    try {
+      const url = await api.sheetImageUrl(r.sheetId);
+      setViewUrl(url);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setViewLoading(false);
+    }
+  };
+  const closeView = () => {
+    if (viewUrl) URL.revokeObjectURL(viewUrl);
+    setViewRow(null);
+    setViewUrl("");
+    setViewName("");
+  };
+  const saveView = async () => {
+    const value = viewName.trim();
+    const sheetId = viewRow.sheetId;
+    setSaving(true);
+    try {
+      await api.updateSheet(sheetId, { studentName: value });
+      applyName(sheetId, value);
+      closeView();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     api.listExams().then((list) => {
@@ -78,6 +154,10 @@ export default function Results() {
 
   const stats = data?.stats;
   const maxScore = data?.rows?.[0]?.maxScore || 0;
+  // Questions actually configured in the answer key — only these are graded,
+  // which can be fewer than the exam's nominal question count.
+  const keyQuestions = data?.exam ? Object.keys(data.exam.answerKey || {}).length : 0;
+  const totalQuestions = data?.exam?.numQuestions || 0;
 
   return (
     <>
@@ -139,8 +219,14 @@ export default function Results() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-lg mb-xl">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-lg mb-xl">
             <StatCard icon="groups" label="Graded" value={stats.graded} />
+            <StatCard
+              icon="key"
+              label="Key Questions"
+              value={keyQuestions}
+              sub={totalQuestions ? `of ${totalQuestions}` : ""}
+            />
             <StatCard
               icon="functions"
               label="Average"
@@ -188,12 +274,44 @@ export default function Results() {
                   <li key={r.sheetId} className="p-md">
                     <div className="flex justify-between items-start mb-sm">
                       <div>
-                        <p className="font-body-lg text-body-lg text-on-background font-semibold leading-tight">
-                          {r.studentName || "—"}
-                        </p>
+                        {editing === r.sheetId ? (
+                          <div className="flex items-center gap-xs mb-xs">
+                            <input
+                              autoFocus
+                              value={editVal}
+                              onChange={(e) => setEditVal(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEdit(r.sheetId);
+                                if (e.key === "Escape") cancelEdit();
+                              }}
+                              placeholder="Student name"
+                              className="bg-surface border border-outline-variant rounded-lg px-sm py-1 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary w-40"
+                            />
+                            <button onClick={() => saveEdit(r.sheetId)} disabled={saving} title="Save" className="text-primary p-xs rounded disabled:opacity-60">
+                              <Icon name="check" size={18} />
+                            </button>
+                            <button onClick={cancelEdit} title="Cancel" className="text-secondary p-xs rounded">
+                              <Icon name="close" size={18} />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="font-body-lg text-body-lg text-on-background font-semibold leading-tight inline-flex items-center gap-xs">
+                            {r.studentName || "—"}
+                            <button onClick={() => startEdit(r)} title="Edit name" className="text-outline hover:text-primary p-xs rounded">
+                              <Icon name="edit" size={15} />
+                            </button>
+                          </p>
+                        )}
                         <p className="font-data-mono text-body-sm text-secondary">
                           {r.rollNumber || "—"} • Rank #{rank}
                         </p>
+                        <button
+                          onClick={() => openView(r)}
+                          className="mt-xs inline-flex items-center gap-xs text-primary font-label-md text-label-md"
+                        >
+                          <Icon name="image" size={15} />
+                          View scan
+                        </button>
                       </div>
                       <span
                         className={`font-label-md text-label-md px-sm py-xs rounded-full border shrink-0 ${
@@ -273,20 +391,65 @@ export default function Results() {
                           {r.rollNumber || "—"}
                         </td>
                         <td className="px-lg py-md font-body-md text-body-md text-on-background">
-                          <span className="inline-flex items-center gap-xs">
-                            {r.studentName || "—"}
-                            {(r.flags || []).length > 0 && (
-                              <span
-                                className="inline-flex items-center text-error"
-                                title={`Filling issues: ${(r.flags || []).map(violationLabel).join(", ")}`}
+                          {editing === r.sheetId ? (
+                            <span className="inline-flex items-center gap-xs">
+                              <input
+                                autoFocus
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") saveEdit(r.sheetId);
+                                  if (e.key === "Escape") cancelEdit();
+                                }}
+                                placeholder="Student name"
+                                className="bg-surface border border-outline-variant rounded-lg px-sm py-1 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary w-40"
+                              />
+                              <button
+                                onClick={() => saveEdit(r.sheetId)}
+                                disabled={saving}
+                                title="Save"
+                                className="text-primary p-xs rounded hover:bg-surface-container transition-colors disabled:opacity-60"
                               >
-                                <Icon name="warning" size={16} filled />
-                              </span>
-                            )}
-                          </span>
+                                <Icon name="check" size={18} />
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                title="Cancel"
+                                className="text-secondary p-xs rounded hover:bg-surface-container transition-colors"
+                              >
+                                <Icon name="close" size={18} />
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-xs group">
+                              {r.studentName || "—"}
+                              {(r.flags || []).length > 0 && !r.studentName && (
+                                <span
+                                  className="inline-flex items-center text-error"
+                                  title={`Filling issues: ${(r.flags || []).map(violationLabel).join(", ")}`}
+                                >
+                                  <Icon name="warning" size={16} filled />
+                                </span>
+                              )}
+                              <button
+                                onClick={() => startEdit(r)}
+                                title="Edit name"
+                                className="text-outline hover:text-primary p-xs rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              >
+                                <Icon name="edit" size={15} />
+                              </button>
+                            </span>
+                          )}
                         </td>
-                        <td className="px-lg py-md font-body-sm text-body-sm text-secondary hidden md:table-cell truncate max-w-[200px]">
-                          {r.filename}
+                        <td className="px-lg py-md font-body-sm text-body-sm text-secondary hidden md:table-cell max-w-[200px]">
+                          <button
+                            onClick={() => openView(r)}
+                            title="View scanned sheet"
+                            className="inline-flex items-center gap-xs text-primary hover:underline max-w-full"
+                          >
+                            <Icon name="image" size={16} className="shrink-0" />
+                            <span className="truncate">{r.filename}</span>
+                          </button>
                         </td>
                         <td className="px-lg py-md text-center font-data-mono text-data-mono text-[#0d9488]">
                           {r.correct}
@@ -324,6 +487,68 @@ export default function Results() {
             </div>
           </div>
         </>
+      )}
+
+      {/* View-scan modal: read the handwritten name off the sheet and set it. */}
+      {viewRow && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-md"
+          onClick={closeView}
+        >
+          <div
+            className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-lg w-full max-w-3xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-lg py-md border-b border-outline-variant flex items-center justify-between gap-sm">
+              <h4 className="font-headline-sm text-headline-sm text-on-background truncate">
+                {viewRow.filename}
+              </h4>
+              <button
+                onClick={closeView}
+                title="Close"
+                className="text-secondary p-xs rounded hover:bg-surface-container transition-colors shrink-0"
+              >
+                <Icon name="close" size={20} />
+              </button>
+            </div>
+
+            <div className="p-lg overflow-auto custom-scrollbar bg-surface-container flex-1 flex items-center justify-center min-h-[200px]">
+              {viewLoading ? (
+                <Loading />
+              ) : viewUrl ? (
+                <img
+                  src={viewUrl}
+                  alt="Scanned answer sheet"
+                  className="max-w-full h-auto rounded border border-outline-variant"
+                />
+              ) : (
+                <p className="text-on-surface-variant font-body-md">Could not load the scan.</p>
+              )}
+            </div>
+
+            <div className="px-lg py-md border-t border-outline-variant flex flex-wrap items-end gap-sm">
+              <label className="flex-1 min-w-[180px]">
+                <span className="block font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-xs">
+                  Student Name
+                </span>
+                <input
+                  value={viewName}
+                  onChange={(e) => setViewName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveView()}
+                  placeholder="Type the name from the scan"
+                  className="w-full bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                />
+              </label>
+              <button
+                onClick={saveView}
+                disabled={saving}
+                className="py-2 px-lg bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors disabled:opacity-60"
+              >
+                {saving ? "Saving…" : "Save name"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

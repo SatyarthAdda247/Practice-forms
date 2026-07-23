@@ -54,6 +54,16 @@ EXAMS_TABLE = os.environ.get("BQ_EXAMS_TABLE", "omr_exams")
 SHEETS_TABLE = os.environ.get("BQ_SHEETS_TABLE", "omr_sheets")
 RESULTS_TABLE = os.environ.get("BQ_RESULTS_TABLE", "omr_results")
 
+# Hard per-query cost guardrail. BigQuery bills by bytes *scanned*, so a single
+# runaway or accidentally unfiltered query is the only real cost risk here (the
+# tables are clustered on the columns every read filters by, and stay tiny). A
+# query that would bill more than this is rejected before it runs — it fails
+# fast instead of costing money. 1 GB is orders of magnitude above what these
+# tables will scan for years; override with BQ_MAX_BYTES_BILLED, or set 0/empty
+# to disable the cap.
+_max_bytes = os.environ.get("BQ_MAX_BYTES_BILLED", "1000000000").strip()
+MAX_BYTES_BILLED = int(_max_bytes) if _max_bytes else 0
+
 # Backtick-quoted forms for embedding in SQL...
 _EXAMS = f"`{PROJECT}.{DATASET}.{EXAMS_TABLE}`"
 _SHEETS = f"`{PROJECT}.{DATASET}.{SHEETS_TABLE}`"
@@ -85,11 +95,20 @@ def _p(name, type_, value):
 
 def _execute(sql, params=None):
     """Run a query/DML statement. Returns (job, rows) where ``rows`` is a list
-    of ``Row`` objects (empty for pure DML)."""
+    of ``Row`` objects (empty for pure DML).
+
+    Every job runs with the query cache on (repeat reads with identical SQL +
+    params return cached results, which BigQuery neither re-scans nor bills) and
+    under the ``MAX_BYTES_BILLED`` ceiling so no single statement can rack up an
+    unexpected scan cost."""
     from google.cloud import bigquery
-    job = _client().query(
-        sql, job_config=bigquery.QueryJobConfig(query_parameters=params or [])
+    config = bigquery.QueryJobConfig(
+        query_parameters=params or [],
+        use_query_cache=True,
     )
+    if MAX_BYTES_BILLED > 0:
+        config.maximum_bytes_billed = MAX_BYTES_BILLED
+    job = _client().query(sql, job_config=config)
     rows = list(job.result())
     return job, rows
 
@@ -402,6 +421,36 @@ def create_sheet(exam_id, filename, size_bytes, status, error=None,
         "flags": flags_json,
         "created_at": created_at,
     }
+
+
+def get_sheet(sheet_id):
+    """A single sheet as a physical-column dict, or ``None``."""
+    _, rows = _execute(
+        f"SELECT id, exam_id, filename, size_bytes, status, error, "
+        f"roll_number, student_name, answers, flags, created_at FROM {_SHEETS} "
+        f"WHERE id = @id LIMIT 1",
+        [_p("id", "INT64", sheet_id)],
+    )
+    return dict(rows[0]) if rows else None
+
+
+def update_sheet_identity(sheet_id, student_name=None, roll_number=None):
+    """Set a sheet's manually-entered ``student_name`` / ``roll_number``.
+
+    Only fields passed as non-``None`` are changed. Returns the refreshed sheet
+    dict, or ``None`` if the sheet doesn't exist. This is a manual override of
+    what OCR read (or didn't); it never touches ``answers`` or grading."""
+    sets, params = [], [_p("id", "INT64", sheet_id)]
+    if student_name is not None:
+        sets.append(f"student_name = @student_name")
+        params.append(_p("student_name", "STRING", student_name))
+    if roll_number is not None:
+        sets.append(f"roll_number = @roll_number")
+        params.append(_p("roll_number", "STRING", roll_number))
+    if not sets:
+        return get_sheet(sheet_id)
+    _execute(f"UPDATE {_SHEETS} SET {', '.join(sets)} WHERE id = @id", params)
+    return get_sheet(sheet_id)
 
 
 def delete_sheet(sheet_id):
