@@ -9,3 +9,15 @@ PyMuPDF==1.28.0
 opencv-python-headless==5.0.0.93
 numpy==2.5.1
 google-cloud-vision==3.10.2
+# Handwritten-name OCR fallback (name_trocr). CPU-only torch keeps the image
+# ~2 GB smaller than the default CUDA build; install with
+#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+# Left as minimums rather than exact pins: the wheels available differ by
+# Python version (the image is 3.12, some dev machines are 3.14, where the
+# pinned `tokenizers` for transformers 4.46 has no wheel and needs Rust).
+# name_trocr copes with either transformers generation.
+torch>=2.5
+torchvision>=0.20
+transformers>=4.46
+pillow>=10.0
+sentencepiece>=0.2

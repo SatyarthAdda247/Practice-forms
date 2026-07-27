@@ -93,8 +93,10 @@ from grading import grade
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
 MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB, per the upload screen copy
-# OCR the handwritten student name via Google Vision (best-effort). Off with
-# OMR_NAME_OCR=0 — e.g. when the Vision API isn't enabled on the project.
+# Fall back to OCR (local TrOCR) for the handwritten name when the sheet's A-Z
+# bubble grid is blank. Best-effort and never fatal. Off with OMR_NAME_OCR=0.
+# See name_trocr: it only reads a blue-pen "NAME- <name>" line, never the
+# printed per-character boxes, which no OCR engine reads reliably.
 NAME_OCR = os.environ.get("OMR_NAME_OCR", "1") != "0"
 
 app = Flask(__name__)
