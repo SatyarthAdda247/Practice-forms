@@ -102,9 +102,12 @@ export const api = {
 
   // Uploads
   listSheets: (id) => request(`/exams/${id}/sheets`),
-  uploadSheets: (id, files) => {
+  // sheetQuestions = how many questions are PRINTED on the form (100 | 200),
+  // which is the sheet's layout, not the exam's question count.
+  uploadSheets: (id, files, sheetQuestions = 200) => {
     const fd = new FormData();
     [...files].forEach((f) => fd.append("files", f));
+    fd.append("sheetQuestions", String(sheetQuestions));
     return request(`/exams/${id}/upload`, { method: "POST", body: fd });
   },
   updateSheet: (id, data) => request(`/sheets/${id}`, json("PATCH", data)),
