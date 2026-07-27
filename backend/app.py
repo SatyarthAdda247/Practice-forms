@@ -88,6 +88,7 @@ from auth import (
     verify_google_token,
 )
 import omr_pipeline
+import tools_store
 from grading import grade
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
@@ -112,6 +113,9 @@ else:
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 db.init_db()
+# Provisions the two public-tool tables. Never raises — a problem there must
+# not stop the portal API from booting (see tools_store.init).
+tools_store.init()
 
 
 # --------------------------------------------------------------------------- #
@@ -179,6 +183,8 @@ def api_index():
             {"method": "GET", "path": "/api/exams/<id>/validation", "desc": "Upload validation summary"},
             {"method": "POST", "path": "/api/exams/<id>/grade", "desc": "Grade all validated sheets"},
             {"method": "GET", "path": "/api/exams/<id>/results", "desc": "Results dashboard data"},
+            {"method": "POST", "path": "/api/tools/image-resizer/leads", "desc": "Log an image-resizer download + lead (public)"},
+            {"method": "POST", "path": "/api/tools/answerkey-checker/results", "desc": "Log an answer-key analysis (public)"},
         ],
     })
 
@@ -776,6 +782,107 @@ def results(exam_id):
     }
 
     return jsonify({"exam": db.row_to_exam(exam), "stats": stats, "rows": result_rows})
+
+
+# --------------------------------------------------------------------------- #
+# Public standalone tools (/image-resizer, /answerkey-checker)
+# --------------------------------------------------------------------------- #
+# These two endpoints are intentionally UNAUTHENTICATED — the tools they serve
+# run on the public adda247.com site, not inside the portal. They are
+# append-only writes to their own BigQuery tables and touch nothing else.
+#
+# Because they are open, each one is: payload-size capped, field-length capped
+# (see tools_store), and rate-limited per client IP below.
+TOOLS_RATE_LIMIT = int(os.environ.get("OMR_TOOLS_RATE_LIMIT", "30"))  # per minute
+TOOLS_MAX_JSON_BYTES = 64 * 1024
+
+# ip -> [timestamps]. Best-effort only: per-process (each gunicorn worker keeps
+# its own) and reset on restart. It blunts accidental loops and casual abuse,
+# not a determined attacker — put a real limiter at the edge for that.
+_tools_hits = {}
+
+
+def _rate_limited(ip):
+    import time
+
+    now = time.time()
+    hits = [t for t in _tools_hits.get(ip, []) if now - t < 60]
+    if len(hits) >= TOOLS_RATE_LIMIT:
+        _tools_hits[ip] = hits
+        return True
+    hits.append(now)
+    _tools_hits[ip] = hits
+    if len(_tools_hits) > 10_000:  # bound the dict; drop the coldest entries
+        for stale in [k for k, v in _tools_hits.items() if not v or now - v[-1] > 60][:5_000]:
+            _tools_hits.pop(stale, None)
+    return False
+
+
+def _client_ip():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    return (fwd.split(",")[0].strip() if fwd else request.remote_addr) or "unknown"
+
+
+def _tools_payload():
+    """Validate size and shape of a public tool payload. Returns (data, error)."""
+    if request.content_length and request.content_length > TOOLS_MAX_JSON_BYTES:
+        return None, error("payload too large", 413)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return None, error("a JSON object body is required")
+    return data, None
+
+
+def _tools_save(save_fn, payload):
+    """Run a tools_store write, mapping failures to a response.
+
+    A logging failure must never look like a tool failure to the candidate, so
+    the frontend treats any non-2xx here as "carry on regardless"."""
+    try:
+        row_id = save_fn(
+            payload,
+            user_agent=request.headers.get("User-Agent"),
+            referrer=request.headers.get("Referer"),
+        )
+    except Exception as exc:  # noqa: BLE001 — never leak internals publicly
+        app.logger.warning("tools: BigQuery write failed: %s", exc)
+        return error("could not record this request", 503)
+    return jsonify({"status": "ok", "id": row_id}), 201
+
+
+@app.post("/api/tools/image-resizer/leads")
+def tools_resizer_lead():
+    """Record one image-resizer download: the captured lead plus what was
+    produced. Public. The image itself never leaves the browser — only its
+    filename and dimensions are stored."""
+    if _rate_limited(_client_ip()):
+        return error("too many requests; try again in a minute", 429)
+    data, err = _tools_payload()
+    if err:
+        return err
+
+    lead = data.get("lead") or {}
+    if not str(lead.get("name") or "").strip():
+        return error("lead name is required")
+    if not str(lead.get("phone") or "").strip():
+        return error("lead phone is required")
+
+    return _tools_save(tools_store.save_resizer_lead, data)
+
+
+@app.post("/api/tools/answerkey-checker/results")
+def tools_keycheck_result():
+    """Record one answer-key analysis. Public. Aggregates only — individual
+    responses and the answer key are never stored."""
+    if _rate_limited(_client_ip()):
+        return error("too many requests; try again in a minute", 429)
+    data, err = _tools_payload()
+    if err:
+        return err
+    if not isinstance(data.get("stats"), dict):
+        return error("stats object is required")
+
+    return _tools_save(tools_store.save_keycheck_result, data)
 
 
 if __name__ == "__main__":

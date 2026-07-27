@@ -129,3 +129,28 @@ export const api = {
   grade: (id) => request(`/exams/${id}/grade`, { method: "POST" }),
   results: (id) => request(`/exams/${id}/results`),
 };
+
+// --- Public standalone tools ----------------------------------------------
+// Deliberately NOT routed through request(): those pages are public, so they
+// must never attach a session token, and a failure there must never trip the
+// 401 handler and sign a portal user out. Logging is fire-and-forget — the
+// candidate's download or score must not depend on the warehouse write.
+async function toolLog(path, body) {
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn(`tool logging failed (${path}):`, err.message);
+    return null;
+  }
+}
+
+export const toolsApi = {
+  logResizerLead: (payload) => toolLog("/tools/image-resizer/leads", payload),
+  logKeyCheckResult: (payload) => toolLog("/tools/answerkey-checker/results", payload),
+};

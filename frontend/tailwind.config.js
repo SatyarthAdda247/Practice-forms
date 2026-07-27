@@ -52,6 +52,30 @@ export default {
         "on-primary": "#ffffff",
         "surface-tint": "#455f88",
         "secondary-fixed": "#d3e4fe",
+
+        // Standalone public tools (/image-resizer, /answerkey-checker). These
+        // ship under the main adda247.com brand, not the portal's navy, so
+        // they get their own namespace — nothing above is affected.
+        tool: {
+          primary: "#b7102a",
+          "primary-container": "#db313f",
+          "on-primary": "#ffffff",
+          "on-primary-container": "#fffbff",
+          tint: "#bb152c",
+          secondary: "#485f84",
+          "secondary-container": "#bbd3fd",
+          "on-secondary-container": "#445a7f",
+          surface: "#f6faff",
+          "surface-lowest": "#ffffff",
+          "surface-low": "#eaf5ff",
+          "surface-high": "#d3ebff",
+          "surface-highest": "#c7e7ff",
+          "on-surface": "#001e2e",
+          "on-surface-variant": "#5b403f",
+          outline: "#e4bebc",
+          success: "#15803d",
+          error: "#ba1a1a",
+        },
       },
       borderRadius: {
         DEFAULT: "0.125rem",

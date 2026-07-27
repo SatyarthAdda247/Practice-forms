@@ -8,6 +8,8 @@ import AnswerKeyConfig from "./pages/AnswerKeyConfig.jsx";
 import BulkUpload from "./pages/BulkUpload.jsx";
 import Results from "./pages/Results.jsx";
 import Admin from "./pages/Admin.jsx";
+import ImageResizer from "./pages/ImageResizer.jsx";
+import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
 
 // Auth gate: redirects to /login when there is no signed-in user.
 function RequireAuth() {
@@ -38,6 +40,11 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Public standalone tools for the main adda247.com site. Deliberately
+            outside RequireAuth and Layout: no sign-in, no portal chrome, and
+            the portal's own navigation never links to them. */}
+        <Route path="/image-resizer" element={<ImageResizer />} />
+        <Route path="/answerkey-checker" element={<AnswerKeyChecker />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />
