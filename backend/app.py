@@ -494,10 +494,29 @@ def upload_sheets(exam_id):
     extension (pdf/jpg/jpeg/png). Recognised files are stored, run through the
     (stubbed) mark detector, and marked ``validated``; unrecognised files are
     recorded with status ``failed``. Returns the created sheet records.
+
+    Form field ``sheetQuestions`` declares how many question slots are *printed*
+    on the form (100 or 200). This is the sheet's layout, not the exam's
+    question count — a 50-question exam is often sat on a 200-question form, and
+    the reader needs the printed geometry to number answers correctly.
     """
     exam = db.get_exam(exam_id)
     if exam is None:
         return error("exam not found", 404)
+
+    try:
+        sheet_questions = int(
+            request.form.get("sheetQuestions")
+            or omr_pipeline.DEFAULT_SHEET_QUESTIONS
+        )
+    except (TypeError, ValueError):
+        return error("'sheetQuestions' must be a number")
+    if sheet_questions not in omr_pipeline.SHEET_TEMPLATES:
+        return error(
+            "unsupported 'sheetQuestions' "
+            f"{sheet_questions}; supported: "
+            f"{sorted(omr_pipeline.SHEET_TEMPLATES)}"
+        )
 
     files = request.files.getlist("files")
     if not files:
@@ -532,7 +551,10 @@ def upload_sheets(exam_id):
                 # Real OMR: read the actually-marked bubbles off the scan. The
                 # reader also flags filling-rule issues (double / faint marks),
                 # and optionally OCRs the handwritten student name.
-                read = omr_pipeline.read_sheet(path, page=page, read_name=NAME_OCR)
+                read = omr_pipeline.read_sheet(
+                    path, page=page, read_name=NAME_OCR,
+                    sheet_questions=sheet_questions,
+                )
                 row = db.create_sheet(
                     exam_id, sheet_name, size, status="validated",
                     roll_number=None, student_name=read.get("name"),

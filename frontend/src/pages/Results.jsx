@@ -128,7 +128,6 @@ export default function Results() {
     if (!q) return data.rows;
     return data.rows.filter(
       (r) =>
-        (r.rollNumber || "").toLowerCase().includes(q) ||
         (r.studentName || "").toLowerCase().includes(q) ||
         (r.filename || "").toLowerCase().includes(q)
     );
@@ -257,7 +256,7 @@ export default function Results() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name / roll / file"
+                  placeholder="Search name / file"
                   className="bg-surface border border-outline-variant rounded-lg pl-xl pr-sm py-1.5 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
                 />
               </div>
@@ -303,7 +302,7 @@ export default function Results() {
                           </p>
                         )}
                         <p className="font-data-mono text-body-sm text-secondary">
-                          {r.rollNumber || "—"} • Rank #{rank}
+                          Rank #{rank}
                         </p>
                         <button
                           onClick={() => openView(r)}
@@ -368,7 +367,6 @@ export default function Results() {
                 <thead>
                   <tr className="bg-surface-bright text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
                     <th className="px-lg py-sm">Rank</th>
-                    <th className="px-lg py-sm">Roll No.</th>
                     <th className="px-lg py-sm">Student Name</th>
                     <th className="px-lg py-sm hidden md:table-cell">File</th>
                     <th className="px-lg py-sm text-center">Correct</th>
@@ -386,9 +384,6 @@ export default function Results() {
                       <tr key={r.sheetId} className="hover:bg-surface-bright transition-colors">
                         <td className="px-lg py-md font-data-mono text-data-mono text-secondary">
                           {rank}
-                        </td>
-                        <td className="px-lg py-md font-body-md text-body-md text-on-background font-medium">
-                          {r.rollNumber || "—"}
                         </td>
                         <td className="px-lg py-md font-body-md text-body-md text-on-background">
                           {editing === r.sheetId ? (
