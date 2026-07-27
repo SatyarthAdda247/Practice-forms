@@ -106,6 +106,33 @@ def _render_gray(path, page=0, dpi=200):
     return img
 
 
+def _render_bgr(path, page=0, dpi=200):
+    """Colour version of :func:`_render_gray`.
+
+    Only used for handwritten-name OCR, which locates the pen strokes by their
+    blue channel — that information is gone by the time the page is greyscale.
+    Returns ``None`` if the page can't be rendered in colour."""
+    try:
+        if path.lower().endswith(".pdf"):
+            import fitz
+
+            doc = fitz.open(path)
+            if page >= doc.page_count:
+                return None
+            pix = doc[page].get_pixmap(dpi=dpi)
+            buf = np.frombuffer(pix.samples, dtype=np.uint8)
+            img = buf.reshape(pix.height, pix.width, pix.n)
+            if pix.n == 4:
+                return cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+            if pix.n == 3:
+                return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            return cv2.cvtColor(img.reshape(pix.height, pix.width),
+                                cv2.COLOR_GRAY2BGR)
+        return cv2.imread(path, cv2.IMREAD_COLOR)
+    except Exception:
+        return None
+
+
 def _find_answer_blocks(gray):
     """Locate the five bordered answer-column boxes in the lower region.
     Returns a left-to-right sorted list of (x, y, w, h)."""
@@ -551,6 +578,21 @@ def _read_generic(gray, layout, opts=4):
     return answers, flags
 
 
+def _ocr_name(path, page, dpi):
+    """Fallback name read for sheets whose A-Z bubble grid is blank.
+
+    Re-renders the page in colour because the reader finds the handwriting by
+    its blue ink. Best-effort: ``None`` on anything unexpected."""
+    try:
+        import name_trocr  # lazy: avoids importing torch unless actually needed
+
+        if not name_trocr.ENABLED:
+            return None
+        return name_trocr.read_name_from_bgr(_render_bgr(path, page=page, dpi=dpi))
+    except Exception:
+        return None
+
+
 def read_sheet(path, page=0, dpi=200, read_name=False,
                sheet_questions=DEFAULT_SHEET_QUESTIONS):
     """Read a scanned answer sheet.
@@ -585,9 +627,7 @@ def read_sheet(path, page=0, dpi=200, read_name=False,
         answers, flags = _read_generic(gray, layout)
         name = read_name_grid(gray)
         if name is None and read_name:
-            import name_ocr
-
-            name = name_ocr.read_name_from_gray(gray)
+            name = _ocr_name(path, page, dpi)
         return {"answers": answers, "flags": sorted(flags), "name": name}
 
     blocks = _find_answer_blocks(gray)
@@ -622,7 +662,5 @@ def read_sheet(path, page=0, dpi=200, read_name=False,
     # Bubbled name first: exact, free, and needs no external service.
     name = read_name_grid(gray)
     if name is None and read_name:
-        import name_ocr  # lazy: avoids importing Vision unless enabled
-
-        name = name_ocr.read_name_from_gray(gray)
+        name = _ocr_name(path, page, dpi)
     return {"answers": answers, "flags": sorted(flags), "name": name}
