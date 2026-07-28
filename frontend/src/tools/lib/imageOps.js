@@ -17,7 +17,7 @@ export const PRESETS = {
     physical: "4.5 cm × 3.5 cm",
     checks: { face: true, background: true, sharpness: true, ink: false },
     source: "IBPS PO — Guidelines for Scanning and Upload of Documents",
-    covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
+    family: "Banking", covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
     guidance: [
       "Recent passport-style colour picture against a light-coloured, preferably white background.",
       "Look straight at the camera with a relaxed face — no harsh shadows, no red-eye.",
@@ -32,7 +32,7 @@ export const PRESETS = {
     physical: null,
     checks: { face: false, background: true, sharpness: true, ink: true },
     source: "IBPS PO — Guidelines for Scanning and Upload of Documents",
-    covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
+    family: "Banking", covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
     guidance: [
       "Sign on white paper with a black ink pen.",
       "Signature must NOT be in capital letters — a capitalised signature is not accepted.",
@@ -84,79 +84,79 @@ export const PRESETS = {
   "ssc-photo": {
     label: "SSC — Photograph", w: 100, h: 120, minKB: 20, maxKB: 50, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "CGL, CHSL, MTS, GD, JE, Stenographer",
+    source: null, family: "SSC", covers: "CGL, CHSL, MTS, GD, JE, Stenographer",
     guidance: ["Recent passport-size colour photo on a white or light background.",
                "Face should fill 70–80% of the frame. No cap, hat or sunglasses."],
   },
   "ssc-sign": {
     label: "SSC — Signature", w: 140, h: 60, minKB: 10, maxKB: 20, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "CGL, CHSL, MTS, GD, JE, Stenographer",
+    source: null, family: "SSC", covers: "CGL, CHSL, MTS, GD, JE, Stenographer",
     guidance: ["Sign on white paper in black or blue ink, then crop to the signature.",
                "Must not be in capital or block letters."],
   },
   "upsc-photo": {
     label: "UPSC — Photograph", w: 350, h: 350, minKB: 20, maxKB: 300, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "CSE, CDS, NDA, CAPF",
+    source: null, family: "UPSC", covers: "CSE, CDS, NDA, CAPF",
     guidance: ["Square photo — 350 × 350 px.",
                "Recent passport-style colour photo on a light background."],
   },
   "upsc-sign": {
     label: "UPSC — Signature", w: 350, h: 100, minKB: 20, maxKB: 300, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "CSE, CDS, NDA, CAPF",
+    source: null, family: "UPSC", covers: "CSE, CDS, NDA, CAPF",
     guidance: ["Sign on white paper in black or blue ink, then crop to the signature."],
   },
   "rrb-photo": {
     label: "Railway (RRB) — Photograph", w: 320, h: 240, minKB: 20, maxKB: 50, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "NTPC, Group D, ALP, JE",
+    source: null, family: "Railway", covers: "RRB NTPC, Group D, ALP, JE",
     guidance: ["Landscape 320 × 240 px — wider than it is tall.",
                "Recent colour photo on a light background."],
   },
   "rrb-sign": {
     label: "Railway (RRB) — Signature", w: 140, h: 60, minKB: 10, maxKB: 40, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "NTPC, Group D, ALP, JE",
+    source: null, family: "Railway", covers: "RRB NTPC, Group D, ALP, JE",
     guidance: ["Sign on white paper in black or blue ink, then crop to the signature."],
   },
   "nta-photo": {
     label: "NTA (JEE / NEET / CUET / UGC NET / CTET) — Photograph", w: 200, h: 230, minKB: 10, maxKB: 100, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "JEE Main, NEET UG, CUET UG, UGC NET, CTET",
+    source: null, family: "NTA", covers: "JEE Main, NEET UG, CUET UG, UGC NET, CTET",
     guidance: ["Capped at 100 KB so the file is valid for CTET as well as the 200 KB exams.",
                "Recent passport-size colour photo on a white background."],
   },
   "nta-sign": {
     label: "NTA (JEE / NEET / CUET / UGC NET / CTET) — Signature", w: 140, h: 60, minKB: 4, maxKB: 30, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "JEE Main, NEET UG, CUET UG, UGC NET, CTET",
+    source: null, family: "NTA", covers: "JEE Main, NEET UG, CUET UG, UGC NET, CTET",
     guidance: ["Sign on white paper in black or blue ink. Not in capital letters."],
   },
   "afcat-photo": {
     label: "AFCAT — Photograph", w: 200, h: 230, minKB: 10, maxKB: 50, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "AFCAT",
+    source: null, family: "AFCAT", covers: "AFCAT",
     guidance: ["Recent passport-size colour photo on a light background."],
   },
   "afcat-sign": {
     label: "AFCAT — Signature", w: 140, h: 60, minKB: 10, maxKB: 50, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "AFCAT",
+    source: null, family: "AFCAT", covers: "AFCAT",
     guidance: ["Sign on white paper in black or blue ink, then crop to the signature."],
   },
   "statepsc-photo": {
     label: "State PSC — Photograph", w: 200, h: 230, minKB: 20, maxKB: 50, dpi: 200,
     physical: null, checks: { face: true, background: true, sharpness: true, ink: false },
-    source: null, covers: "Most State Public Service Commissions",
+    source: null, family: "State PSC", covers: "UPPSC, BPSC, MPSC, RPSC and most others",
     guidance: ["Typical State PSC requirement — always confirm against your own notification.",
                "Recent passport-size colour photo on a light background."],
   },
   "statepsc-sign": {
     label: "State PSC — Signature", w: 140, h: 60, minKB: 10, maxKB: 20, dpi: 200,
     physical: null, checks: { face: false, background: true, sharpness: true, ink: true },
-    source: null, covers: "Most State Public Service Commissions",
+    source: null, family: "State PSC", covers: "UPPSC, BPSC, MPSC, RPSC and most others",
     guidance: ["Sign on white paper in black or blue ink, then crop to the signature."],
   },
 
@@ -167,6 +167,28 @@ export const PRESETS = {
     source: null,
     guidance: [],
   },
+};
+
+// Which document a preset targets. Drives the Photograph / Signature switch at
+// the top of the tool, so a candidate picks what they are uploading first and
+// only ever sees the presets that apply to it.
+export const presetKind = (key) =>
+  key.endsWith("-photo") ? "photo" : key.endsWith("-sign") ? "sign" : "other";
+
+// Name for the exam-preset dropdown. The document type is already chosen above
+// it, so "SSC — Photograph" would say Photograph twice; show just the family.
+// "Other" keeps its full label, because there the suffix is the distinguishing
+// part (thumb impression vs hand-written declaration), not a repeat.
+export const presetFamilyLabel = (key, preset) => {
+  // "Other" keeps its full label — there the suffix distinguishes thumb
+  // impression from hand-written declaration rather than repeating the type.
+  if (presetKind(key) === "other") return preset.label;
+  const family = preset.family || preset.label.split(" — ")[0];
+  // Spell out the exams a family covers, unless the list would just repeat the
+  // family name (AFCAT covers only AFCAT).
+  return preset.covers && preset.covers !== family
+    ? `${family} (${preset.covers})`
+    : family;
 };
 
 export const MAX_INPUT_BYTES = 10 * 1024 * 1024;

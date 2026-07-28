@@ -43,9 +43,15 @@ log = logging.getLogger(__name__)
 PROJECT = os.environ.get("BQ_PROJECT", "adda247-dev")
 DATASET = os.environ.get("BQ_DATASET", "Aspirant_portal")
 RESIZER_TABLE = os.environ.get("BQ_TOOL_RESIZER_TABLE", "tool_image_resizer")
+# The candidate's contact details live in their own table rather than inside the
+# job row: it is the only personal data the tools collect, it is the thing the
+# leads page reads, and keeping it separate means that page never has to query a
+# table full of unrelated job metadata. Joined back to a job via `job_id`.
+LEADS_TABLE = os.environ.get("BQ_TOOL_LEADS_TABLE", "tool_image_resizer_leads")
 KEYCHECK_TABLE = os.environ.get("BQ_TOOL_KEYCHECK_TABLE", "tool_answerkey_checker")
 
 _RESIZER_ID = f"{PROJECT}.{DATASET}.{RESIZER_TABLE}"
+_LEADS_ID = f"{PROJECT}.{DATASET}.{LEADS_TABLE}"
 _KEYCHECK_ID = f"{PROJECT}.{DATASET}.{KEYCHECK_TABLE}"
 
 # Length caps for free-text coming from an unauthenticated form.
@@ -116,6 +122,7 @@ def _table_specs():
     from google.cloud import bigquery
     F = bigquery.SchemaField
     return (
+        _access_spec(),
         (_RESIZER_ID, [
             F("id", "STRING", mode="REQUIRED"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
@@ -149,6 +156,20 @@ def _table_specs():
             F("user_agent", "STRING"),
             F("referrer", "STRING"),
         ], ["preset_key"]),
+        (_LEADS_ID, [
+            F("id", "STRING", mode="REQUIRED"),
+            F("created_at", "TIMESTAMP", mode="REQUIRED"),
+            F("name", "STRING"),
+            F("phone", "STRING"),
+            F("exam", "STRING"),
+            # Which tool produced the lead, and the job row it came from, so the
+            # technical detail can be looked up without duplicating it here.
+            F("tool", "STRING"),
+            F("job_id", "STRING"),
+            F("preset_label", "STRING"),
+            F("user_agent", "STRING"),
+            F("referrer", "STRING"),
+        ], ["tool"]),
         (_KEYCHECK_ID, [
             F("id", "STRING", mode="REQUIRED"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
@@ -193,9 +214,13 @@ def init():
     for table_id, schema, clustering in _table_specs():
         try:
             table = bigquery.Table(table_id, schema=schema)
-            table.time_partitioning = bigquery.TimePartitioning(
-                type_=bigquery.TimePartitioningType.DAY, field="created_at"
-            )
+            # Event tables are day-partitioned on created_at; the lead-access
+            # grant table is a tiny mutable list with no such column, and
+            # partitioning it on a missing field makes the create fail.
+            if any(f.name == "created_at" for f in schema):
+                table.time_partitioning = bigquery.TimePartitioning(
+                    type_=bigquery.TimePartitioningType.DAY, field="created_at"
+                )
             table.clustering_fields = clustering
             created = client.create_table(table, exists_ok=True)
             _reconcile_columns(client, created, schema)
@@ -231,12 +256,28 @@ def save_resizer_lead(payload, user_agent=None, referrer=None):
     output = payload.get("output") or {}
     source = payload.get("source") or {}
 
-    return _insert(_RESIZER_ID, {
+    job_id = str(uuid.uuid4())
+    now = _now_iso()
+
+    # Personal data goes to the leads table only. The lead_* columns stay in the
+    # job table's schema for rows written before this split, but are no longer
+    # populated — one home for contact details, not two.
+    _insert(_LEADS_ID, {
         "id": str(uuid.uuid4()),
-        "created_at": _now_iso(),
-        "lead_name": _text(lead.get("name")),
-        "lead_phone": _text(lead.get("phone"), 32),
-        "lead_exam": _text(lead.get("exam")),
+        "created_at": now,
+        "name": _text(lead.get("name")),
+        "phone": _text(lead.get("phone"), 32),
+        "exam": _text(lead.get("exam")),
+        "tool": "image-resizer",
+        "job_id": job_id,
+        "preset_label": _text(target.get("label")),
+        "user_agent": _text(user_agent, 400),
+        "referrer": _text(referrer, 400),
+    })
+
+    return _insert(_RESIZER_ID, {
+        "id": job_id,
+        "created_at": now,
         "preset_key": _text(payload.get("presetKey"), 64),
         "preset_label": _text(target.get("label")),
         "target_width": _int(target.get("w")),
@@ -287,3 +328,150 @@ def save_keycheck_result(payload, user_agent=None, referrer=None):
         "user_agent": _text(user_agent, 400),
         "referrer": _text(referrer, 400),
     })
+
+
+# --------------------------------------------------------------------------- #
+# Leads: read access + listing
+# --------------------------------------------------------------------------- #
+# Who may see candidate contact details. Held in its own app-owned table rather
+# than as a column on the shared `users` table, which other products also read —
+# this keeps a permission that is specific to this app out of shared schema.
+# A super admin grants and revokes; nobody else can read or write it.
+ACCESS_TABLE = os.environ.get("BQ_TOOL_LEAD_ACCESS_TABLE", "tool_lead_access")
+_ACCESS_ID = f"{PROJECT}.{DATASET}.{ACCESS_TABLE}"
+
+
+def _access_spec():
+    from google.cloud import bigquery
+    F = bigquery.SchemaField
+    return (_ACCESS_ID, [
+        F("email", "STRING", mode="REQUIRED"),
+        F("granted_by", "STRING"),
+        F("granted_at", "TIMESTAMP"),
+    ], ["email"])
+
+
+def _q(sql, params=None):
+    """Run a read query under the same byte ceiling the rest of the app uses."""
+    from google.cloud import bigquery
+    cfg = bigquery.QueryJobConfig(query_parameters=params or [],
+                                  use_query_cache=True)
+    import db as _db
+    if _db.MAX_BYTES_BILLED > 0:
+        cfg.maximum_bytes_billed = _db.MAX_BYTES_BILLED
+    return list(_client().query(sql, job_config=cfg).result())
+
+
+def _sp(name, type_, value):
+    from google.cloud import bigquery
+    return bigquery.ScalarQueryParameter(name, type_, value)
+
+
+# The grant list is tiny and changes rarely, but the check runs on every
+# /api/auth/me — i.e. every page load. Querying BigQuery there cost every
+# non-super-admin 600-1300ms per request (measured), so the whole list is held
+# in-process for a short window instead. Per worker and busted on grant/revoke,
+# so a change is live immediately in the worker that made it and within
+# ACCESS_TTL everywhere else.
+ACCESS_TTL = 60  # seconds
+_access_cache = {"at": 0.0, "emails": frozenset()}
+
+
+def _access_emails(force=False):
+    import time as _time
+
+    now = _time.monotonic()
+    if not force and now - _access_cache["at"] < ACCESS_TTL:
+        return _access_cache["emails"]
+    rows = _q(f"SELECT LOWER(email) AS email FROM `{_ACCESS_ID}`")
+    _access_cache["emails"] = frozenset(r["email"] for r in rows if r["email"])
+    _access_cache["at"] = now
+    return _access_cache["emails"]
+
+
+def _bust_access_cache():
+    _access_cache["at"] = 0.0
+
+
+def can_view_leads(user, cached=True):
+    """True if ``user`` may see candidate contact details.
+
+    Super admins always may; anyone else needs an explicit grant. Never raises —
+    a warehouse problem denies access rather than opening it.
+
+    ``cached=True`` is for the cosmetic flag on /api/auth/me, which only decides
+    whether a nav link is drawn and runs on every page load. The endpoint that
+    actually serves the data passes ``cached=False`` so a revoked grant takes
+    effect on the next request rather than up to ACCESS_TTL later — the cache
+    must never be what keeps a door open."""
+    if not user:
+        return False
+    if user.get("role") == "super_admin":
+        return True
+    try:
+        return (user.get("email") or "").lower() in _access_emails(force=not cached)
+    except Exception:
+        log.exception("lead-access check failed; denying")
+        return False
+
+
+def list_lead_access():
+    rows = _q(f"SELECT email, granted_by, granted_at FROM `{_ACCESS_ID}` "
+              f"ORDER BY granted_at DESC")
+    return [{
+        "email": r["email"],
+        "grantedBy": r["granted_by"],
+        "grantedAt": r["granted_at"].isoformat() if r["granted_at"] else None,
+    } for r in rows]
+
+
+def grant_lead_access(email, granted_by):
+    email = (email or "").strip().lower()
+    if not email:
+        raise ValueError("email is required")
+    _q(f"""MERGE `{_ACCESS_ID}` T
+           USING (SELECT @e AS email) S ON LOWER(T.email) = S.email
+           WHEN NOT MATCHED THEN
+             INSERT (email, granted_by, granted_at)
+             VALUES (@e, @by, CURRENT_TIMESTAMP())""",
+       [_sp("e", "STRING", email), _sp("by", "STRING", granted_by)])
+    _bust_access_cache()   # the granting worker sees it at once
+    return email
+
+
+def revoke_lead_access(email):
+    email = (email or "").strip().lower()
+    _q(f"DELETE FROM `{_ACCESS_ID}` WHERE LOWER(email) = @e",
+       [_sp("e", "STRING", email)])
+    _bust_access_cache()
+    return email
+
+
+def list_leads(days=30, limit=500):
+    """Recent candidate leads, newest first.
+
+    The cut-off is computed here and passed as a parameter, snapped to midnight,
+    so the query is deterministic and BigQuery can serve it from cache — see the
+    same reasoning in db.daily_usage."""
+    from datetime import datetime, timedelta, timezone
+    days = max(1, min(int(days), 365))
+    limit = max(1, min(int(limit), 5000))
+    midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0,
+                                                  microsecond=0)
+    cutoff = midnight - timedelta(days=days - 1)
+    rows = _q(
+        f"""SELECT created_at, name, phone, exam, tool, preset_label
+              FROM `{_ACCESS_ID.rsplit('.', 1)[0]}.{LEADS_TABLE}`
+             WHERE created_at >= @cutoff
+             ORDER BY created_at DESC
+             LIMIT {limit}""",
+        [_sp("cutoff", "TIMESTAMP", cutoff)],
+    )
+    return [{
+        "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        "name": r["name"],
+        "phone": r["phone"],
+        "exam": r["exam"],
+        "tool": r["tool"],
+        "presetLabel": r["preset_label"],
+    } for r in rows]

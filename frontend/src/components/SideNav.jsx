@@ -14,6 +14,8 @@ const BASE_NAV = [
 const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_settings", end: true };
 // Usage analytics is super-admin only, matching GET /api/admin/usage.
 const SUPER_ADMIN_NAV = { to: "/admin/usage", label: "Daily Usage", icon: "monitoring" };
+// Shown only to users a super admin has approved for candidate leads.
+const LEADS_NAV = { to: "/leads", label: "Leads", icon: "contacts" };
 
 function Item({ to, label, icon, end }) {
   return (
@@ -52,6 +54,7 @@ export default function SideNav() {
     ...BASE_NAV,
     ...(["admin", "super_admin"].includes(user?.role) ? [ADMIN_NAV] : []),
     ...(user?.role === "super_admin" ? [SUPER_ADMIN_NAV] : []),
+    ...(user?.role === "super_admin" || user?.canViewLeads ? [LEADS_NAV] : []),
   ];
 
   return (

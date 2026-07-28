@@ -256,8 +256,12 @@ def auth_google():
 @app.get("/api/auth/me")
 @login_required
 def auth_me():
-    """Return the currently signed-in user (live DB record)."""
-    return jsonify(g.user)
+    """Return the currently signed-in user (live DB record).
+
+    ``canViewLeads`` is included so the UI can hide the leads page from users
+    who have not been approved for it. The endpoint itself re-checks — this is
+    only to avoid showing a link that would 403."""
+    return jsonify({**g.user, "canViewLeads": tools_store.can_view_leads(g.user)})
 
 
 @app.post("/api/auth/logout")
@@ -422,6 +426,70 @@ def admin_usage():
                    "activeDays": len(rows)},
         "rows": rows,
     })
+
+
+@app.get("/api/admin/lead-access")
+@admin_required
+def admin_list_lead_access():
+    """Users approved to view candidate leads. **Super-admins only.**"""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can manage lead access", 403)
+    return jsonify(tools_store.list_lead_access())
+
+
+@app.post("/api/admin/lead-access")
+@admin_required
+def admin_grant_lead_access():
+    """Approve a user to view candidate leads. **Super-admins only.**
+
+    Body: ``{ "email": "..." }``. Super admins always have access and do not
+    need a grant."""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can grant lead access", 403)
+    email = ((request.get_json(silent=True) or {}).get("email") or "").strip()
+    if not email or "@" not in email:
+        return error("a valid 'email' is required")
+    try:
+        tools_store.grant_lead_access(email, g.user["email"])
+    except Exception as exc:
+        app.logger.exception("granting lead access failed")
+        return error(f"could not grant access: {exc}", 500)
+    return jsonify(tools_store.list_lead_access()), 201
+
+
+@app.delete("/api/admin/lead-access/<path:email>")
+@admin_required
+def admin_revoke_lead_access(email):
+    """Revoke a user's lead access. **Super-admins only.**"""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can revoke lead access", 403)
+    tools_store.revoke_lead_access(email)
+    return "", 204
+
+
+@app.get("/api/tools/leads")
+@login_required
+def tools_leads():
+    """Candidate leads captured by the public tools.
+
+    Readable by super admins, and by anyone a super admin has approved via
+    ``/api/admin/lead-access``. Everyone else gets 403 — this is the only
+    personal data the tools collect, so it is not open to all signed-in users.
+
+    Query param ``days`` (default 30, max 365).
+    """
+    # Authoritative check — never served from the cache (see can_view_leads).
+    if not tools_store.can_view_leads(g.user, cached=False):
+        return error("you do not have access to candidate leads — "
+                     "ask a super admin to approve your account", 403)
+    try:
+        days = int(request.args.get("days", 30))
+    except (TypeError, ValueError):
+        return error("'days' must be a number")
+    if days < 1 or days > 365:
+        return error("'days' must be between 1 and 365")
+    rows = tools_store.list_leads(days)
+    return jsonify({"days": days, "count": len(rows), "rows": rows})
 
 
 # --------------------------------------------------------------------------- #

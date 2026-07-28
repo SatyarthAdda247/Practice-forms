@@ -94,6 +94,13 @@ export const api = {
   adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
   // Daily OMR processing volume for the usage dashboard.
   adminUsage: (days = 30) => request(`/admin/usage?days=${days}`),
+  // Lead access is granted by a super admin; the leads themselves are then
+  // readable by that user.
+  adminListLeadAccess: () => request("/admin/lead-access"),
+  adminGrantLeadAccess: (email) => request("/admin/lead-access", json("POST", { email })),
+  adminRevokeLeadAccess: (email) =>
+    request(`/admin/lead-access/${encodeURIComponent(email)}`, { method: "DELETE" }),
+  leads: (days = 30) => request(`/tools/leads?days=${days}`),
 
   // Exams + answer keys
   listExams: () => request("/exams"),
