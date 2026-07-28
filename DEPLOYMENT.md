@@ -229,6 +229,42 @@ livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 30, ti
 
 ---
 
+## 6b. BigQuery: partitioning the sheets/results tables
+
+`init_db()` creates `omr_sheets` and `omr_results` **day-partitioned** (on
+`created_at` and `graded_at`) so the admin usage dashboard's date-range query
+prunes to the days it asks for. Clustering is on `exam_id` and cannot prune a
+timestamp predicate, so without partitioning that query scans every row of the
+columns it touches.
+
+**This only applies to tables created from that point on.** BigQuery cannot add
+partitioning to an existing table in place, and `create_table(exists_ok=True)`
+returns an existing table untouched — so a table created before this change
+stays unpartitioned and keeps working, just without pruning. Given the query is
+cached and bills BigQuery's 10 MB-per-table minimum on a miss, that is a
+non-issue at current volume; migrate only if `omr_sheets` grows into the
+multi-GB range.
+
+To migrate an existing table (do it during a quiet window — the swap is not
+atomic, and rows written between the copy and the rename are lost):
+
+```sql
+CREATE TABLE `adda247-dev.Aspirant_portal.omr_sheets_partitioned`
+PARTITION BY DATE(created_at)
+CLUSTER BY exam_id, id
+AS SELECT * FROM `adda247-dev.Aspirant_portal.omr_sheets`;
+
+-- verify the row counts match, then:
+DROP TABLE `adda247-dev.Aspirant_portal.omr_sheets`;
+ALTER TABLE `adda247-dev.Aspirant_portal.omr_sheets_partitioned`
+  RENAME TO omr_sheets;
+```
+
+Repeat for `omr_results`, partitioning by `DATE(graded_at)` and clustering by
+`exam_id, sheet_id`.
+
+---
+
 ## 7. Open items
 
 - Confirm **staging domains** (frontend + backend) → fill `VITE_API_BASE_URL`

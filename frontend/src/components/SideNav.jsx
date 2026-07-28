@@ -10,12 +10,16 @@ const BASE_NAV = [
   { to: "/upload", label: "Uploads", icon: "cloud_upload" },
   { to: "/results", label: "Results", icon: "analytics" },
 ];
-const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_settings" };
+// `end` on Administrator so it does not also light up on /admin/usage.
+const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_settings", end: true };
+// Usage analytics is super-admin only, matching GET /api/admin/usage.
+const SUPER_ADMIN_NAV = { to: "/admin/usage", label: "Daily Usage", icon: "monitoring" };
 
-function Item({ to, label, icon }) {
+function Item({ to, label, icon, end }) {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         `flex items-center gap-md px-md py-sm rounded-xl font-label-md text-label-md transition-all duration-200 ease-in-out ${
           isActive
@@ -47,6 +51,7 @@ export default function SideNav() {
   const navItems = [
     ...BASE_NAV,
     ...(["admin", "super_admin"].includes(user?.role) ? [ADMIN_NAV] : []),
+    ...(user?.role === "super_admin" ? [SUPER_ADMIN_NAV] : []),
   ];
 
   return (

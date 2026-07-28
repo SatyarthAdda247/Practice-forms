@@ -92,6 +92,8 @@ export const api = {
   adminCreateUser: (data) => request("/admin/users", json("POST", data)),
   adminUpdateUser: (id, data) => request(`/admin/users/${id}`, json("PATCH", data)),
   adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+  // Daily OMR processing volume for the usage dashboard.
+  adminUsage: (days = 30) => request(`/admin/usage?days=${days}`),
 
   // Exams + answer keys
   listExams: () => request("/exams"),
