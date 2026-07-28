@@ -27,6 +27,100 @@ function Avatar({ user }) {
   );
 }
 
+// Super admins approve who may see candidate leads (name / phone / exam).
+// Kept on the Admin page because that is where access is already managed.
+function LeadAccessPanel() {
+  const [rows, setRows] = useState([]);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const load = () =>
+    api.adminListLeadAccess().then(setRows).catch((e) => setErr(e.message));
+  useEffect(() => { load(); }, []);
+
+  const grant = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr("");
+    try {
+      setRows(await api.adminGrantLeadAccess(email.trim()));
+      setEmail("");
+    } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+
+  const revoke = async (addr) => {
+    setBusy(true); setErr("");
+    try { await api.adminRevokeLeadAccess(addr); await load(); }
+    catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden mb-xl">
+      <div className="px-lg py-md border-b border-outline-variant bg-surface-bright">
+        <h4 className="font-headline-sm text-headline-sm text-on-background flex items-center gap-sm">
+          <Icon name="contacts" size={20} />
+          Candidate Leads Access
+        </h4>
+        <p className="font-body-sm text-body-sm text-secondary mt-xs">
+          Approved users can view the name, phone and target exam candidates submit
+          on the public tools. Super admins always have access.
+        </p>
+      </div>
+
+      {err && (
+        <p className="px-lg pt-md font-body-sm text-body-sm text-error">{err}</p>
+      )}
+
+      <form onSubmit={grant} className="px-lg py-md flex flex-wrap gap-sm items-center">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@adda247.com"
+          className="flex-1 min-w-[220px] bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="py-2 px-md bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors disabled:opacity-60"
+        >
+          Approve
+        </button>
+      </form>
+
+      {rows.length === 0 ? (
+        <p className="px-lg pb-md font-body-sm text-body-sm text-secondary">
+          Nobody approved yet — only super admins can see leads.
+        </p>
+      ) : (
+        <ul className="divide-y divide-outline-variant border-t border-outline-variant">
+          {rows.map((r) => (
+            <li key={r.email} className="px-lg py-sm flex items-center justify-between gap-sm">
+              <div className="min-w-0">
+                <p className="font-body-md text-body-md text-on-background truncate">{r.email}</p>
+                {r.grantedBy && (
+                  <p className="font-body-sm text-body-sm text-secondary truncate">
+                    approved by {r.grantedBy}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => revoke(r.email)}
+                disabled={busy}
+                title="Revoke access"
+                className="p-xs rounded-full text-outline hover:text-error hover:bg-error-container transition-colors disabled:opacity-40 shrink-0"
+              >
+                <Icon name="remove_circle" size={20} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
@@ -133,6 +227,7 @@ export default function Admin() {
         <Loading />
       ) : (
         <>
+          {me?.role === "super_admin" && <LeadAccessPanel />}
       {/* Counts */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg flex justify-around items-center mb-xl">
         {[

@@ -9,6 +9,7 @@ import BulkUpload from "./pages/BulkUpload.jsx";
 import Results from "./pages/Results.jsx";
 import Admin from "./pages/Admin.jsx";
 import Usage from "./pages/Usage.jsx";
+import Leads from "./pages/Leads.jsx";
 import ImageResizer from "./pages/ImageResizer.jsx";
 import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
 
@@ -38,6 +39,16 @@ function RequireAdmin({ children }) {
 
 // Stricter gate for pages a regular admin must not see (usage analytics).
 // The API enforces this too — this only keeps the route from rendering.
+// Leads hold candidate personal data: super admins always, others only once a
+// super admin approves them (canViewLeads comes from /api/auth/me).
+function RequireLeadAccess({ children }) {
+  const { user } = useAuth();
+  if (!(user?.role === "super_admin" || user?.canViewLeads)) {
+    return <Navigate to="/exams" replace />;
+  }
+  return children;
+}
+
 function RequireSuperAdmin({ children }) {
   const { user } = useAuth();
   if (user?.role !== "super_admin") return <Navigate to="/exams" replace />;
@@ -65,6 +76,7 @@ export default function App() {
           <Route path="/results/:id" element={<Results />} />
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/admin/usage" element={<RequireSuperAdmin><Usage /></RequireSuperAdmin>} />
+          <Route path="/leads" element={<RequireLeadAccess><Leads /></RequireLeadAccess>} />
           <Route path="*" element={<Navigate to="/exams" replace />} />
         </Route>
       </Routes>
