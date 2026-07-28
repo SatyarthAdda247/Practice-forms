@@ -50,7 +50,13 @@ MARK_MARGIN = 0.12  # ...and lead the runner-up by this much to be unambiguous
 # fill it give us the name with no OCR at all, so this is tried before any
 # handwriting recognition. Region is generous — the grid is located by finding
 # the bubbles themselves, not by these bounds.
-NAME_REGION = (0.05, 0.18, 0.42, 0.55)  # x0, y0, x1, y1 as page fractions
+# Generous enough to contain the NAME block on both form variants: the
+# 200-question sheet's matrix starts at y~0.13 and runs to x~0.45, where the
+# 100-question one starts at y~0.18 and ends by x~0.40. A region tuned to the
+# latter clipped rows A-C off the former, so no 26-row run could be found and
+# every 200-question sheet silently returned no name. Overshooting is safe —
+# the grid itself is located by finding its bubbles inside this window.
+NAME_REGION = (0.02, 0.10, 0.50, 0.52)  # x0, y0, x1, y1 as page fractions
 NAME_ROWS = 26                          # A-Z
 NAME_MIN_BUBBLES = 100                  # fewer ⇒ we haven't found the matrix
 NAME_FILL_MIN = 0.55                    # a filled letter bubble measures >= this
@@ -343,6 +349,36 @@ def _evenly_spaced_run(clusters, min_count=5, tol=0.15):
     return (best, pitch) if len(best) >= 2 else (None, None)
 
 
+def _name_rows(ys, rad, ncols):
+    """The 26 A-Z row centres, or ``None``.
+
+    Rows are found by comb fit rather than by an evenly-spaced run: the run test
+    needs near-perfect spacing and fell apart on a lower-resolution phone photo
+    (5 rows found instead of 26), whereas the comb tolerates the jitter.
+
+    The comb returns a few extra rows beyond the matrix — the handwriting boxes
+    above it and the first answer rows below. Those sit at the ends and are
+    sparsely populated (13-23 bubbles against the grid's 34-47), so trim from
+    whichever end is weaker until exactly 26 remain."""
+    pitch, candidates = _comb_axis(ys, rad)
+    counts = [(c, int((np.abs(ys - c) < pitch * 0.4).sum())) for c in candidates]
+    kept = [(c, n) for c, n in counts if n >= max(3, ncols // 3)]
+    if len(kept) < NAME_ROWS:
+        return None
+    stretches = [[kept[0]]]
+    for c, n in kept[1:]:
+        if c - stretches[-1][-1][0] <= pitch * 1.5:
+            stretches[-1].append((c, n))
+        else:
+            stretches.append([(c, n)])
+    band = max(stretches, key=len)
+    if len(band) < NAME_ROWS:
+        return None
+    while len(band) > NAME_ROWS:
+        band.pop(0 if band[0][1] <= band[-1][1] else -1)
+    return [c for c, _ in band]
+
+
 def read_name_grid(gray):
     """Decode the student name from the NAME block's A-Z bubble matrix.
 
@@ -383,15 +419,30 @@ def read_name_grid(gray):
         return None
 
     rad = float(np.median(rs))
-    rows, _ = _evenly_spaced_run(_cluster_1d(np.array(ys), rad * 1.2))
-    if rows is None or len(rows) != NAME_ROWS:
+    x_arr, y_arr = np.array(xs), np.array(ys)
+
+    # Columns before rows. The search region has to be generous enough to cover
+    # both form variants (the 200-question NAME block is wider and starts higher
+    # than the 100-question one), which means it also catches the edge of the
+    # SET NO / ROLL NO grids. Those are 0-9, so their columns hold ~10 bubbles
+    # against the name matrix's 26 — filtering columns by occupancy drops them,
+    # and finding the rows only from surviving columns keeps their differently
+    # pitched rows from corrupting the A-Z run.
+    pitch, candidates = _comb_axis(x_arr, rad)
+    name_cols = [c for c in candidates
+                 if int((np.abs(x_arr - c) < pitch * 0.4).sum()) >= NAME_ROWS // 2]
+    if len(name_cols) < 2:
+        return None
+    in_grid = np.zeros(len(x_arr), dtype=bool)
+    for c in name_cols:
+        in_grid |= np.abs(x_arr - c) < pitch * 0.4
+
+    rows = _name_rows(y_arr[in_grid], rad, len(name_cols))
+    if rows is None:
         return None  # not a clean A-Z matrix — refuse rather than guess
 
-    # Columns come from a comb fit, then keep only positions that actually hold
-    # a stack of bubbles and take the longest unbroken stretch of them — that
-    # discards the comb teeth that fall outside the matrix.
-    pitch, candidates = _comb_axis(np.array(xs), rad)
-    x_arr = np.array(xs)
+    # Keep only the comb positions holding a full stack of bubbles, then take
+    # the longest unbroken stretch — that discards teeth outside the matrix.
     occupied = [c for c in candidates
                 if int((np.abs(x_arr - c) < pitch * 0.4).sum()) >= NAME_ROWS // 2]
     if len(occupied) < 2:
@@ -408,7 +459,8 @@ def read_name_grid(gray):
 
     rr = max(1, int(rad * 0.6))
     out = []
-    for cx in cols:
+    unreadable = []   # column indices holding ink we can't resolve to a letter
+    for ci, cx in enumerate(cols):
         darkness = []
         for cy in rows:
             xi, yi = int(cx), int(cy)
@@ -422,13 +474,25 @@ def read_name_grid(gray):
         elif d[best] < NAME_EMPTY_MAX:
             out.append(" ")   # nothing in this column ⇒ word gap or unused
         else:
-            # Ink present but no confident letter. Reading on would drop or
-            # mistake this character while the rest still looks like a name
-            # (a sheet reading ANUPRIYA MANDAL decodes as "ANUPR A MA DAL"),
-            # and a plausible wrong name is worse than none. Refuse the sheet.
-            return None
+            out.append(" ")
+            unreadable.append(ci)
 
-    name = " ".join("".join(out).split())
+    # A column holding ink we can't resolve to a letter is only fatal if it
+    # falls *inside* the name: there it would drop or mistake a character while
+    # the rest still reads plausibly (a sheet spelling ANUPRIYA MANDAL came out
+    # as "ANUPR A MA DAL"), and a convincing wrong name is worse than none.
+    #
+    # Past the end of the name it means nothing — the unused columns of a form
+    # commonly carry scan shading, and one real sheet had three of them sitting
+    # in the ambiguous band. Rejecting on those threw away perfectly good short
+    # names, so only ambiguity up to the last filled column counts.
+    filled = [i for i, ch in enumerate(out) if ch != " "]
+    if not filled:
+        return None
+    if any(i < filled[-1] for i in unreadable):
+        return None
+
+    name = " ".join("".join(out[:filled[-1] + 1]).split())
     return name or None
 
 
