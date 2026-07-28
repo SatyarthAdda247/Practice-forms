@@ -388,6 +388,42 @@ def admin_delete_user(user_id):
     return "", 204
 
 
+@app.get("/api/admin/usage")
+@admin_required
+def admin_usage():
+    """Daily OMR processing volume. **Super-admins only.**
+
+    Query param ``days`` (default 30, max 365). Returns::
+
+        {
+          "days": 30,
+          "totals": {"sheets": 412, "validated": 400, "failed": 12,
+                      "graded": 395, "named": 210, "activeDays": 18},
+          "rows": [{"day": "2026-07-27", "sheets": 42, ...}, ...]   # newest first
+        }
+
+    ``sheets`` counts uploaded pages — one page is one student's sheet.
+    Days with no activity are omitted from ``rows``.
+    """
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can view usage", 403)
+    try:
+        days = int(request.args.get("days", 30))
+    except (TypeError, ValueError):
+        return error("'days' must be a number")
+    if days < 1 or days > 365:
+        return error("'days' must be between 1 and 365")
+
+    rows = db.daily_usage(days)
+    keys = ("sheets", "validated", "failed", "graded", "named")
+    return jsonify({
+        "days": days,
+        "totals": {**{k: sum(r[k] for r in rows) for k in keys},
+                   "activeDays": len(rows)},
+        "rows": rows,
+    })
+
+
 # --------------------------------------------------------------------------- #
 # Exams + answer keys
 # --------------------------------------------------------------------------- #

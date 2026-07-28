@@ -142,9 +142,14 @@ def _now():
 # etc.). BigQuery has no indexes; clustering is the lever that keeps these
 # transactional-style reads from scanning every row as the tables grow.
 def _table_specs():
-    """Return ``(table_id, schema_fields, clustering_fields)`` for each
-    app-owned table, using the BigQuery SDK types (built lazily so importing
-    this module never requires the SDK)."""
+    """Return ``(table_id, schema_fields, clustering_fields, partition_field)``
+    for each app-owned table, using the BigQuery SDK types (built lazily so
+    importing this module never requires the SDK).
+
+    ``partition_field`` day-partitions the two tables that are read by date
+    range (the usage dashboard). Without it a date filter scans every row of
+    the referenced columns, because clustering is on ``exam_id`` and cannot
+    prune a timestamp predicate. ``None`` leaves a table unpartitioned."""
     from google.cloud import bigquery
     F = bigquery.SchemaField
     return (
@@ -157,7 +162,7 @@ def _table_specs():
             F("marks_penalty", "FLOAT64", mode="REQUIRED"),
             F("answer_key", "STRING", mode="REQUIRED"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
-        ], ["id"]),
+        ], ["id"], None),
         (_SHEETS_ID, [
             F("id", "INT64", mode="REQUIRED"),
             F("exam_id", "INT64", mode="REQUIRED"),
@@ -171,7 +176,7 @@ def _table_specs():
             # JSON array of filling-rule violation codes (see grading.py).
             F("flags", "STRING"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
-        ], ["exam_id", "id"]),
+        ], ["exam_id", "id"], "created_at"),
         (_RESULTS_ID, [
             F("id", "INT64", mode="REQUIRED"),
             F("sheet_id", "INT64", mode="REQUIRED"),
@@ -182,7 +187,7 @@ def _table_specs():
             F("score", "FLOAT64", mode="REQUIRED"),
             F("max_score", "FLOAT64", mode="REQUIRED"),
             F("graded_at", "TIMESTAMP", mode="REQUIRED"),
-        ], ["exam_id", "sheet_id"]),
+        ], ["exam_id", "sheet_id"], "graded_at"),
     )
 
 
@@ -195,9 +200,17 @@ def init_db():
     from google.cloud import bigquery
     _init_users()  # ensure the shared users table exists with a schema
     client = _client()
-    for table_id, schema, clustering in _table_specs():
+    for table_id, schema, clustering, partition_field in _table_specs():
         table = bigquery.Table(table_id, schema=schema)
         table.clustering_fields = clustering
+        if partition_field:
+            # Only takes effect for tables created from here on:
+            # create_table(exists_ok=True) returns an existing table untouched,
+            # and BigQuery cannot add partitioning to a table in place. See
+            # DEPLOYMENT.md for migrating a table that predates this.
+            table.time_partitioning = bigquery.TimePartitioning(
+                type_=bigquery.TimePartitioningType.DAY, field=partition_field
+            )
         created = client.create_table(table, exists_ok=True)
         _reconcile_columns(client, created, schema)
 
@@ -525,3 +538,85 @@ def list_results(exam_id):
         [_p("exam_id", "INT64", exam_id)],
     )
     return [dict(r) for r in rows]
+
+
+# --------------------------------------------------------------------------- #
+# Usage analytics
+# --------------------------------------------------------------------------- #
+def daily_usage(days=30):
+    """Per-day OMR processing volume for the admin dashboard.
+
+    One row per calendar day (UTC) for the last ``days`` days, newest first::
+
+        {"day": "2026-07-27", "sheets": 42, "validated": 40, "failed": 2,
+         "graded": 38, "exams": 3, "students": 40}
+
+    Days with no activity are omitted rather than zero-filled — the caller
+    renders the calendar, and sending only the non-empty days keeps the
+    response small for long ranges.
+
+    ``sheets`` counts every uploaded page (one page = one student's sheet);
+    ``graded`` counts those that made it through scoring on that day, which can
+    differ because grading is a separate step run later.
+    """
+    days = max(1, min(int(days), 365))
+
+    # Cut-off is computed here and passed as a parameter, deliberately NOT with
+    # CURRENT_TIMESTAMP() in SQL. A query containing CURRENT_TIMESTAMP() is
+    # non-deterministic, so BigQuery refuses to cache it: measured, the
+    # CURRENT_TIMESTAMP form billed the 10 MB minimum on *every* dashboard
+    # load, while the parameterised form billed 0 from the second call on.
+    #
+    # It is also snapped to midnight UTC rather than "now minus N days". An
+    # exact-instant cut-off changes on every request, which would miss the
+    # cache just as badly; snapped to a day boundary, every request for the
+    # same range on the same day is byte-identical and free after the first.
+    # Comparing the raw column against a timestamp (rather than wrapping it in
+    # DATE()) also keeps it able to prune date partitions.
+    from datetime import datetime, timedelta, timezone
+
+    midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0,
+                                                  microsecond=0)
+    cutoff = midnight - timedelta(days=days - 1)
+
+    _, rows = _execute(
+        f"""
+        WITH uploads AS (
+          SELECT DATE(created_at) AS day,
+                 COUNT(*) AS sheets,
+                 COUNTIF(status = 'validated') AS validated,
+                 COUNTIF(status = 'failed') AS failed,
+                 COUNT(DISTINCT exam_id) AS exams,
+                 COUNTIF(student_name IS NOT NULL AND student_name != '') AS named
+            FROM {_SHEETS}
+           WHERE created_at >= @cutoff
+           GROUP BY day
+        ),
+        scored AS (
+          SELECT DATE(graded_at) AS day, COUNT(*) AS graded
+            FROM {_RESULTS}
+           WHERE graded_at >= @cutoff
+           GROUP BY day
+        )
+        SELECT COALESCE(u.day, s.day) AS day,
+               IFNULL(u.sheets, 0)    AS sheets,
+               IFNULL(u.validated, 0) AS validated,
+               IFNULL(u.failed, 0)    AS failed,
+               IFNULL(u.exams, 0)     AS exams,
+               IFNULL(u.named, 0)     AS named,
+               IFNULL(s.graded, 0)    AS graded
+          FROM uploads u
+          FULL OUTER JOIN scored s ON s.day = u.day
+         ORDER BY day DESC
+        """,
+        [_p("cutoff", "TIMESTAMP", cutoff)],
+    )
+    return [{
+        "day": r["day"].isoformat(),
+        "sheets": int(r["sheets"]),
+        "validated": int(r["validated"]),
+        "failed": int(r["failed"]),
+        "graded": int(r["graded"]),
+        "exams": int(r["exams"]),
+        "named": int(r["named"]),
+    } for r in rows]

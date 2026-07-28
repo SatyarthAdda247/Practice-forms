@@ -8,6 +8,7 @@ import AnswerKeyConfig from "./pages/AnswerKeyConfig.jsx";
 import BulkUpload from "./pages/BulkUpload.jsx";
 import Results from "./pages/Results.jsx";
 import Admin from "./pages/Admin.jsx";
+import Usage from "./pages/Usage.jsx";
 import ImageResizer from "./pages/ImageResizer.jsx";
 import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
 
@@ -29,10 +30,18 @@ function RequireAuth() {
 }
 
 // Admin-only gate (used inside the authed layout). Non-admins are redirected.
-function RequireAdmin() {
+function RequireAdmin({ children }) {
   const { user } = useAuth();
   if (!["admin", "super_admin"].includes(user?.role)) return <Navigate to="/exams" replace />;
-  return <Admin />;
+  return children;
+}
+
+// Stricter gate for pages a regular admin must not see (usage analytics).
+// The API enforces this too — this only keeps the route from rendering.
+function RequireSuperAdmin({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== "super_admin") return <Navigate to="/exams" replace />;
+  return children;
 }
 
 export default function App() {
@@ -54,7 +63,8 @@ export default function App() {
           <Route path="/upload/:id" element={<BulkUpload />} />
           <Route path="/results" element={<Results />} />
           <Route path="/results/:id" element={<Results />} />
-          <Route path="/admin" element={<RequireAdmin />} />
+          <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
+          <Route path="/admin/usage" element={<RequireSuperAdmin><Usage /></RequireSuperAdmin>} />
           <Route path="*" element={<Navigate to="/exams" replace />} />
         </Route>
       </Routes>

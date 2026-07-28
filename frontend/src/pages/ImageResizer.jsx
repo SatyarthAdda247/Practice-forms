@@ -309,6 +309,15 @@ export default function ImageResizer() {
                     <option key={key} value={key}>{p.label}</option>
                   ))}
               </select>
+              {/* Presets are grouped by specification, so name the exams each
+                  one covers — otherwise a candidate can't tell that "Banking"
+                  is the right pick for, say, RBI Grade B. */}
+              {target?.covers && (
+                <p className="text-label-sm text-tool-secondary mt-3 flex items-start gap-1">
+                  <Icon name="checklist" size={16} className="shrink-0" />
+                  <span>Covers: {target.covers}</span>
+                </p>
+              )}
               <p className="text-label-sm text-tool-secondary mt-3 flex items-start gap-1">
                 <Icon name={target?.source ? "verified" : "info"} size={16} className="shrink-0" />
                 <span>
