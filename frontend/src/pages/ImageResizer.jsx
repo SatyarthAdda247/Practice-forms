@@ -245,7 +245,10 @@ export default function ImageResizer() {
 
   return (
     <div className="lg:h-screen lg:overflow-hidden flex flex-col bg-tool-surface text-tool-on-surface font-body-md">
-      <header className="shrink-0 bg-tool-surface-lowest border-b border-tool-outline/70">
+      {/* Sticky so the bar is pinned below lg too, where the page scrolls
+          normally — on lg+ the page is locked to the viewport and it never moves
+          anyway. Matches the Answer Key Checker's bar. */}
+      <header className="shrink-0 sticky top-0 z-20 bg-tool-surface-lowest border-b border-tool-outline/70">
         <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           <span className={`${PILL} grid place-items-center w-10 h-10 bg-tool-primary text-tool-on-primary shrink-0`}>
             <Icon name="photo_size_select_large" size={22} />

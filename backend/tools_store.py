@@ -187,8 +187,20 @@ def _table_specs():
             F("score", "FLOAT64"),
             F("max_score", "FLOAT64"),
             F("accuracy", "FLOAT64"),
-            # 'upload' (response sheet parsed) or 'manual' (typed in).
+            # 'upload' (response sheet parsed) or 'manual' (typed in), and for an
+            # upload, how much the parser got out of the file on its own: which
+            # format it was, whether the official key and the marking scheme came
+            # from the sheet rather than the keyboard. This is how we tell whether
+            # sheet parsing still works as commissions change their layouts.
             F("input_source", "STRING"),
+            F("file_kind", "STRING"),
+            F("key_detected", "BOOL"),
+            F("scheme_detected", "BOOL"),
+            # The paper's own date/time as printed on the sheet. Nothing that
+            # identifies the candidate (roll number, name, centre) is ever read
+            # out of the sheet, let alone sent here.
+            F("test_date", "STRING"),
+            F("test_time", "STRING"),
             # JSON {section: {correct, incorrect, skipped}} — aggregate only;
             # individual answers are never stored.
             F("section_summary", "STRING"),
@@ -324,6 +336,11 @@ def save_keycheck_result(payload, user_agent=None, referrer=None):
         "max_score": _float(stats.get("maxScore")),
         "accuracy": _float(stats.get("accuracy")),
         "input_source": _text(payload.get("inputSource"), 32),
+        "file_kind": _text(payload.get("fileKind"), 16),
+        "key_detected": _bool(payload.get("keyDetected")),
+        "scheme_detected": _bool(payload.get("schemeDetected")),
+        "test_date": _text(payload.get("testDate"), 32),
+        "test_time": _text(payload.get("testTime"), 64),
         "section_summary": _json_text(payload.get("sectionSummary")),
         "user_agent": _text(user_agent, 400),
         "referrer": _text(referrer, 400),

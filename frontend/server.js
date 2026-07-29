@@ -31,6 +31,41 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
+// Public tool routes are meant to rank in search, so their title/description
+// must be in the HTML we serve — crawlers and social unfurlers that do not run
+// JS never see what React sets. Mirrors usePageMeta in each page; keep in sync.
+const PAGE_META = {
+  "/answerkey-checker": {
+    title: "Answer Key Calculator for SSC, Railway & Govt Exams (Free)",
+    description:
+      "Calculate your expected score using the official answer key for SSC, Railway, " +
+      "Defence, Teaching, State, and Central Government exams.",
+  },
+};
+
+const escapeAttr = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Rewrite the content="" of the <meta> tag identified by attr="name". Matches
+// either attribute order, since the formatter sorts attributes alphabetically.
+function setMetaContent(html, attr, name, content) {
+  return html.replace(new RegExp(`<meta\\b[^>]*\\b${attr}="${name}"[^>]*>`, "i"), (tag) =>
+    tag.replace(/\bcontent="[^"]*"/i, `content="${content}"`)
+  );
+}
+
+function withPageMeta(html, url) {
+  const meta = PAGE_META[url.replace(/\/+$/, "") || "/"];
+  if (!meta) return html;
+
+  const title = escapeAttr(meta.title);
+  const description = escapeAttr(meta.description);
+  let out = html.toString("utf8").replace(/<title>[^<]*<\/title>/i, `<title>${title}</title>`);
+  out = setMetaContent(out, "name", "description", description);
+  out = setMetaContent(out, "property", "og:title", title);
+  return setMetaContent(out, "property", "og:description", description);
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = decodeURIComponent((req.url || "/").split("?")[0]);
@@ -64,7 +99,7 @@ const server = createServer(async (req, res) => {
     // SPA fallback -> index.html
     const index = await readFile(join(DIST, "index.html")).catch(() => null);
     if (index) {
-      return send(res, 200, index, {
+      return send(res, 200, withPageMeta(index, url), {
         "Content-Type": MIME[".html"],
         "Cache-Control": "no-cache",
       });
