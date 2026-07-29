@@ -104,10 +104,19 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_BYTES
 
 # CORS: allow all origins by default (dev), or restrict to a comma-separated
-# allowlist in production via OMR_CORS_ORIGINS (e.g. "https://omr.example.com").
+# allowlist in production via OMR_CORS_ORIGINS
+# (e.g. "http://tools.adda247.com").
+#
+# Entries are matched against the browser's Origin header, which is scheme +
+# host [+ port] and NEVER has a trailing slash. A value copied from the address
+# bar as "http://tools.adda247.com/" would therefore match nothing and fail
+# every cross-origin call with no error on the server side, so the slash is
+# stripped here rather than left as a silent misconfiguration. The scheme still
+# has to match exactly: http:// and https:// are different origins.
 _cors_origins = os.environ.get("OMR_CORS_ORIGINS", "").strip()
 if _cors_origins:
-    CORS(app, origins=[o.strip() for o in _cors_origins.split(",") if o.strip()])
+    _origins = [o.strip().rstrip("/") for o in _cors_origins.split(",")]
+    CORS(app, origins=[o for o in _origins if o])
 else:
     CORS(app)
 

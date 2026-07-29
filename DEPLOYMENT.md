@@ -7,10 +7,15 @@ hybrid database.
 - **Branch:** `main`
 - **Environments:** Staging + Prod
 
-| Service  | Domain (Prod)                            | Domain (Staging)       |
-|----------|------------------------------------------|------------------------|
-| Frontend | https://aspirant-portal.adda247.com      | `<confirm>`            |
-| Backend  | https://aspirant-portal-api.adda247.com  | `<confirm>`            |
+| Service  | Domain (Prod)                  | Domain (Staging)       |
+|----------|--------------------------------|------------------------|
+| Frontend | http://tools.adda247.com       | `<confirm>`            |
+| Backend  | http://tools-api.adda247.com   | `<confirm>`            |
+
+> These moved from `aspirant-portal[-api].adda247.com`. Both are served over
+> **http**, which has one hard consequence: Google sign-in cannot work on an
+> http origin — see §6 step 3. The public tools (`/answerkey-checker`,
+> `/image-resizer`) need no sign-in and are unaffected.
 
 Data stores (both **external**, provisioned per environment):
 - **Users** → BigQuery: `adda247-dev.Aspirant_portal.users`
@@ -102,7 +107,7 @@ data:
   OMR_SUPER_ADMIN_EMAILS: "umesh.rao@adda247.com"
   OMR_ADMIN_EMAILS: ""
   OMR_SESSION_MAX_AGE: "604800"
-  OMR_CORS_ORIGINS: "https://aspirant-portal.adda247.com"
+  OMR_CORS_ORIGINS: "http://tools.adda247.com"
   GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
   BQ_PROJECT: "adda247-dev"
@@ -130,7 +135,7 @@ metadata:
   name: omr-answer-fe-adda-prod-green
 data:
   PORT: "8080"
-  VITE_API_BASE_URL: "https://aspirant-portal-api.adda247.com"
+  VITE_API_BASE_URL: "http://tools-api.adda247.com"
   VITE_GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
 ```
 
@@ -224,8 +229,15 @@ livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 30, ti
    BigQuery read/write on the dataset → mounted at `GOOGLE_APPLICATION_CREDENTIALS`.
 3. **Google OAuth client** — add each frontend origin to "Authorized JavaScript
    origins":
-   - Prod: `https://aspirant-portal.adda247.com`
+   - Prod: `https://tools.adda247.com`
    - Staging: `https://<staging-frontend-domain>`
+
+   ⚠️ **Google rejects http origins.** Only `http://localhost` is exempt: every
+   other authorized JavaScript origin must be `https://`. So while the site is
+   served over `http://tools.adda247.com`, Google Identity Services will refuse
+   to render the sign-in button (`origin_mismatch`) and **nobody can sign in to
+   the portal**. Serving the frontend over https is the fix; there is no
+   config-side workaround. The unauthenticated public tools are unaffected.
 
 ---
 
