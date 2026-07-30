@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "../api.js";
+import { MAX_UPLOAD_BYTES, api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { violationLabel } from "../violations.js";
 
@@ -32,6 +32,16 @@ function fileIcon(filename) {
   return filename.toLowerCase().endsWith(".pdf") ? "picture_as_pdf" : "image";
 }
 
+// The upload loop reports three states per file: sending it, waiting for the
+// API to come back after it dropped out, and re-sending it. Say which one is
+// happening — "Uploading…" while the server is down reads as a hang.
+function progressLabel({ index, total, name, waiting, attempt }) {
+  const which = `file ${index + 1} of ${total}`;
+  if (waiting) return `Server is restarting — waiting to resume ${name} (${which})…`;
+  if (attempt) return `Retrying ${name} — attempt ${attempt + 1} (${which})…`;
+  return `Uploading ${name} — ${which}…`;
+}
+
 function humanSize(bytes) {
   if (!bytes) return "";
   const mb = bytes / (1024 * 1024);
@@ -54,6 +64,8 @@ export default function BulkUpload() {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Which file of how many is uploading, now that each goes in its own request.
+  const [progress, setProgress] = useState(null);
 
   // Load the exam list for the selector.
   useEffect(() => {
@@ -80,16 +92,40 @@ export default function BulkUpload() {
       setError("Select an exam before uploading.");
       return;
     }
-    if (!files || files.length === 0) return;
+    const picked = [...(files || [])];
+    if (!picked.length) return;
+
+    // Reject oversized files here rather than letting them upload and then be
+    // refused with a 413 halfway through. The good files still go.
+    const tooBig = picked.filter((f) => f.size > MAX_UPLOAD_BYTES);
+    const sendable = picked.filter((f) => f.size <= MAX_UPLOAD_BYTES);
+    const sizeError = tooBig.length
+      ? `Skipped ${tooBig.map((f) => `${f.name} (${humanSize(f.size)})`).join(", ")} — ` +
+        `the limit is ${humanSize(MAX_UPLOAD_BYTES)} per file.`
+      : "";
+    if (!sendable.length) {
+      setError(sizeError);
+      return;
+    }
+
     setBusy(true);
     setError("");
+    setProgress(null);
     try {
-      await api.uploadSheets(examId, files, sheetQuestions);
+      const { failures } = await api.uploadSheets(
+        examId, sendable, sheetQuestions,
+        // One request per file now, so say which one is in flight.
+        ({ index, total, name }) => setProgress({ index, total, name }),
+      );
       await refresh(examId);
+      // Partial success: the sheets that landed are already on screen, so the
+      // failures are a notice rather than a dead end.
+      setError([sizeError, ...failures].filter(Boolean).join(" · "));
     } catch (e) {
-      setError(e.message);
+      setError([sizeError, e.message].filter(Boolean).join(" · "));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
@@ -199,7 +235,8 @@ export default function BulkUpload() {
               Drag &amp; Drop Scans Here
             </h3>
             <p className="font-body-md text-body-md text-secondary mb-lg">
-              Support for PDF, JPG, and PNG files up to 50MB each.
+              {/* The limit really is per file now — each one is its own request. */}
+              {progress ? progressLabel(progress) : `Support for PDF, JPG, and PNG files up to ${humanSize(MAX_UPLOAD_BYTES)} each.`}
             </p>
             <span className="py-sm px-lg bg-surface-container text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-colors border border-outline-variant">
               {busy ? "Uploading…" : "Browse Files"}
