@@ -93,6 +93,7 @@ data:
   OMR_SUPER_ADMIN_EMAILS: "umesh.rao@adda247.com"
   OMR_ADMIN_EMAILS: ""
   OMR_SESSION_MAX_AGE: "604800"
+  OMR_NAME_OCR: "0"          # see "Handwritten-name OCR" below — leave off
   OMR_CORS_ORIGINS: "https://<staging-frontend-domain>"
   GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
@@ -116,6 +117,7 @@ data:
   OMR_SUPER_ADMIN_EMAILS: "umesh.rao@adda247.com"
   OMR_ADMIN_EMAILS: ""
   OMR_SESSION_MAX_AGE: "604800"
+  OMR_NAME_OCR: "0"          # see "Handwritten-name OCR" below — leave off
   OMR_CORS_ORIGINS: "https://tools.adda247.com"
   GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
@@ -213,11 +215,31 @@ livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 30, ti
 | `OMR_ADMIN_EMAILS` | no | comma-separated |
 | `OMR_SESSION_MAX_AGE` | no | seconds (default 604800) |
 | `OMR_CORS_ORIGINS` | yes | the **frontend** origin for this env |
+| `OMR_NAME_OCR` | no | handwritten-name OCR; **off** unless `1` — see below |
+| `OMR_TROCR_MODEL` | no | local weights directory, or a Hub id |
+| `OMR_TROCR_ALLOW_DOWNLOAD` | no | `1` lets the first upload fetch ~1.4 GB — dev only |
 | `GOOGLE_CLIENT_ID` | yes | OAuth Web client ID (same as frontend) |
 | `DATABASE_URL` | yes | Cloud SQL Postgres — **app won't start without it** |
 | `GOOGLE_APPLICATION_CREDENTIALS` | yes | path to mounted SA key file |
 | `BQ_PROJECT` | yes | `adda247-dev` |
 | `BQ_DATASET` | no | `Aspirant_portal` (default) |
+
+#### Handwritten-name OCR (`OMR_NAME_OCR`)
+
+Leave it off. It is a fallback used only when a sheet's A–Z name grid is blank,
+and it costs a ~1.4 GB TrOCR model **per gunicorn worker**, loaded lazily on the
+first upload — inside the request. On a memory-limited pod that is an OOM kill
+that takes the whole pod with it: the Service loses its endpoints and the
+ingress answers `503` on every route, `/api/health` included, with no CORS
+headers — so the browser reports it as "blocked by CORS policy" /
+`net::ERR_FAILED` and the upload screen says the server is unreachable. The
+symptom appears only in staging/prod; locally there is no memory limit and the
+weights are already cached.
+
+To actually enable it: bake the weights into the image and point
+`OMR_TROCR_MODEL` at that directory, set `WEB_CONCURRENCY: "1"`, and give the
+pod a memory limit of ~4Gi. Never rely on a runtime download —
+`OMR_TROCR_ALLOW_DOWNLOAD` stays `0` outside a dev machine.
 
 ### Frontend
 | Key | Required | Notes |

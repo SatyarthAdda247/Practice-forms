@@ -96,10 +96,23 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
 MAX_FILE_BYTES = 50 * 1024 * 1024  # 50 MB, per the upload screen copy
 # Fall back to OCR (local TrOCR) for the handwritten name when the sheet's A-Z
-# bubble grid is blank. Best-effort and never fatal. Off with OMR_NAME_OCR=0.
-# See name_trocr: it only reads a blue-pen "NAME- <name>" line, never the
-# printed per-character boxes, which no OCR engine reads reliably.
-NAME_OCR = os.environ.get("OMR_NAME_OCR", "1") != "0"
+# bubble grid is blank. See name_trocr: it only reads a blue-pen "NAME- <name>"
+# line, never the printed per-character boxes, which no OCR engine reads
+# reliably.
+#
+# OFF unless OMR_NAME_OCR=1, because it is only "best-effort and never fatal" on
+# a machine with spare memory. TrOCR is ~1.4 GB of weights loaded *per gunicorn
+# worker*, on the first upload — inside the request. On a pod with a memory
+# limit that is an OOM kill, which takes every worker with it: the Service loses
+# its endpoints and the ingress answers 503 (no CORS headers, so the browser
+# reports it as a network failure) for every route including /api/health, until
+# the pod restarts. Locally it looks fine — no memory limit, and the weights are
+# already in ~/.cache/huggingface.
+#
+# Turn it on only where the deployment can actually carry it: weights baked into
+# the image (see OMR_TROCR_MODEL), WEB_CONCURRENCY=1, and a memory limit of a
+# few GB.
+NAME_OCR = os.environ.get("OMR_NAME_OCR", "0") == "1"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_BYTES
