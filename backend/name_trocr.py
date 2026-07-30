@@ -30,8 +30,10 @@ Crops are taken from the **greyscale** image, not the blue mask: the ink is weak
 (blue-dominance peaks around 41/255 on a phone photo) and binarising it turns
 the strokes into blobs.
 
-Setup: needs ``torch`` + ``transformers`` and downloads ~1.4 GB of weights on
-first use. Toggle with ``OMR_NAME_TROCR`` ("1" on — default; "0" off).
+Setup: needs ``torch`` + ``transformers`` and ~1.4 GB of weights **already on
+disk** — see ``ALLOW_DOWNLOAD`` below; fetching them mid-request is what kills a
+memory-limited pod. Toggle with ``OMR_NAME_TROCR`` ("1" on — default; "0" off),
+though the caller gate is ``OMR_NAME_OCR``, which is off unless set to 1.
 """
 
 import logging
@@ -45,6 +47,17 @@ log = logging.getLogger(__name__)
 
 ENABLED = os.environ.get("OMR_NAME_TROCR", "1") != "0"
 MODEL = os.environ.get("OMR_TROCR_MODEL", "microsoft/trocr-base-handwritten")
+
+# The first load pulls ~1.4 GB unless the weights are already cached, and it
+# happens inside an upload request. In a container that download is either
+# impossible (no egress) or fatal (it blows the memory limit and OOM-kills the
+# worker, taking the pod's endpoints — and every other route — down with it).
+# So by default the model must already be on disk: a HF cache baked into the
+# image, or OMR_TROCR_MODEL pointing at a local directory. Set
+# OMR_TROCR_ALLOW_DOWNLOAD=1 only where a slow first request is acceptable,
+# such as a dev machine.
+ALLOW_DOWNLOAD = os.environ.get("OMR_TROCR_ALLOW_DOWNLOAD", "0") == "1"
+_LOCAL_ONLY = {"local_files_only": True} if not ALLOW_DOWNLOAD else {}
 
 DOM_MIN = 18        # blue-dominance above which a pixel counts as pen ink
 BAND_MIN_H = 8      # ignore ink bands thinner than this (specks, rules)
@@ -89,7 +102,7 @@ def _load():
         try:
             from transformers import TrOCRProcessor
 
-            proc = TrOCRProcessor.from_pretrained(MODEL)
+            proc = TrOCRProcessor.from_pretrained(MODEL, **_LOCAL_ONLY)
             _image_proc, _tokenizer = proc.image_processor, proc.tokenizer
         except Exception as exc:
             # Newer transformers can't convert TrOCR's slow tokenizer without
@@ -97,16 +110,23 @@ def _load():
             # RoBERTa vocab (50265 tokens, verified identical), which ships a
             # prebuilt fast tokenizer, so assemble the processor by hand.
             log.info("TrOCRProcessor unavailable (%s); using RoBERTa tokenizer", exc)
-            _image_proc = AutoImageProcessor.from_pretrained(MODEL)
-            _tokenizer = AutoTokenizer.from_pretrained("roberta-large")
+            _image_proc = AutoImageProcessor.from_pretrained(MODEL, **_LOCAL_ONLY)
+            _tokenizer = AutoTokenizer.from_pretrained("roberta-large", **_LOCAL_ONLY)
 
-        _model = VisionEncoderDecoderModel.from_pretrained(MODEL)
+        _model = VisionEncoderDecoderModel.from_pretrained(MODEL, **_LOCAL_ONLY)
         _model.eval()
         _model.config.decoder_start_token_id = _tokenizer.cls_token_id
         _model.config.pad_token_id = _tokenizer.pad_token_id
         return True
     except Exception as exc:
-        log.warning("TrOCR unavailable, name OCR disabled for this process: %s", exc)
+        # Includes "weights are not cached and downloads are off" — deliberate.
+        # A blank name for a human to fill in beats a 1.4 GB fetch (or an OOM)
+        # in the middle of an upload.
+        log.warning(
+            "TrOCR unavailable, name OCR disabled for this process: %s "
+            "(weights must be on disk; set OMR_TROCR_MODEL to a local path or "
+            "OMR_TROCR_ALLOW_DOWNLOAD=1)", exc,
+        )
         _disabled = True
         return False
 
