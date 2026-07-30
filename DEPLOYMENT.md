@@ -9,13 +9,16 @@ hybrid database.
 
 | Service  | Domain (Prod)                  | Domain (Staging)       |
 |----------|--------------------------------|------------------------|
-| Frontend | http://tools.adda247.com       | `<confirm>`            |
-| Backend  | http://tools-api.adda247.com   | `<confirm>`            |
+| Frontend | https://tools.adda247.com      | `<confirm>`            |
+| Backend  | https://tools-api.adda247.com  | `<confirm>`            |
 
-> These moved from `aspirant-portal[-api].adda247.com`. Both are served over
-> **http**, which has one hard consequence: Google sign-in cannot work on an
-> http origin — see §6 step 3. The public tools (`/answerkey-checker`,
-> `/image-resizer`) need no sign-in and are unaffected.
+> These moved from `aspirant-portal[-api].adda247.com`, which no longer resolves
+> (NXDOMAIN) — any env still pointing at the old host fails every API call with
+> `ERR_NAME_NOT_RESOLVED`. Both domains now serve **https** (plain http 301s to
+> it), so Google sign-in works; see §6 step 3.
+>
+> ⚠️ Always use the **https** scheme in `VITE_API_BASE_URL`. The page is https,
+> so an `http://` API origin is blocked as mixed content and every call fails.
 
 Data stores (both **external**, provisioned per environment):
 - **Users** → BigQuery: `adda247-dev.Aspirant_portal.users`
@@ -65,6 +68,12 @@ docker push <registry>/omr-answer-fe:green
 
 Injected at runtime from the ConfigMap: `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID`.
 
+If `VITE_API_BASE_URL` is missing or the placeholder was never substituted,
+`frontend/src/api.js` falls back to a hostname→API-origin map (`tools.adda247.com`
+→ `https://tools-api.adda247.com`) and logs the misconfiguration, instead of
+calling same-origin `/api` which does not exist under split-domain. The
+ConfigMap value always wins — add new deployed hosts to that map as a safety net.
+
 ---
 
 ## 3. ConfigMaps
@@ -107,7 +116,7 @@ data:
   OMR_SUPER_ADMIN_EMAILS: "umesh.rao@adda247.com"
   OMR_ADMIN_EMAILS: ""
   OMR_SESSION_MAX_AGE: "604800"
-  OMR_CORS_ORIGINS: "http://tools.adda247.com"
+  OMR_CORS_ORIGINS: "https://tools.adda247.com"
   GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
   DATABASE_URL: "postgresql://USER:PASSWORD@HOST:5432/DBNAME"
   BQ_PROJECT: "adda247-dev"
@@ -135,7 +144,7 @@ metadata:
   name: omr-answer-fe-adda-prod-green
 data:
   PORT: "8080"
-  VITE_API_BASE_URL: "http://tools-api.adda247.com"
+  VITE_API_BASE_URL: "https://tools-api.adda247.com"
   VITE_GOOGLE_CLIENT_ID: "<OAuth Web client ID>"
 ```
 
@@ -233,11 +242,15 @@ livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 30, ti
    - Staging: `https://<staging-frontend-domain>`
 
    ⚠️ **Google rejects http origins.** Only `http://localhost` is exempt: every
-   other authorized JavaScript origin must be `https://`. So while the site is
-   served over `http://tools.adda247.com`, Google Identity Services will refuse
-   to render the sign-in button (`origin_mismatch`) and **nobody can sign in to
-   the portal**. Serving the frontend over https is the fix; there is no
-   config-side workaround. The unauthenticated public tools are unaffected.
+   other authorized JavaScript origin must be `https://`, or Google Identity
+   Services refuses to render the sign-in button (`origin_mismatch`). Prod is
+   served over https, so this is satisfied — keep it that way when adding envs.
+   The unauthenticated public tools need no sign-in and are unaffected.
+
+   The frontend serves `Cross-Origin-Opener-Policy: same-origin-allow-popups`
+   on HTML (`frontend/server.js`); GIS hands the credential back from a popup
+   via `postMessage`, which Chrome blocks under a stricter COOP. If an ingress
+   or WAF overrides COOP on this host, sign-in breaks — don't tighten it.
 
 ---
 

@@ -31,6 +31,14 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
+// Google Identity Services signs the user in through a popup that postMessages
+// the credential back to this page. Chrome severs that opener link — logging
+// "Cross-Origin-Opener-Policy policy would block the window.postMessage call"
+// — unless the document hosting GIS opts popups back in. Only HTML needs it.
+const HTML_SECURITY_HEADERS = {
+  "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+};
+
 // Public tool routes are meant to rank in search, so their title/description
 // must be in the HTML we serve — crawlers and social unfurlers that do not run
 // JS never see what React sets. Mirrors usePageMeta in each page; keep in sync.
@@ -93,6 +101,7 @@ const server = createServer(async (req, res) => {
       return send(res, 200, await readFile(filePath), {
         "Content-Type": MIME[ext] || "application/octet-stream",
         "Cache-Control": cache,
+        ...(ext === ".html" ? HTML_SECURITY_HEADERS : {}),
       });
     }
 
@@ -102,6 +111,7 @@ const server = createServer(async (req, res) => {
       return send(res, 200, withPageMeta(index, url), {
         "Content-Type": MIME[".html"],
         "Cache-Control": "no-cache",
+        ...HTML_SECURITY_HEADERS,
       });
     }
     return send(res, 404, "not found");

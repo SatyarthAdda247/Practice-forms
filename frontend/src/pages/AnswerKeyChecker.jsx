@@ -9,7 +9,10 @@ import { toolsApi } from "../api.js";
 import usePageMeta from "../pageMeta.js";
 import {
   EXAM_OPTIONS,
+  KEY_URL_HOSTS,
   SCHEMES,
+  normalizeKeyUrl,
+  parseAnnotatedHtmlSheet,
   parseAnswerList,
   parseResponseFile,
   round,
@@ -93,6 +96,12 @@ export default function AnswerKeyChecker() {
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [filter, setFilter] = useState("all");
+  // The emailed response-sheet link, and how far the fetch has got.
+  const [keyUrl, setKeyUrl] = useState("");
+  const [urlBusy, setUrlBusy] = useState(false);
+  // Cohort standing for the score just computed. null until it comes back, and
+  // stays null when there is not enough data to say anything.
+  const [rank, setRank] = useState(null);
 
   const pickExam = (value) => {
     setExam(value);
@@ -164,29 +173,46 @@ export default function AnswerKeyChecker() {
     }
   };
 
-  const analyze = () => {
-    const responses = parseAnswerList(responsesText);
-    const key = parseAnswerList(keyText);
+  // `from` lets the URL path score the sheet it has just parsed directly.
+  // Without it this would read the state set moments earlier in the same tick,
+  // which React has not applied yet.
+  const analyze = (from) => {
+    const responses = from?.responses ?? parseAnswerList(responsesText);
+    const key = from?.key ?? parseAnswerList(keyText);
+    const useSections = from?.sections ?? sections;
+    const useLabels = from?.labels ?? labels;
+    const useScheme = from?.scheme ?? scheme;
+    const useDetected = from ? from.detected : detected;
+    const inputSource = from?.inputSource ?? (fileLabel ? "upload" : "manual");
     if (!responses.size) return setError("Add your responses — upload a response sheet or paste them above.");
     if (!key.size) return setError("Paste the official answer key to compare against.");
 
     setError("");
     const marking = {
-      correct: Number(scheme.correct) || 0,
-      wrong: Number(scheme.wrong) || 0,
-      skipped: Number(scheme.skipped) || 0,
+      correct: Number(useScheme.correct) || 0,
+      wrong: Number(useScheme.wrong) || 0,
+      skipped: Number(useScheme.skipped) || 0,
     };
     const result = scoreAll({
       responses,
       key,
-      sections,
-      labels,
-      total: Number(scheme.total) || 0,
+      sections: useSections,
+      labels: useLabels,
+      total: Number(useScheme.total) || 0,
       scheme: marking,
     });
     // Keep the scheme the score was computed with, so the report keeps saying
     // what it was marked by even if the inputs are edited afterwards.
     setReport({ ...result, marking });
+
+    // Where this score stands among everyone who has checked the same paper.
+    // Asked for after the report is set, and allowed to come back empty — the
+    // score must never wait on it.
+    const testDate = useDetected?.meta?.testDate || null;
+    setRank(null);
+    toolsApi
+      .keyCheckRank({ exam, score: result.score, testDate })
+      .then((r) => setRank(r?.available ? r : null));
 
     // Warehouse the analysis (aggregates only — no individual answers, no key,
     // nothing that identifies the candidate).
@@ -195,14 +221,14 @@ export default function AnswerKeyChecker() {
       exam,
       shift,
       scheme: marking,
-      inputSource: fileLabel ? "upload" : "manual",
+      inputSource,
       // How much of this came out of the file rather than the keyboard — the
       // signal for whether sheet parsing is actually working in the wild.
-      fileKind: detected?.kind || null,
-      keyDetected: Boolean(detected?.key),
-      schemeDetected: Boolean(detected?.scheme),
-      testDate: detected?.meta?.testDate || null,
-      testTime: detected?.meta?.testTime || null,
+      fileKind: useDetected?.kind || null,
+      keyDetected: Boolean(useDetected?.key),
+      schemeDetected: Boolean(useDetected?.scheme),
+      testDate,
+      testTime: useDetected?.meta?.testTime || null,
       sectionSummary: summariseSections(result.rows),
       stats: {
         total: result.total,
@@ -218,6 +244,89 @@ export default function AnswerKeyChecker() {
     });
   };
 
+  /* Paste-a-link path: fetch the emailed response sheet, read the responses AND
+     the official key straight out of it, and score it in one go — the candidate
+     types nothing. The page is fetched through the backend because the exam CDNs
+     send no CORS headers; it is parsed here and never stored anywhere. */
+  const analyzeUrl = async () => {
+    const { url, error: bad } = normalizeKeyUrl(keyUrl);
+    if (bad) return setError(bad);
+
+    setUrlBusy(true);
+    setError("");
+    setReport(null);
+    setRank(null);
+    try {
+      const { html } = await toolsApi.fetchAnswerKeyUrl(url);
+      const parsed = parseAnnotatedHtmlSheet(html);
+      if (!parsed.responses.size) {
+        throw new Error(
+          "That page opened, but no response sheet could be read from it. " +
+            "Check the link points at your own response sheet, or upload the file below.",
+        );
+      }
+
+      const asLines = (map) =>
+        [...map.entries()].sort((a, b) => a[0] - b[0]).map(([q, a]) => `${q} ${a || "-"}`).join("\n");
+      const hasKey = parsed.key.size > 0;
+
+      // The sheet's own marking note beats the exam preset — it is what the
+      // commission will actually mark this paper by. Only the fields it states
+      // are overwritten; the rest keep the preset.
+      const stated = Object.fromEntries(
+        Object.entries(parsed.scheme || {}).filter(([, v]) => v != null),
+      );
+      const merged = { ...scheme, ...stated };
+      const detectedFromUrl = {
+        kind: "url",
+        responses: parsed.responses.size,
+        key: hasKey ? parsed.key.size : 0,
+        // `total` is inferred from the question count, so this only counts as a
+        // stated scheme if the marks themselves were stated.
+        scheme: stated.correct != null || stated.wrong != null ? stated : null,
+        sections: new Set(Object.values(parsed.sections)).size,
+        meta: parsed.meta || {},
+      };
+      const shiftFromSheet = [parsed.meta?.testDate, parsed.meta?.testTime]
+        .filter(Boolean)
+        .join(", ");
+
+      setResponsesText(asLines(parsed.responses));
+      if (hasKey) setKeyText(asLines(parsed.key));
+      setSections(parsed.sections);
+      setLabels(parsed.labels || {});
+      setScheme(merged);
+      if (shiftFromSheet) setShift(shiftFromSheet);
+      setDetected(detectedFromUrl);
+      setFileLabel(null);
+      if (fileRef.current) fileRef.current.value = "";
+
+      if (!hasKey) {
+        // Responses without the key cannot be scored, and silently showing a
+        // zero would be worse than saying so.
+        return setError(
+          "That sheet lists your answers but not the official ones, so it cannot be " +
+            "scored on its own. Paste the official answer key below and press Analyze.",
+        );
+      }
+
+      analyze({
+        responses: parsed.responses,
+        key: parsed.key,
+        sections: parsed.sections,
+        labels: parsed.labels || {},
+        scheme: merged,
+        detected: detectedFromUrl,
+        inputSource: "url",
+      });
+    } catch (e) {
+      console.warn("answer key URL failed:", e);
+      setError(e.message || "Could not read that link.");
+    } finally {
+      setUrlBusy(false);
+    }
+  };
+
   const reset = () => {
     setResponsesText("");
     setKeyText("");
@@ -228,6 +337,8 @@ export default function AnswerKeyChecker() {
     setShift("");
     setReport(null);
     setError("");
+    setKeyUrl("");
+    setRank(null);
     if (SCHEMES[exam]) setScheme({ ...SCHEMES[exam] });
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -272,6 +383,59 @@ export default function AnswerKeyChecker() {
       <main className="w-full max-w-4xl px-4 md:px-0 py-8 md:py-12 flex-grow flex flex-col gap-6">
         <section className="bg-tool-surface border border-tool-outline rounded-xl p-6 flex flex-col gap-6">
           <h2 className="text-headline-md">Configuration &amp; Upload</h2>
+
+          {/* The fastest route in, so it goes first: candidates are emailed a
+              link to their response sheet, and that page carries their answers,
+              the official key, the marking scheme and the section names. One
+              paste and the score is done — nothing to type, nothing to upload. */}
+          <div className="bg-tool-surface-low border border-tool-outline rounded-xl p-4 md:p-6 flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="answer-key-url" className="text-label-md text-tool-on-surface-variant uppercase">
+                Answer Key URL
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  id="answer-key-url"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={keyUrl}
+                  onChange={(e) => setKeyUrl(e.target.value)}
+                  // Enter is what anyone does after pasting a link into a single
+                  // field, so make it submit rather than do nothing.
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !urlBusy) {
+                      e.preventDefault();
+                      analyzeUrl();
+                    }
+                  }}
+                  placeholder="https://cdn3.digialm.com/per/g26/pub/…/….html"
+                  className={`${inputClass} font-data-mono flex-grow min-w-0`}
+                />
+                <button
+                  type="button"
+                  onClick={analyzeUrl}
+                  disabled={urlBusy}
+                  className="bg-tool-primary text-tool-on-primary px-6 py-3 rounded-lg text-body-md font-semibold shadow-sm hover:bg-tool-tint transition-colors flex items-center justify-center gap-1 shrink-0 disabled:opacity-60"
+                >
+                  <Icon name={urlBusy ? "hourglass_top" : "link"} size={18} />
+                  {urlBusy ? "Reading sheet…" : "Get My Score"}
+                </button>
+              </div>
+            </div>
+            <p className="text-body-md text-tool-secondary">
+              Paste the response-sheet link the commission emailed you and your score is
+              calculated automatically — your answers, the official key and the marking scheme
+              are all read from that page. Supported: {KEY_URL_HOSTS.join(", ")}.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-grow bg-tool-outline" />
+            <span className="text-label-md text-tool-secondary uppercase">or set it up yourself</span>
+            <span className="h-px flex-grow bg-tool-outline" />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1">
@@ -413,7 +577,9 @@ export default function AnswerKeyChecker() {
               </button>
               <button
                 type="button"
-                onClick={analyze}
+                // Wrapped, not passed directly: analyze() now takes parsed input
+                // as its first argument, and onClick would hand it a MouseEvent.
+                onClick={() => analyze()}
                 className="bg-tool-primary text-tool-on-primary px-8 py-3 rounded-lg text-body-md font-semibold shadow-sm hover:bg-tool-tint transition-colors flex items-center gap-1"
               >
                 <Icon name="analytics" size={18} />
@@ -452,6 +618,59 @@ export default function AnswerKeyChecker() {
               <StatCard label="Correct Answers" className="text-headline-lg text-tool-success" value={report.correct} />
               <StatCard label="Incorrect Answers" className="text-headline-lg text-tool-error" value={report.incorrect} />
             </div>
+
+            {/* Expected rank. Deliberately labelled with the cohort it is drawn
+                from: the only scores this tool holds are those of candidates who
+                used it, so this is a standing among them, not the commission's
+                rank list. Hidden entirely when the cohort is too small to mean
+                anything (the backend decides that, not this component). */}
+            {rank && (
+              <div className="bg-tool-surface-lowest border border-tool-outline rounded-xl p-6 flex flex-col gap-4">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-label-md text-tool-secondary uppercase">Expected Rank</span>
+                    <span className="text-[40px] leading-[48px] font-bold text-tool-primary">
+                      #{rank.rank}
+                      <span className="text-headline-md text-tool-secondary">
+                        {" "}of {rank.cohort.toLocaleString("en-IN")}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-6">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-label-md text-tool-secondary uppercase">Standing</span>
+                      {/* rank/cohort, not the backend's `percentile` (which is the
+                          share at or below this score): topping the cohort has to
+                          read as "Top 1%", never "Top 0%". */}
+                      <span className="text-headline-lg">
+                        Top {Math.max(1, Math.ceil((rank.rank / rank.cohort) * 100))}%
+                      </span>
+                    </div>
+                    {rank.avgScore != null && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-label-md text-tool-secondary uppercase">Cohort Average</span>
+                        <span className="text-headline-lg">{round(rank.avgScore)}</span>
+                      </div>
+                    )}
+                    {rank.topScore != null && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-label-md text-tool-secondary uppercase">Cohort Best</span>
+                        <span className="text-headline-lg">{round(rank.topScore)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="text-body-md text-tool-secondary">
+                  Among {rank.cohort.toLocaleString("en-IN")} candidates who have checked{" "}
+                  {rank.basis === "paper"
+                    ? "this same shift"
+                    : "this exam"}{" "}
+                  with this tool — {rank.better.toLocaleString("en-IN")} scored higher than you.
+                  This is an indicative standing within that group, not the conducting body's
+                  official rank list.
+                </p>
+              </div>
+            )}
 
             <p className="text-body-md text-tool-secondary">
               {[

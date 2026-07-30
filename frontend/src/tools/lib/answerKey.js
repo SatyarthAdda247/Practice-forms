@@ -490,6 +490,193 @@ export function parseAnnotatedSheet(lines) {
   return { responses, key, sections, labels, scheme, meta };
 }
 
+/* -------------------------------------------------------------------------- *
+ * Answer-key URL (TCS iON / digialm annotated response sheet)
+ *
+ * Commissions hand candidates a *link*, not a file: an email points at
+ * cdn<N>.digialm.com, which renders the same annotated sheet the PDF branch
+ * above parses — every option printed, the official answer green with a tick,
+ * the candidate's own pick stated as "Chosen Option : <n>" in a side table, and
+ * "Section : <name>" headings between subjects.
+ *
+ * Two things make the HTML far easier than the PDF: the correct option is
+ * marked by a CSS class (`rightAns`) rather than by a fill colour, and the
+ * option letter is printed in the cell ("C. 10.8"). So none of the colour or
+ * tick-image forensics needed for the PDF applies here.
+ *
+ * Why this is not parseResponseSheetHtml: that reader walks *every* table
+ * looking for a "Chosen Option" label, and on this layout each question is a
+ * table nested inside another table, so every answer is found twice — a
+ * 100-question paper reads back as 200 responses. It also has no notion of the
+ * official answer, which is the whole point of an annotated sheet. This reader
+ * walks question *panels* instead, so each question is visited exactly once.
+ *
+ * The page cannot be fetched from the browser: digialm sends no
+ * Access-Control-Allow-Origin, and answers a non-browser User-Agent with a 400.
+ * So the HTML arrives via the backend proxy (POST
+ * /api/tools/answerkey-checker/fetch) and is parsed here, in the browser, just
+ * like an uploaded file.
+ *
+ * Nothing identifying the candidate — participant id, name, test centre, the
+ * two photographs — is read out of the page. Only answers, section names, the
+ * marking note and the paper's own date/time.
+ * -------------------------------------------------------------------------- */
+
+// Hosts whose response sheets this tool accepts. Advisory only: the backend
+// proxy holds the authoritative allowlist (it is what actually makes the
+// request), and this copy exists so an obviously wrong paste is rejected
+// without a round-trip. Keep the two in step — see KEYCHECK_URL_HOSTS in
+// backend/app.py.
+export const KEY_URL_HOSTS = ["digialm.com", "tcsion.com"];
+
+const hostAllowed = (host) =>
+  KEY_URL_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+
+/* Validate a pasted response-sheet link, returning { url } or { error }.
+ *
+ * Deliberately forgiving about how the link arrives — candidates paste it out
+ * of an email or a WhatsApp forward, so a missing scheme and surrounding
+ * whitespace are normal. A doubled slash in the path is left alone: digialm
+ * serves those perfectly well, and rewriting the path risks breaking a link
+ * that would have worked.
+ */
+export function normalizeKeyUrl(raw) {
+  const text = String(raw || "").trim().replace(/^<|>$/g, "");
+  if (!text) return { error: "Paste your answer key URL first." };
+
+  let url;
+  try {
+    url = new URL(/^[a-z]+:\/\//i.test(text) ? text : `https://${text}`);
+  } catch {
+    return { error: "That does not look like a web address." };
+  }
+  if (!/^https?:$/.test(url.protocol)) {
+    return { error: "Only http and https links are supported." };
+  }
+  if (!hostAllowed(url.hostname.toLowerCase())) {
+    return {
+      error:
+        `Only response-sheet links from ${KEY_URL_HOSTS.join(" or ")} are supported. ` +
+        "Paste the link the commission emailed you.",
+    };
+  }
+  // The trailing "#" candidates copy along with the link is not part of the
+  // request; drop the fragment rather than sending it.
+  url.hash = "";
+  return { url: url.href };
+}
+
+// "A. 10.8" / "B) 12" — the option letter as printed in the cell.
+const OPTION_LETTER = /^\s*([A-E])\s*[.)]/;
+
+/* Parse a TCS iON annotated response sheet from its HTML.
+ *
+ * Returns the same shape as parseAnnotatedSheet (the PDF reader), so the two
+ * feed the page identically:
+ *   responses  Map<qNo, letter>   the candidate's answers ("" = unattempted)
+ *   key        Map<qNo, letter>   the official answer ("A,C" if two were accepted)
+ *   sections   {qNo: sectionName}
+ *   labels     {qNo: "10"}        the question number as printed
+ *   scheme     {correct?, wrong?, total?} as declared in the sheet's own note
+ *   meta       {testDate?, testTime?}
+ *
+ * As in the PDF reader, questions are keyed by *position* rather than by the
+ * printed number: a sheet holding two papers restarts at Q.1 half way through,
+ * so printed numbers are not unique. They are still reported in `labels`.
+ */
+export function parseAnnotatedHtmlSheet(html) {
+  const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+  const clean = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim();
+
+  const responses = new Map();
+  const key = new Map();
+  const sections = {};
+  const labels = {};
+  const meta = {};
+
+  let qno = 0;
+  let currentSection = "";
+
+  // Headings and question panels in one document-order pass, so each question
+  // picks up the section heading that actually precedes it.
+  for (const node of doc.querySelectorAll(".section-lbl, .question-pnl")) {
+    if (node.classList.contains("section-lbl")) {
+      // "Section :" and the name are separate spans, so read the whole heading
+      // and strip the prefix — matching a single leaf node finds only the label.
+      currentSection = clean(node).replace(/^Section\s*:?\s*/i, "").trim();
+      continue;
+    }
+
+    // The side table carries the candidate's own answer. "Chosen Option" is
+    // sometimes an option number (1-4) and sometimes an option *ID*, so the
+    // Option N ID rows are collected to translate it.
+    const optionIds = new Map();
+    let chosen;
+    for (const tr of node.querySelectorAll(".menu-tbl tr")) {
+      const cells = [...tr.children].map(clean);
+      if (cells.length < 2) continue;
+      const label = cells[0].replace(/\s*:\s*$/, "").toLowerCase();
+      const opt = label.match(/^option\s*(\d)\s*id$/);
+      if (opt) optionIds.set(cells[1], "ABCDE"[+opt[1] - 1]);
+      if (/^chosen\s*option$/.test(label)) chosen = cells[1];
+    }
+    // These sheets close the row before the last pair ("</tr><td>Chosen Option
+    // :</td>"), which the HTML parser repairs into a row of its own — but not
+    // every generator produces the same repair, so fall back to the panel text.
+    if (chosen === undefined) {
+      const loose = clean(node).match(/Chosen\s*Option\s*:?\s*(\S+)/i);
+      if (loose) chosen = loose[1];
+    }
+
+    // Option cells in printed order. The official answer is the one the sheet
+    // put in green; `wrngAns` is not "the candidate was wrong", it is simply
+    // every option that is not the answer.
+    const options = [...node.querySelectorAll(".rightAns, .wrngAns")];
+    if (!options.length && chosen === undefined) continue;
+
+    qno++;
+    const picked = String(chosen ?? "").trim();
+    responses.set(qno, optionIds.get(picked) ?? normalizeAnswer(picked));
+
+    // More than one green option means the commission accepted more than one
+    // answer; isCorrect() already treats "A,C" as either being right.
+    const right = [];
+    options.forEach((cell, i) => {
+      if (!cell.classList.contains("rightAns")) return;
+      const letter = clean(cell).match(OPTION_LETTER);
+      // Image-only options print no letter, so fall back to where the cell sits
+      // in the printed list.
+      const fallback = "ABCDE"[i] || "";
+      right.push(letter ? letter[1] : fallback);
+    });
+    const answers = [...new Set(right.filter(Boolean))].sort();
+    if (answers.length) key.set(qno, answers.join(","));
+
+    if (currentSection) sections[qno] = currentSection;
+    const printed = clean(node).match(/^Q\.\s*(\d+)/);
+    if (printed) labels[qno] = printed[1];
+  }
+
+  // The marking note and the paper's date/time sit outside the question panels,
+  // in the header. Read them off the flattened markup the same way the uploaded
+  // -file path does, so one sheet scores identically whichever way it arrives.
+  const flat = String(html || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ");
+  const scheme = parseMarkingNote(flat);
+  if (qno) scheme.total = qno;
+
+  const date = flat.match(/Test\s*Date\s*:?\s*(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})/i);
+  if (date) meta.testDate = date[1];
+  const time = flat.match(
+    /Test\s*Time\s*:?\s*(\d{1,2}:\d{2}\s*[AP]\.?M\.?(?:\s*(?:-|–|to)\s*\d{1,2}:\d{2}\s*[AP]\.?M\.?)?)/i,
+  );
+  if (time) meta.testTime = time[1].replace(/\s+/g, " ").trim();
+
+  return { responses, key, sections, labels, scheme, meta };
+}
+
 const NOTHING = {
   responses: new Map(),
   key: new Map(),
@@ -515,6 +702,13 @@ export async function parseResponseFile(file, onProgress) {
   const text = await file.text();
   const isHtml = /\.html?$/i.test(file.name) || /<html|<table/i.test(text.slice(0, 2000));
   if (!isHtml) return { ...NOTHING, responses: parseAnswerList(text), kind: "text" };
+
+  // An annotated sheet first: plenty of candidates save the page from the link
+  // instead of pasting it, and that file must score the same as the link does.
+  // parseResponseSheetHtml double-counts this layout (see the note above
+  // parseAnnotatedHtmlSheet), so it must not get first refusal on it.
+  const annotated = parseAnnotatedHtmlSheet(text);
+  if (annotated.responses.size) return { ...annotated, kind: "html" };
 
   const parsed = parseResponseSheetHtml(text);
   if (parsed.responses.size) {

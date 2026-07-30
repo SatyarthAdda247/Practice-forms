@@ -348,6 +348,95 @@ def save_keycheck_result(payload, user_agent=None, referrer=None):
 
 
 # --------------------------------------------------------------------------- #
+# Answer-key checker: where a score sits in the cohort
+# --------------------------------------------------------------------------- #
+# What this is NOT: the commission's rank list. The only scores this app holds
+# are those of candidates who ran the checker, so what comes back is a
+# percentile *within that group*. It is returned together with the cohort size
+# precisely so the page can say so rather than implying an official rank.
+#
+# Below KEYCHECK_MIN_COHORT a "rank" is noise — one other candidate would make
+# anyone either 1st or 2nd — so it is reported as unavailable instead.
+KEYCHECK_MIN_COHORT = int(os.environ.get("BQ_KEYCHECK_MIN_COHORT", "10"))
+# How far back to look. Papers are checked in the days after a shift, so a
+# window this wide covers a sitting comfortably while keeping the scan bounded
+# (the table is day-partitioned, so the filter really does cut bytes read).
+KEYCHECK_RANK_DAYS = 180
+
+
+def keycheck_rank(exam, score, test_date=None, days=KEYCHECK_RANK_DAYS):
+    """Cohort rank + percentile for one score. Never raises on "no data".
+
+    Prefers the cohort that sat the *same paper* (same printed test date) and
+    falls back to the whole exam when that is too small to say anything — both
+    are counted in one query rather than two, so a fallback costs no extra scan.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    days = max(1, min(int(days), 365))
+    # Snapped to midnight so the query is deterministic and BigQuery can serve
+    # it from cache — same reasoning as list_leads / db.daily_usage.
+    midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0,
+                                                  microsecond=0)
+    cutoff = midnight - timedelta(days=days - 1)
+    score = float(score)
+
+    rows = _q(
+        f"""SELECT
+                 COUNT(*)                                        AS exam_n,
+                 COUNTIF(score > @score)                          AS exam_better,
+                 AVG(score)                                       AS exam_avg,
+                 MAX(score)                                       AS exam_top,
+                 COUNTIF(same_paper)                              AS paper_n,
+                 COUNTIF(same_paper AND score > @score)           AS paper_better,
+                 AVG(IF(same_paper, score, NULL))                 AS paper_avg,
+                 MAX(IF(same_paper, score, NULL))                 AS paper_top
+              FROM (SELECT score,
+                           @test_date IS NOT NULL
+                             AND test_date = @test_date AS same_paper
+                      FROM `{_KEYCHECK_ID}`
+                     WHERE exam = @exam
+                       AND created_at >= @cutoff
+                       AND score IS NOT NULL)""",
+        [
+            _sp("exam", "STRING", str(exam)[:64]),
+            _sp("score", "FLOAT64", score),
+            _sp("test_date", "STRING", _text(test_date, 32) or None),
+            _sp("cutoff", "TIMESTAMP", cutoff),
+        ],
+    )
+    if not rows:
+        return {"available": False, "reason": "no-data"}
+
+    r = rows[0]
+    # Same paper when we can identify it, the whole exam otherwise.
+    if (r["paper_n"] or 0) >= KEYCHECK_MIN_COHORT:
+        basis, n, better = "paper", r["paper_n"], r["paper_better"]
+        avg, top = r["paper_avg"], r["paper_top"]
+    else:
+        basis, n, better = "exam", r["exam_n"], r["exam_better"]
+        avg, top = r["exam_avg"], r["exam_top"]
+
+    n = int(n or 0)
+    if n < KEYCHECK_MIN_COHORT:
+        return {"available": False, "reason": "small-cohort", "cohort": n,
+                "minCohort": KEYCHECK_MIN_COHORT}
+
+    better = int(better or 0)
+    return {
+        "available": True,
+        "basis": basis,                      # 'paper' = same test date, 'exam' = all shifts
+        "cohort": n,
+        "better": better,
+        "rank": better + 1,
+        # "top X%" — the share of the cohort at or below this score.
+        "percentile": round((n - better) / n * 100, 1),
+        "avgScore": round(float(avg), 2) if avg is not None else None,
+        "topScore": round(float(top), 2) if top is not None else None,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # Leads: read access + listing
 # --------------------------------------------------------------------------- #
 # Who may see candidate contact details. Held in its own app-owned table rather

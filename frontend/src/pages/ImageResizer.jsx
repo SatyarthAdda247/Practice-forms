@@ -1,6 +1,12 @@
 // Public standalone tool at /image-resizer — no auth, no portal chrome. All
-// image work runs on <canvas> in the browser; the file is never uploaded.
-// Only the captured lead + job metadata go to BigQuery on download.
+// image work runs on <canvas> in the browser; the uploaded file itself is never
+// sent anywhere. Only the captured lead + job metadata go to BigQuery on
+// download.
+//
+// One exception: for photographs the resized output is posted to
+// /api/tools/image-resizer/face-check, measured with OpenCV in memory and
+// dropped — no browser ships a face detector this can use. See imageOps'
+// detectFace and backend/face_check.py.
 //
 // Layout note: on lg+ the page is locked to the viewport (h-screen +
 // overflow-hidden) so it never scrolls — the dropzone absorbs the spare height
@@ -23,13 +29,22 @@ import {
   setJpegDpi,
 } from "../tools/lib/imageOps.js";
 
-// Shown before an image has been processed, so the panel isn't empty.
-const PENDING_CHECKS = [
-  { key: "background", label: "Background (White)" },
-  { key: "sharpness", label: "Image Sharpness" },
-  { key: "dimensions", label: "Dimensions & Ratio" },
-  { key: "filesize", label: "Format & File Size" },
-];
+// Rows shown before anything has been processed. Derived from the chosen target
+// rather than hard-coded, because the panel is the landing state now: a list
+// that changes shape the moment an image arrives reads as a glitch. Order and
+// labels track runHealthChecks, which is what fills these in for real.
+const pendingChecks = (target) => {
+  const c = target?.checks || { background: true, sharpness: true };
+  return [
+    c.face && { key: "face", label: "Face Visibility" },
+    c.ink && { key: "ink", label: "Ink Visibility" },
+    c.background && { key: "background", label: "Background (White)" },
+    c.sharpness && { key: "sharpness", label: "Image Sharpness" },
+    { key: "dimensions", label: "Dimensions & Ratio" },
+    { key: "filesize", label: "Format & File Size" },
+    { key: "dpi", label: `Resolution (${target?.dpi || 200} DPI)` },
+  ].filter(Boolean);
+};
 
 const CHECK_STYLES = {
   pass: ["text-tool-success", "check_circle"],
@@ -44,12 +59,12 @@ const CHECK_STYLES = {
 const DOC_TYPES = [
   { key: "photo", label: "Photograph", icon: "account_box" },
   { key: "sign", label: "Signature", icon: "draw" },
-  { key: "other", label: "Other", icon: "description" },
+  { key: "other", label: "Custom Image", icon: "description" },
 ];
 
 // borderRadius.full is only 0.75rem in this theme, so true pills/circles need
 // an explicit radius.
-// Custom size starts on the spec that satisfies the majority of exams (banking,
+// Custom Dimensions start on the spec that satisfies most exams (banking,
 // NTA, AFCAT and most State PSCs all use 200 x 230 at up to 50 KB), so the tool
 // produces something the moment an image is dropped rather than sitting inert
 // until three fields are typed. Freely overwritten, and unused once a preset is
@@ -63,6 +78,82 @@ const FIELD =
   "w-full bg-tool-surface-lowest border border-tool-outline/70 rounded-lg px-3 py-2.5 text-body-md text-tool-on-surface " +
   "placeholder:text-tool-secondary/60 focus:ring-2 focus:ring-tool-primary/30 focus:border-tool-primary outline-none transition-shadow";
 const LABEL = "block text-label-sm font-medium uppercase tracking-wider text-tool-secondary mb-1.5";
+
+// Empty-state art for the preview box. The panel is on screen from page load
+// now, so this is the first thing a candidate sees, and a silhouette in the
+// target's own aspect ratio says what the tool expects faster than a line of
+// text can. Inline SVG: nothing to fetch, and it inherits the theme's colours.
+//
+// The frame is sized by the target so it previews the output shape — tall for a
+// passport photo, wide for a signature — and the figure follows the document
+// type, so switching Photograph → Signature visibly changes what is being asked
+// for.
+// Each viewBox is cropped to its own drawing rather than left at a uniform
+// square: an SVG scales to fit its shorter side, so a square box around the
+// signature squiggle left it stranded in the middle of a 140 × 60 frame.
+const PLACEHOLDER_ART = {
+  photo: {
+    viewBox: "10 18 80 84",
+    art: (
+      <>
+        <circle cx="50" cy="40" r="19" />
+        <path d="M13 100c0-20 16.6-31 37-31s37 11 37 31z" />
+      </>
+    ),
+  },
+  sign: {
+    viewBox: "4 30 92 48",
+    art: (
+      <path
+        d="M10 68c12-4 17-30 24-30s3 34 11 34 9-22 15-22 4 16 10 16 12-6 20-14"
+        fill="none"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        stroke="currentColor"
+      />
+    ),
+  },
+  other: {
+    viewBox: "20 8 62 90",
+    art: (
+      <>
+        <path d="M24 12h36l18 18v58a6 6 0 0 1-6 6H30a6 6 0 0 1-6-6V18a6 6 0 0 1 6-6z" opacity=".35" />
+        <rect x="36" y="46" width="34" height="6" rx="3" />
+        <rect x="36" y="60" width="34" height="6" rx="3" />
+        <rect x="36" y="74" width="22" height="6" rx="3" />
+      </>
+    ),
+  },
+};
+
+const PLACEHOLDER_CAPTION = {
+  photo: "Your passport photo will appear here",
+  sign: "Your signature will appear here",
+  other: "Your document will appear here",
+};
+
+function PreviewPlaceholder({ docType, target }) {
+  // Clamped so a lopsided custom size (2000 × 50) still leaves a frame you can
+  // see rather than a hairline.
+  const ratio = Math.min(2.2, Math.max(0.45, (target?.w || 200) / (target?.h || 230)));
+  const { viewBox, art } = PLACEHOLDER_ART[docType] || PLACEHOLDER_ART.other;
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
+      <div
+        className="relative max-h-[62%] max-w-[62%] rounded-xl border-2 border-dashed border-tool-primary/25 bg-gradient-to-b from-tool-surface-low to-tool-surface-lowest p-[7%] shadow-[0_1px_2px_rgba(0,30,46,0.04)]"
+        style={{ aspectRatio: ratio, width: ratio >= 1 ? "62%" : "auto", height: ratio >= 1 ? "auto" : "62%" }}
+      >
+        <svg viewBox={viewBox} className="h-full w-full text-tool-secondary/30" fill="currentColor">
+          {art}
+        </svg>
+      </div>
+      <p className="text-label-sm leading-snug text-tool-secondary">
+        {PLACEHOLDER_CAPTION[docType] || PLACEHOLDER_CAPTION.other}
+      </p>
+    </div>
+  );
+}
 
 function ChecklistRow({ row }) {
   const [cls, icon] = CHECK_STYLES[row.status || "pending"];
@@ -98,7 +189,6 @@ export default function ImageResizer() {
   const [presetKey, setPresetKey] = useState("custom");
   const [custom, setCustom] = useState(DEFAULT_CUSTOM);
   const [fitMode, setFitMode] = useState("cover");
-  const [padToMin, setPadToMin] = useState(true);
   const [output, setOutput] = useState(null);
   const [checks, setChecks] = useState(null);
   const [status, setStatus] = useState("Upload an image and set a size to begin.");
@@ -130,7 +220,18 @@ export default function ImageResizer() {
     const h = parseInt(custom.h, 10);
     const maxKB = parseFloat(custom.kb);
     if (!w || !h) return null;
-    return { ...PRESETS.custom, label: "Custom", w, h, maxKB: maxKB > 0 ? maxKB : 0 };
+    return {
+      ...PRESETS.custom,
+      label: "Custom",
+      w,
+      h,
+      maxKB: maxKB > 0 ? maxKB : 0,
+      // A custom size still has a document type picked above it, so a
+      // photograph gets the face row here just as a preset would. Without this
+      // the default path — Custom dimensions — would never show the check at
+      // all. The other rows stay as PRESETS.custom sets them.
+      checks: { ...PRESETS.custom.checks, face: docType === "photo" },
+    };
   })();
 
   const takeFile = useCallback(async (file) => {
@@ -175,12 +276,21 @@ export default function ImageResizer() {
       // budget checked below still holds.
       const stamped = await setJpegDpi(encoded.blob, target.dpi);
       // Only pads when quality alone can't reach the floor; never exceeds the
-      // ceiling because the floor is always the smaller of the two.
+      // ceiling because the floor is always the smaller of the two. Not
+      // optional: a file under the exam's minimum is rejected at upload, so
+      // there is no version of this a candidate would want switched off. The
+      // checklist says when it happened, and why the picture is unaffected.
       const { blob, padded } =
-        padToMin && target.minKB && stamped.size < target.minKB * 1024
+        target.minKB && stamped.size < target.minKB * 1024
           ? await padJpegToSize(stamped, target.minKB * 1024)
           : { blob: stamped, padded: false };
-      const health = await runHealthChecks(canvas, target, blob.size, { padded });
+      const health = await runHealthChecks(canvas, target, blob.size, {
+        padded,
+        blob,
+        // Identifies what the face check depends on, so retyping the KB budget
+        // does not fire a fresh request — see imageOps' detectFace.
+        face: { img: source.img, mode },
+      });
       if (run !== runRef.current) return; // a newer run superseded this one
 
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -198,7 +308,9 @@ export default function ImageResizer() {
       setChecks(health);
       setStatus("");
     })();
-  }, [source, presetKey, custom.w, custom.h, custom.kb, fitMode, padToMin]);
+    // docType is here because on Custom it decides which checks apply (above);
+    // on a preset it already moves presetKey with it.
+  }, [source, docType, presetKey, custom.w, custom.h, custom.kb, fitMode]);
 
   // Release the last preview URL when the page goes away.
   useEffect(() => () => urlRef.current && URL.revokeObjectURL(urlRef.current), []);
@@ -249,7 +361,11 @@ export default function ImageResizer() {
           normally — on lg+ the page is locked to the viewport and it never moves
           anyway. Matches the Answer Key Checker's bar. */}
       <header className="shrink-0 sticky top-0 z-20 bg-tool-surface-lowest border-b border-tool-outline/70">
-        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* On a phone the title wraps to two lines, so the row breaks and the
+            badge would sit alone against the left edge. Centre the whole stack
+            below sm instead — badge over centred text — and restore the
+            left-aligned row from sm up, where it fits on one line. */}
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-8 py-4 flex flex-wrap items-center justify-center text-center gap-x-4 gap-y-2 sm:justify-start sm:text-left">
           <span className={`${PILL} grid place-items-center w-10 h-10 bg-tool-primary text-tool-on-primary shrink-0`}>
             <Icon name="photo_size_select_large" size={22} />
           </span>
@@ -264,12 +380,12 @@ export default function ImageResizer() {
 
       <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:px-8 max-w-[1400px] w-full mx-auto">
         {/* Left: what → where → the file */}
-        <div className={`${source ? "lg:col-span-8" : "lg:col-span-12"} flex flex-col gap-4 min-h-0 min-w-0`}>
+        <div className="lg:col-span-8 flex flex-col gap-4 min-h-0 min-w-0">
           {/* Step 1 — document type. First decision, so it leads the page. */}
           <div className={`${CARD} shrink-0 p-4`}>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h2 className="text-label-sm font-semibold uppercase tracking-wider text-tool-secondary">
-                <span className="text-tool-primary">1.</span> What are you uploading?
+                <span className="text-tool-primary">1.</span> What do you want to resize?
               </h2>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -299,7 +415,7 @@ export default function ImageResizer() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
             <div className={`${CARD} p-4`}>
               <h2 className="text-label-sm font-semibold uppercase tracking-wider text-tool-secondary mb-3">
-                <span className="text-tool-primary">2.</span> Exam preset
+                <span className="text-tool-primary">2.</span> Select Exam
               </h2>
               <select
                 aria-label="Select target exam"
@@ -323,19 +439,14 @@ export default function ImageResizer() {
             </div>
 
             <div className={`${CARD} p-4`}>
-              <h2 className="text-label-sm font-semibold uppercase tracking-wider text-tool-secondary mb-3 flex items-center justify-between">
-                <span>Custom size</span>
-                {isCustom && (
-                  <span className={`${PILL} bg-tool-primary/10 text-tool-primary px-2 py-[2px] text-label-sm normal-case tracking-normal`}>
-                    Active
-                  </span>
-                )}
+              <h2 className="text-label-sm font-semibold uppercase tracking-wider text-tool-secondary mb-3">
+                Custom Dimensions
               </h2>
               <div className={`grid grid-cols-3 gap-2.5 ${isCustom ? "" : "opacity-40 pointer-events-none"}`}>
                 {[
-                  ["w", "Width", "350"],
-                  ["h", "Height", "450"],
-                  ["kb", "Max KB", "50"],
+                  ["w", "Width (px)", "350"],
+                  ["h", "Height (px)", "450"],
+                  ["kb", "Max Size (KB)", "50"],
                 ].map(([field, label, ph]) => (
                   <div key={field} className="min-w-0">
                     <label className={LABEL}>{label}</label>
@@ -398,7 +509,7 @@ export default function ImageResizer() {
                     : "bg-tool-primary text-tool-on-primary shadow-sm"
                 }`}
               >
-                {source ? "Replace image" : "Browse files"}
+                {source ? "Replace image" : "Upload Image"}
               </span>
             </div>
             <input
@@ -416,25 +527,11 @@ export default function ImageResizer() {
             </p>
           )}
 
-          {/* Only the padding option remains, and only when the preset has a
-              minimum size for it to act on. */}
-          {target?.minKB > 0 && (
-            <div className={`${CARD} shrink-0 px-4 py-3`}>
-              <label className="flex items-center gap-2 text-body-md text-tool-on-surface cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={padToMin}
-                  onChange={(e) => setPadToMin(e.target.checked)}
-                  className="rounded border-tool-outline text-tool-primary focus:ring-tool-primary/40"
-                />
-                Pad to minimum ({target.minKB} KB) when needed
-              </label>
-            </div>
-          )}
         </div>
 
-        {/* Right: preview & checks — only once there is an image to show. */}
-        {source && (
+        {/* Right: preview & checks. On screen from the start — the empty state
+            shows the frame the chosen spec produces and the checks that will
+            run, so a candidate knows what they are getting before uploading. */}
         <div className="lg:col-span-4 min-h-0 min-w-0">
           <div className={`${CARD} h-full p-4 flex flex-col min-h-0`}>
             <div className="flex justify-between items-center pb-3 mb-3 border-b border-tool-outline/60 shrink-0">
@@ -446,7 +543,20 @@ export default function ImageResizer() {
               )}
             </div>
 
-            <div className="flex-1 min-h-[140px] bg-[repeating-conic-gradient(#f1f5f9_0_25%,#ffffff_0_50%)] bg-[length:16px_16px] border border-tool-outline/60 rounded-lg flex items-center justify-center mb-3 relative overflow-hidden">
+            {/* The transparency checkerboard is there to show what a real JPEG
+                is matted against, so it only belongs under a real result — behind
+                the placeholder it is just noise.
+
+                min-h matters below lg, where the card is not height-constrained
+                and flex-1 collapses to that floor; 140px left the placeholder
+                too small to read. */}
+            <div
+              className={`flex-1 min-h-[210px] border border-tool-outline/60 rounded-lg flex items-center justify-center mb-3 relative overflow-hidden ${
+                output
+                  ? "bg-[repeating-conic-gradient(#f1f5f9_0_25%,#ffffff_0_50%)] bg-[length:16px_16px]"
+                  : "bg-tool-surface"
+              }`}
+            >
               {output ? (
                 <img
                   src={output.url}
@@ -454,19 +564,20 @@ export default function ImageResizer() {
                   className="absolute inset-0 w-full h-full object-contain"
                 />
               ) : (
-                <div className="text-center text-tool-secondary px-4">
-                  <Icon name="image" size={34} />
-                  <p className="text-label-sm mt-1">Your resized image appears here</p>
-                </div>
+                <PreviewPlaceholder docType={docType} target={target} />
               )}
-              <button
-                type="button"
-                title={fitMode === "cover" ? "Crop to fill (click to fit on white)" : "Fit on white (click to crop)"}
-                onClick={() => setFitMode(fitMode === "cover" ? "contain" : "cover")}
-                className="absolute bottom-2 right-2 z-10 bg-tool-surface-lowest border border-tool-outline/70 p-2 rounded-lg shadow-sm hover:border-tool-primary/50 hover:text-tool-primary text-tool-secondary transition-colors"
-              >
-                <Icon name="crop" size={18} />
-              </button>
+              {/* Only once there is something to re-crop — with an empty box it
+                  would be a control that appears to do nothing. */}
+              {output && (
+                <button
+                  type="button"
+                  title={fitMode === "cover" ? "Crop to fill (click to fit on white)" : "Fit on white (click to crop)"}
+                  onClick={() => setFitMode(fitMode === "cover" ? "contain" : "cover")}
+                  className="absolute bottom-2 right-2 z-10 bg-tool-surface-lowest border border-tool-outline/70 p-2 rounded-lg shadow-sm hover:border-tool-primary/50 hover:text-tool-primary text-tool-secondary transition-colors"
+                >
+                  <Icon name="crop" size={18} />
+                </button>
+              )}
             </div>
 
             <p className="text-label-sm text-tool-secondary mb-3 shrink-0 leading-snug">
@@ -478,7 +589,7 @@ export default function ImageResizer() {
             </p>
 
             <ul className="space-y-0.5 mb-3 overflow-y-auto custom-scrollbar pr-1 min-h-0">
-              {(checks || PENDING_CHECKS).map((row) => (
+              {(checks || pendingChecks(target)).map((row) => (
                 <ChecklistRow key={row.key} row={row} />
               ))}
             </ul>
@@ -493,7 +604,6 @@ export default function ImageResizer() {
             </button>
           </div>
         </div>
-        )}
       </main>
 
       {/* Lead capture */}

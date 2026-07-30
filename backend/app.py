@@ -87,6 +87,7 @@ from auth import (
     role_for_email,
     verify_google_token,
 )
+import face_check
 import omr_pipeline
 import tools_store
 from grading import grade
@@ -193,7 +194,10 @@ def api_index():
             {"method": "POST", "path": "/api/exams/<id>/grade", "desc": "Grade all validated sheets"},
             {"method": "GET", "path": "/api/exams/<id>/results", "desc": "Results dashboard data"},
             {"method": "POST", "path": "/api/tools/image-resizer/leads", "desc": "Log an image-resizer download + lead (public)"},
+            {"method": "POST", "path": "/api/tools/image-resizer/face-check", "desc": "Detect faces in a resized photograph (public)"},
             {"method": "POST", "path": "/api/tools/answerkey-checker/results", "desc": "Log an answer-key analysis (public)"},
+            {"method": "POST", "path": "/api/tools/answerkey-checker/fetch", "desc": "Fetch a response-sheet URL for parsing (public)"},
+            {"method": "GET", "path": "/api/tools/answerkey-checker/rank", "desc": "Cohort rank for a score (public)"},
         ],
     })
 
@@ -915,12 +919,19 @@ TOOLS_MAX_JSON_BYTES = 64 * 1024
 _tools_hits = {}
 
 
-def _rate_limited(ip):
+def _rate_limited(ip, limit=None):
+    """True when this caller has used up its per-minute allowance.
+
+    `limit` overrides the default for endpoints that cost more than an append —
+    the URL fetch below makes an outbound request, so it gets a tighter bucket.
+    Pass a distinct `ip` key to give an endpoint a bucket of its own."""
     import time
 
+    if limit is None:
+        limit = TOOLS_RATE_LIMIT
     now = time.time()
     hits = [t for t in _tools_hits.get(ip, []) if now - t < 60]
-    if len(hits) >= TOOLS_RATE_LIMIT:
+    if len(hits) >= limit:
         _tools_hits[ip] = hits
         return True
     hits.append(now)
@@ -983,6 +994,49 @@ def tools_resizer_lead():
     return _tools_save(tools_store.save_resizer_lead, data)
 
 
+# Face check: an image POST rather than JSON, so it gets its own caps and its
+# own rate-limit bucket. 1 MB is far above any exam photo spec (the largest is
+# UPSC at 300 KB) while keeping an anonymous caller from streaming in bulk.
+FACE_CHECK_MAX_BYTES = 1024 * 1024
+FACE_CHECK_RATE_LIMIT = int(os.environ.get("OMR_FACE_CHECK_RATE_LIMIT", "20"))  # per minute
+
+
+@app.post("/api/tools/image-resizer/face-check")
+def tools_resizer_face_check():
+    """Count and measure the faces in a resized photograph. Public.
+
+    This is the one part of the resizer that cannot run in the browser: no
+    shipping browser has a usable face detector (see face_check). The candidate's
+    photo is therefore posted here as raw JPEG bytes, measured in memory, and
+    dropped — it is never written to disk, recorded in BigQuery, or logged.
+
+    Returns geometry only; the pass/warn wording is decided in the frontend.
+    """
+    if _rate_limited(f"face:{_client_ip()}", limit=FACE_CHECK_RATE_LIMIT):
+        return error("too many requests; try again in a minute", 429)
+    if request.content_length and request.content_length > FACE_CHECK_MAX_BYTES:
+        return error("image too large", 413)
+
+    data = request.get_data(cache=False)
+    if not data:
+        return error("an image body is required")
+    if len(data) > FACE_CHECK_MAX_BYTES:  # chunked upload: no content_length to check
+        return error("image too large", 413)
+
+    try:
+        return jsonify(face_check.detect(data))
+    except face_check.Unavailable as exc:
+        # 503, not 500: the tool is fine, this one check is not available, and
+        # the frontend falls back to "check manually" on any non-2xx.
+        app.logger.warning("face-check unavailable: %s", exc)
+        return error(str(exc), 503)
+    except ValueError as exc:
+        return error(str(exc))
+    except Exception as exc:  # noqa: BLE001 — never leak internals publicly
+        app.logger.warning("face-check failed: %s", exc)
+        return error("could not check that image", 503)
+
+
 @app.post("/api/tools/answerkey-checker/results")
 def tools_keycheck_result():
     """Record one answer-key analysis. Public. Aggregates only — individual
@@ -996,6 +1050,205 @@ def tools_keycheck_result():
         return error("stats object is required")
 
     return _tools_save(tools_store.save_keycheck_result, data)
+
+
+# --------------------------------------------------------------------------- #
+# Answer-key URL: fetch a candidate's response sheet on their behalf
+# --------------------------------------------------------------------------- #
+# Candidates are emailed a *link* to their response sheet (cdn<N>.digialm.com),
+# not a file, so the checker takes the link directly. The page cannot be fetched
+# by the browser: the exam CDNs send no Access-Control-Allow-Origin, and answer
+# a non-browser User-Agent with a 400. Hence this proxy.
+#
+# SECURITY. This endpoint makes an outbound HTTP request to a URL supplied by an
+# anonymous caller, which is the classic shape of an SSRF hole: unguarded, it
+# would let anyone use the container as a relay to the cloud metadata server, to
+# other services on the VPC, or to localhost. The hostname allowlist below is
+# therefore the security boundary, and it is enforced on *every* redirect hop,
+# not just on the URL as pasted. Everything else (scheme, port, response size,
+# content type, timeout) is a further narrowing on top of it.
+#
+# The fetched page is returned to the browser and never stored or logged: it
+# carries the candidate's name, roll number and photographs, and only the
+# browser-side parser touches it — and that reads out nothing but answers,
+# section names, the marking note and the paper's own date/time.
+KEYCHECK_URL_HOSTS = tuple(
+    h.strip().lower()
+    for h in os.environ.get("OMR_KEYCHECK_URL_HOSTS", "digialm.com,tcsion.com").split(",")
+    if h.strip()
+)
+# A sheet with inline option images runs to a few MB; 12 is comfortably clear of
+# the largest observed and still bounded.
+KEYCHECK_MAX_BYTES = int(os.environ.get("OMR_KEYCHECK_MAX_BYTES", 12 * 1024 * 1024))
+KEYCHECK_TIMEOUT = 20  # seconds, per hop
+KEYCHECK_MAX_HOPS = 4
+KEYCHECK_RATE_LIMIT = int(os.environ.get("OMR_KEYCHECK_RATE_LIMIT", "10"))  # per minute
+# digialm answers a default requests/curl User-Agent with a 400, so the request
+# has to look like a browser to get the page at all.
+KEYCHECK_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
+
+def _keycheck_url(raw):
+    """Validate and normalise a response-sheet URL. Returns (url, error).
+
+    Note the netloc is rebuilt from `hostname` alone, which drops any userinfo:
+    "https://digialm.com@169.254.169.254/" has hostname 169.254.169.254, and
+    keeping the netloc verbatim would let that read as an allowed host.
+
+    A doubled slash in the path ("...Mode1//33040O261/...") is left exactly as
+    pasted — candidates' links often carry one, digialm serves them fine, and
+    rewriting the path risks breaking a link that would have worked.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    text = str(raw or "").strip().strip("<>")
+    if not text:
+        return None, "an answer key URL is required"
+    if "://" not in text:
+        text = "https://" + text
+    try:
+        parts = urlsplit(text)
+    except ValueError:
+        return None, "that does not look like a web address"
+
+    if parts.scheme not in ("http", "https"):
+        return None, "only http and https links are supported"
+    host = (parts.hostname or "").lower()
+    if not host or not any(host == h or host.endswith("." + h) for h in KEYCHECK_URL_HOSTS):
+        return None, ("only response-sheet links from "
+                      + " or ".join(KEYCHECK_URL_HOSTS)
+                      + " are supported")
+    try:
+        port = parts.port
+    except ValueError:
+        return None, "that does not look like a web address"
+    if port not in (None, 80, 443):
+        return None, "only the standard http and https ports are supported"
+
+    # Always https: these hosts serve it, and it keeps the candidate's sheet off
+    # the wire in the clear. The fragment is not part of the request — drop the
+    # trailing "#" that gets copied along with the link.
+    return urlunsplit(("https", host, parts.path, parts.query, "")), None
+
+
+def _keycheck_fetch(url):
+    """Fetch a response-sheet page. Returns (html, final_url, error).
+
+    Redirects are followed by hand, re-validating each hop, because
+    `allow_redirects=True` would happily follow a 302 off the allowlist and
+    straight at an internal address.
+    """
+    import requests
+
+    for _ in range(KEYCHECK_MAX_HOPS):
+        try:
+            resp = requests.get(
+                url,
+                timeout=KEYCHECK_TIMEOUT,
+                stream=True,
+                allow_redirects=False,
+                headers={"User-Agent": KEYCHECK_UA,
+                         "Accept": "text/html,application/xhtml+xml,*/*"},
+            )
+        except requests.Timeout:
+            return None, None, "the exam site did not respond in time"
+        except requests.RequestException as exc:
+            app.logger.info("keycheck fetch failed for %s: %s", url, exc)
+            return None, None, "could not reach the exam site for that link"
+
+        with resp:
+            if resp.is_redirect or resp.is_permanent_redirect:
+                from urllib.parse import urljoin
+
+                target = urljoin(url, resp.headers.get("Location", ""))
+                url, bad = _keycheck_url(target)
+                if bad:
+                    return None, None, "that link redirects somewhere unsupported"
+                continue
+
+            if resp.status_code != 200:
+                # 403/404 here is the usual sign of an expired or mistyped link,
+                # which is the candidate's problem to fix, so say which it was.
+                return None, None, (f"the exam site returned {resp.status_code} for that "
+                                    "link — check it has not expired")
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            if "html" not in ctype and "text/" not in ctype:
+                return None, None, "that link is not an HTML response sheet"
+
+            size = 0
+            chunks = []
+            for chunk in resp.iter_content(64 * 1024):
+                size += len(chunk)
+                if size > KEYCHECK_MAX_BYTES:
+                    return None, None, "that page is too large to read"
+                chunks.append(chunk)
+
+        raw = b"".join(chunks)
+        # These sheets are UTF-8 and say so; requests only guesses when the
+        # header omits the charset, and its guess for HTML is latin-1, which
+        # would mangle the Odia/Hindi question text.
+        return raw.decode(resp.encoding or "utf-8", errors="replace"), url, None
+
+    return None, None, "that link redirects too many times"
+
+
+@app.post("/api/tools/answerkey-checker/fetch")
+def tools_keycheck_fetch():
+    """Fetch a candidate's response-sheet page so the browser can parse it.
+
+    Public and unauthenticated, like the two endpoints above, and rate-limited
+    harder because each call makes an outbound request. Returns the page
+    verbatim; nothing about it is stored. See the block comment above for why a
+    proxy is needed and what stops it being an open one."""
+    ip = _client_ip()
+    if _rate_limited(f"{ip}:keyfetch", KEYCHECK_RATE_LIMIT):
+        return error("too many link fetches; try again in a minute", 429)
+    data, err = _tools_payload()
+    if err:
+        return err
+
+    url, bad = _keycheck_url(data.get("url"))
+    if bad:
+        return error(bad)
+    html, final_url, bad = _keycheck_fetch(url)
+    if bad:
+        return error(bad, 502)
+    # `chars`, not bytes: this is the decoded string, and these sheets are full
+    # of multi-byte Indic script, so the two differ.
+    return jsonify({"html": html, "url": final_url, "chars": len(html)})
+
+
+@app.get("/api/tools/answerkey-checker/rank")
+def tools_keycheck_rank():
+    """Where a score sits among the analyses already logged for the same paper.
+
+    Public. Reads aggregates only — the keycheck table holds no answers and
+    nothing identifying anyone. A missing or too-small cohort is a normal
+    answer, not an error: the page then simply shows no rank."""
+    if _rate_limited(_client_ip()):
+        return error("too many requests; try again in a minute", 429)
+
+    exam = (request.args.get("exam") or "").strip()
+    if not exam:
+        return error("exam is required")
+    try:
+        score = float(request.args.get("score"))
+    except (TypeError, ValueError):
+        return error("a numeric score is required")
+
+    try:
+        stats = tools_store.keycheck_rank(
+            exam=exam,
+            score=score,
+            test_date=(request.args.get("testDate") or "").strip() or None,
+        )
+    except Exception as exc:  # noqa: BLE001 — a missing rank must not break the score
+        app.logger.warning("tools: rank query failed: %s", exc)
+        return jsonify({"available": False, "reason": "unavailable"})
+    return jsonify(stats)
 
 
 if __name__ == "__main__":
