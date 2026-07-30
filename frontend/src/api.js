@@ -1,8 +1,36 @@
 // Thin fetch wrapper around the Flask API.
 // - Dev: leave VITE_API_BASE_URL unset -> "/api" (Vite proxies it to :5000).
 // - Split-domain prod: set VITE_API_BASE_URL to the backend origin at build
-//   time (e.g. http://tools-api.adda247.com) -> "<origin>/api".
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+//   time (e.g. https://tools-api.adda247.com) -> "<origin>/api".
+// Deployed frontend host -> its backend origin. This is the safety net for a
+// missing or unsubstituted VITE_API_BASE_URL: without it the app fell back to
+// same-origin, which is wrong under split-domain and produced requests to a
+// host that does not exist. Keep in sync with the ConfigMaps in DEPLOYMENT.md.
+const API_ORIGIN_BY_HOST = {
+  "tools.adda247.com": "https://tools-api.adda247.com",
+};
+
+function resolveApiOrigin() {
+  const raw = (import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/$/, "");
+  // The Docker build bakes a __VITE_API_BASE_URL__ token that the container
+  // entrypoint substitutes from the ConfigMap. If it survives to the browser
+  // the injection never ran.
+  const missing = !raw || raw.startsWith("__VITE");
+  if (!missing) return raw;
+
+  // Known deployed host -> its API origin. Anywhere else (localhost) keeps the
+  // same-origin "/api", which `npm run dev` proxies to the Flask server.
+  const fallback = API_ORIGIN_BY_HOST[window.location.hostname] || "";
+  if (raw.startsWith("__VITE")) {
+    console.error(
+      `[api] VITE_API_BASE_URL placeholder was not replaced at container start — ` +
+        `using ${fallback || "same-origin /api"}. Fix docker-entrypoint.sh and the ConfigMap.`
+    );
+  }
+  return fallback;
+}
+
+const API_ORIGIN = resolveApiOrigin();
 const BASE = `${API_ORIGIN}/api`;
 const TOKEN_KEY = "omr_token";
 
@@ -46,7 +74,19 @@ async function request(path, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  // fetch() rejects with a bare "Failed to fetch" for DNS failures, refused
+  // connections, mixed content and CORS rejections alike. Name the origin we
+  // could not reach so a misconfigured API base URL is obvious from the UI.
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...options, headers });
+  } catch (e) {
+    console.error(`[api] request to ${BASE}${path} failed`, e);
+    throw new Error(
+      `Cannot reach the server at ${API_ORIGIN || window.location.origin}. ` +
+        `Check your connection, then reload the page.`
+    );
+  }
 
   if (res.status === 401) {
     tokenStore.clear();
@@ -159,7 +199,60 @@ async function toolLog(path, body) {
   }
 }
 
+// Same reasoning as toolLog (public: never send a token, never trip the 401
+// handler) — but these two calls are the feature rather than telemetry, so a
+// failure has to reach the candidate instead of being swallowed.
+async function toolCall(path, options) {
+  const res = await fetch(`${BASE}${path}`, options);
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(body?.error || `Request failed (${res.status})`);
+  }
+  return body;
+}
+
 export const toolsApi = {
   logResizerLead: (payload) => toolLog("/tools/image-resizer/leads", payload),
   logKeyCheckResult: (payload) => toolLog("/tools/answerkey-checker/results", payload),
+
+  // Pull a response-sheet page down through the backend. It cannot be fetched
+  // here: the exam CDNs send no CORS headers and reject a non-browser
+  // User-Agent. Parsing still happens in the browser — see answerKey.js.
+  fetchAnswerKeyUrl: (url) =>
+    toolCall("/tools/answerkey-checker/fetch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    }),
+
+  // Face detection for the resizer's health check. The one part of that tool
+  // that cannot run in the browser — no shipping browser has a usable face
+  // detector — so the resized JPEG is posted as raw bytes, measured with
+  // OpenCV, and dropped server-side. Returns null on any failure, which the
+  // checklist renders as "check manually" rather than a wrong verdict.
+  checkFace: async (blob) => {
+    try {
+      return await toolCall("/tools/image-resizer/face-check", {
+        method: "POST",
+        headers: { "Content-Type": "image/jpeg" },
+        body: blob,
+      });
+    } catch (err) {
+      console.warn("face check failed:", err.message);
+      return null;
+    }
+  },
+
+  // Cohort rank for a score. Supplementary to the report, so a failure resolves
+  // to "no rank" rather than throwing — the score is already on screen.
+  keyCheckRank: async ({ exam, score, testDate }) => {
+    const q = new URLSearchParams({ exam, score: String(score) });
+    if (testDate) q.set("testDate", testDate);
+    try {
+      return await toolCall(`/tools/answerkey-checker/rank?${q}`);
+    } catch (err) {
+      console.warn("rank lookup failed:", err.message);
+      return null;
+    }
+  },
 };

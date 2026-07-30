@@ -1,5 +1,10 @@
-// Image Resizer — pure canvas/measurement helpers, no React. Kept separate
-// from the page so the numbers can be checked in isolation.
+// Image Resizer — canvas/measurement helpers, no React. Kept separate from the
+// page so the numbers can be checked in isolation.
+//
+// Every measurement here is local except the face check, which posts the
+// encoded JPEG to the backend because no browser ships a usable face detector —
+// see detectFace below.
+import { toolsApi } from "../../api.js";
 
 // EDIT ME: the only table you normally need to touch.
 //
@@ -420,28 +425,145 @@ export function inkCoverage(canvas) {
   return n ? dark / n : 0;
 }
 
-// Only Chromium ships FaceDetector. Everywhere else this says "check manually"
-// rather than reporting a pass it cannot actually verify.
-export async function detectFace(canvas) {
-  if (!("FaceDetector" in window)) return { status: "skip", text: "Check manually" };
+// --- Face visibility -------------------------------------------------------
+// This is the one check that is not a local measurement. The in-browser option,
+// window.FaceDetector, is behind a flag on Chrome desktop and absent from
+// Firefox and Safari, so in practice it always fell through to "check manually"
+// — the row told every candidate to eyeball their own photo. The backend runs
+// OpenCV's YuNet detector instead (see backend/face_check.py) and returns
+// geometry; the wording below is this file's job, like every other row.
+//
+// Fallback order: server, then window.FaceDetector where it happens to exist,
+// then "check manually". Nothing here ever reports a pass it did not establish
+// — in particular there is no head-tilt or "eyes visible" row, because the
+// detector cannot support either (backend/face_check.py explains why).
+
+// Warning thresholds, all as a share of the output frame. Deliberately loose:
+// these back a "retake your photo" nudge, so a false alarm on an acceptable
+// photo costs more than staying quiet about a borderline one.
+const FACE_MIN_HEIGHT = 0.3; // below this the face is lost in the frame
+const FACE_MAX_HEIGHT = 0.92; // above this the crop has cut into the head
+const FACE_MAX_OFFSET_X = 0.18;
+
+// Turn the backend's geometry into one checklist row. Only the first problem is
+// reported: a candidate fixes their photo by retaking it, so a list of four
+// complaints is no more useful than the biggest one.
+function describeFaces({ faces, primary }) {
+  if (!faces) {
+    return {
+      status: "fail",
+      text: "No face detected",
+      hint: "Use a straight-on, well-lit passport-style photo. A profile view, a dark photo or a covered face will be rejected at upload.",
+    };
+  }
+  if (faces > 1) {
+    return {
+      status: "warn",
+      text: `${faces} faces found`,
+      hint: "Only the candidate may appear in the photo — crop out anyone else in the frame.",
+    };
+  }
+
+  const pct = Math.round(primary.heightRatio * 100);
+  if (primary.heightRatio < FACE_MIN_HEIGHT) {
+    return {
+      status: "warn",
+      text: `Face too small (${pct}% of height)`,
+      hint: "Crop closer so the face fills most of the frame — head-and-shoulders, not a full-length photo.",
+    };
+  }
+  if (primary.heightRatio > FACE_MAX_HEIGHT) {
+    return {
+      status: "warn",
+      text: `Face fills the frame (${pct}%)`,
+      hint: "Leave a little space above the head and below the chin, or switch the crop button to fit on white.",
+    };
+  }
+  if (Math.abs(primary.offCenterX) > FACE_MAX_OFFSET_X) {
+    return {
+      status: "warn",
+      text: "Face off-centre",
+      hint: "Centre the face horizontally in the frame.",
+    };
+  }
+  return { status: "pass", text: `1 face · ${pct}% of height` };
+}
+
+// window.FaceDetector, used only when the server check is unavailable. It gives
+// a count and nothing else, so the row is correspondingly thinner.
+async function detectFaceOnDevice(canvas) {
+  if (!("FaceDetector" in window)) return null;
   try {
     const faces = await new window.FaceDetector({ fastMode: true }).detect(canvas);
     if (faces.length === 1) return { status: "pass", text: "1 face" };
     if (faces.length === 0) return { status: "warn", text: "None found" };
     return { status: "warn", text: `${faces.length} faces` };
   } catch {
-    return { status: "skip", text: "Check manually" };
+    return null;
   }
+}
+
+// Smaller than the backend's own floor, so there is nothing to find. Worth
+// checking here because the re-encode runs on every keystroke: a width typed as
+// "3" then "35" on the way to "350" would otherwise post two doomed requests.
+const FACE_MIN_SIDE = 32; // keep in step with face_check.MIN_SIDE
+
+// Last definitive answer, reused while nothing that could change it has moved.
+// The re-encode effect re-runs on every keystroke in the size fields and this is
+// the only row that costs a request, so editing Max KB or toggling the padding
+// checkbox must not fire one. Only the source image, the output dimensions and
+// the fit mode can alter the result. A "check manually" fallback is never
+// cached: a dropped connection has to be free to succeed on the next attempt.
+let lastFace = null;
+
+export async function detectFace(canvas, blob, { img = null, mode = null } = {}) {
+  const { width: w, height: h } = canvas;
+  if (
+    lastFace &&
+    img &&
+    lastFace.img === img &&
+    lastFace.mode === mode &&
+    lastFace.w === w &&
+    lastFace.h === h
+  ) {
+    return lastFace.row;
+  }
+
+  let row = null;
+  if (blob && Math.min(w, h) >= FACE_MIN_SIDE) {
+    // Resolves to null on any failure — an offline candidate or a 503 must not
+    // turn into a claim about their photo.
+    const result = await toolsApi.checkFace(blob);
+    if (result && typeof result.faces === "number") row = describeFaces(result);
+  }
+  row = row || (await detectFaceOnDevice(canvas)) || { status: "skip", text: "Check manually" };
+
+  if (img && row.status !== "skip") lastFace = { img, mode, w, h, row };
+  return row;
 }
 
 // Ordered health report for an encoded result. Only the checks that apply to
 // this document type are included.
-export async function runHealthChecks(canvas, target, bytes, { padded = false } = {}) {
+//
+// `blob` and `face` serve the face row alone: it is the only check measured off
+// the encoded file rather than the canvas, because it is the only one that runs
+// on the server. `face` is { img, mode } — the source image and fit mode — and
+// is what lets detectFace skip a repeat request.
+export async function runHealthChecks(
+  canvas,
+  target,
+  bytes,
+  { padded = false, blob = null, face = null } = {},
+) {
   const rows = [];
   const kb = bytes / 1024;
 
   if (target.checks.face) {
-    rows.push({ key: "face", label: "Face Visibility", ...(await detectFace(canvas)) });
+    rows.push({
+      key: "face",
+      label: "Face Visibility",
+      ...(await detectFace(canvas, blob, face || {})),
+    });
   }
 
   if (target.checks.ink) {
@@ -488,9 +610,11 @@ export async function runHealthChecks(canvas, target, bytes, { padded = false } 
     filesize = {
       status: "warn",
       text: `${kb.toFixed(1)} KB < ${target.minKB} KB`,
-      // Quality is already at its ceiling here, and the output dimensions are
-      // fixed by the preset, so a better source image cannot raise this.
-      hint: `${target.w} × ${target.h} px cannot encode to ${target.minKB} KB at any quality. Tick "Pad to minimum file size" to reach it.`,
+      // Only reachable by a few bytes: padding to the floor is unconditional
+      // now, and padJpegToSize stops when it is within one segment header of
+      // the target. Quality is already at its ceiling and the dimensions are
+      // fixed by the preset, so nothing about the source image can raise it.
+      hint: `${target.w} × ${target.h} px cannot quite encode to ${target.minKB} KB. Most portals accept this, but check yours before uploading.`,
     };
   else if (padded)
     filesize = {
