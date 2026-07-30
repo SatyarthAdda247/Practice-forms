@@ -8,14 +8,16 @@ import Icon from "../components/Icon.jsx";
 import { toolsApi } from "../api.js";
 import usePageMeta from "../pageMeta.js";
 import {
-  EXAM_OPTIONS,
+  DEFAULT_EXAM,
+  EXAM_GROUPS,
   KEY_URL_HOSTS,
-  SCHEMES,
+  examLabel,
   normalizeKeyUrl,
   parseAnnotatedHtmlSheet,
   parseAnswerList,
   parseResponseFile,
   round,
+  schemeForExam,
   scoreAll,
   toCsv,
 } from "../tools/lib/answerKey.js";
@@ -82,9 +84,9 @@ export default function AnswerKeyChecker() {
 
   const fileRef = useRef(null);
 
-  const [exam, setExam] = useState("ssc");
+  const [exam, setExam] = useState(DEFAULT_EXAM);
   const [shift, setShift] = useState("");
-  const [scheme, setScheme] = useState({ ...SCHEMES.ssc });
+  const [scheme, setScheme] = useState(() => schemeForExam(DEFAULT_EXAM));
   const [responsesText, setResponsesText] = useState("");
   const [keyText, setKeyText] = useState("");
   const [sections, setSections] = useState({});
@@ -103,9 +105,13 @@ export default function AnswerKeyChecker() {
   // stays null when there is not enough data to say anything.
   const [rank, setRank] = useState(null);
 
+  // Most exams pin no marking scheme — see the note above SCHEMES. For those the
+  // marks inputs are left exactly as they are rather than reset to a guess, and
+  // `schemePinned` below tells the candidate the marks are theirs to confirm.
   const pickExam = (value) => {
     setExam(value);
-    if (SCHEMES[value]) setScheme({ ...SCHEMES[value] });
+    const preset = schemeForExam(value);
+    if (preset) setScheme(preset);
   };
 
   const setField = (field, value) => setScheme({ ...scheme, [field]: value });
@@ -339,7 +345,8 @@ export default function AnswerKeyChecker() {
     setError("");
     setKeyUrl("");
     setRank(null);
-    if (SCHEMES[exam]) setScheme({ ...SCHEMES[exam] });
+    const preset = schemeForExam(exam);
+    if (preset) setScheme(preset);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -357,6 +364,9 @@ export default function AnswerKeyChecker() {
   // Worth a table only when the sheet actually named its subjects.
   const bySection = report ? Object.entries(summariseSections(report.rows)) : [];
   const showSections = bySection.length > 1 || (bySection.length === 1 && bySection[0][0] !== "—");
+  // Whether the selected exam carries a known marking pattern, or the marks in
+  // the boxes are the candidate's own to confirm.
+  const schemePinned = schemeForExam(exam) !== null;
   const inputClass =
     "w-full bg-tool-surface-lowest border border-tool-outline rounded-lg p-3 text-body-md text-tool-on-surface focus:border-tool-primary focus:ring-1 focus:ring-tool-primary outline-none transition-colors";
 
@@ -439,12 +449,35 @@ export default function AnswerKeyChecker() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-1">
-              <label className="text-label-md text-tool-on-surface-variant uppercase">Exam Category</label>
-              <select value={exam} onChange={(e) => pickExam(e.target.value)} className={inputClass}>
-                {EXAM_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+              <label htmlFor="exam-select" className="text-label-md text-tool-on-surface-variant uppercase">
+                Exam
+              </label>
+              {/* Grouped by conducting body: the list runs to ~200 papers, and
+                  the exam picked here is the cohort a rank is measured against,
+                  so picking the actual paper rather than a family matters. */}
+              <select
+                id="exam-select"
+                value={exam}
+                onChange={(e) => pickExam(e.target.value)}
+                className={inputClass}
+              >
+                {EXAM_GROUPS.map((g) => (
+                  <optgroup key={g.group} label={g.group}>
+                    {g.options.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+              {/* Say when the marks are the candidate's to confirm rather than a
+                  known pattern — otherwise whatever is in the boxes silently
+                  decides the score of a hand-typed paper. */}
+              {!schemePinned && (
+                <p className="text-body-md text-tool-secondary">
+                  No standard marking pattern is stored for this exam — check the marks below, or
+                  paste your sheet above and they will be read from it.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-label-md text-tool-on-surface-variant uppercase">Shift / Date</label>
@@ -674,7 +707,7 @@ export default function AnswerKeyChecker() {
 
             <p className="text-body-md text-tool-secondary">
               {[
-                EXAM_OPTIONS.find((o) => o.value === exam)?.label,
+                examLabel(exam),
                 shift,
                 `${report.total} questions`,
                 `${report.skipped} unattempted`,
