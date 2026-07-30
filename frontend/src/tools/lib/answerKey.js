@@ -5,11 +5,22 @@
 //      tables, or a flat Q.No / Chosen Option grid).
 //   2. Plain text / CSV: "1 B" per line, "1,B", or one run "BCAD-".
 
-// EDIT ME: default marking scheme per exam. `null` leaves the inputs alone.
-//
-// These are starting points only: an uploaded response sheet usually states its
-// own scheme in the header note, and that overrides whatever is picked here (see
-// parseMarkingNote). Every field stays editable either way.
+/* -------------------------------------------------------------------------- *
+ * Marking-scheme profiles
+ *
+ * Deliberately a SHORT list of patterns, not one entry per exam. The authority
+ * on how a paper is marked is the marking note printed on the response sheet
+ * itself — parseMarkingNote reads it and it overrides whatever is selected here
+ * (see parseAnnotatedHtmlSheet). A preset only has to cover the case where
+ * somebody types their answers in by hand and the sheet is not available.
+ *
+ * So a profile is pinned to an exam only where the conducting body's pattern is
+ * long-standing and unambiguous. Everywhere else the exam carries NO profile:
+ * selecting it leaves the marks inputs alone and the page says the marks need
+ * checking. That is the honest outcome — a guessed penalty would silently change
+ * the score of every hand-typed paper, and unlike a missing preset it would do
+ * so without telling anyone.
+ * -------------------------------------------------------------------------- */
 export const SCHEMES = {
   ssc:      { correct: 2, wrong: 0.5,  skipped: 0, total: 100 },
   railway:  { correct: 1, wrong: 0.33, skipped: 0, total: 100 },
@@ -22,17 +33,336 @@ export const SCHEMES = {
   custom:   null,
 };
 
-export const EXAM_OPTIONS = [
-  { value: "ssc", label: "SSC (CGL / CHSL / MTS / GD)" },
-  { value: "railway", label: "Railway (RRB NTPC / Group D / ALP)" },
-  { value: "state", label: "State commission (OSSSC / PSC / Police)" },
-  { value: "defence", label: "Defence (CDS / AFCAT / Agniveer)" },
-  { value: "teaching", label: "Teaching (CTET / KVS / State TET)" },
-  { value: "upsc", label: "Civil Services (UPSC Prelims)" },
-  { value: "jee", label: "Engineering (JEE Main)" },
-  { value: "neet", label: "Medical (NEET)" },
-  { value: "custom", label: "Custom marking scheme" },
-];
+/* -------------------------------------------------------------------------- *
+ * Exam catalogue
+ *
+ * One entry per exam, because the exam slug is the *cohort key*: it is what the
+ * warehouse groups by, and therefore what "Expected Rank" compares a candidate
+ * against. The old nine buckets made RRB NTPC rank against RRB Group D, ALP and
+ * JE — different papers, different difficulty, a meaningless comparison. Adding
+ * a paper here is how it becomes rankable.
+ *
+ * Slugs are permanent. Renaming one orphans every row already warehoused under
+ * the old name, so add and deprecate rather than rewrite.
+ *
+ * Shape:  group -> { body, scheme?, exams: [[slug, label, schemeOverride?], …] }
+ *   `scheme`          profile every exam in the group inherits (see SCHEMES)
+ *   `schemeOverride`  per-exam; pass null where the exam departs from its group
+ *   `body`            conducting body, shown beside the exam so two similarly
+ *                     named posts from different bodies are told apart
+ *
+ * Grouping is by conducting body rather than by subject, so each exam appears
+ * exactly once. Subject ("nursing", "engineering") is already in the exam name.
+ * -------------------------------------------------------------------------- */
+const CATALOGUE = {
+  "SSC": {
+    body: "SSC",
+    scheme: "ssc",
+    exams: [
+      ["ssc-cgl", "SSC CGL"],
+      ["ssc-chsl", "SSC CHSL"],
+      ["ssc-cpo", "SSC CPO"],
+      // MTS and GD are marked differently from the rest of the SSC calendar, and
+      // which way round changes by tier and year — so no preset is asserted.
+      ["ssc-mts", "SSC MTS", null],
+      ["ssc-gd-constable", "SSC GD Constable", null],
+      ["ssc-selection-post", "SSC Selection Post"],
+      ["ssc-je", "SSC JE", null],
+      ["ssc-jht", "SSC JHT"],
+      ["ssc-stenographer", "SSC Stenographer"],
+      ["ssc-scientific-assistant", "SSC Scientific Assistant (IMD)", null],
+    ],
+  },
+  "Railways (RRB)": {
+    body: "RRB",
+    scheme: "railway",
+    exams: [
+      ["rrb-ntpc", "RRB NTPC"],
+      ["rrb-group-d", "RRB Group D"],
+      ["rrb-alp", "RRB ALP"],
+      ["rrb-je", "RRB JE"],
+      ["rrb-technician", "RRB Technician"],
+      ["rrb-paramedical", "RRB Paramedical"],
+      ["rrb-ministerial-isolated", "RRB Ministerial & Isolated"],
+      ["rrb-nursing-superintendent", "RRB Nursing Superintendent"],
+      ["rrb-pharmacist", "RRB Pharmacist"],
+      ["rrb-health-malaria-inspector", "RRB Health & Malaria Inspector"],
+    ],
+  },
+  "DSSSB — Delhi": {
+    body: "DSSSB",
+    exams: [
+      ["dsssb-prt", "DSSSB PRT"],
+      ["dsssb-tgt", "DSSSB TGT"],
+      ["dsssb-pgt", "DSSSB PGT"],
+      ["dsssb-assistant-teacher", "DSSSB Assistant Teacher"],
+      ["dsssb-asst-teacher-nursery", "DSSSB Assistant Teacher (Nursery)"],
+      ["dsssb-drawing-teacher", "DSSSB Drawing Teacher"],
+      ["dsssb-music-teacher", "DSSSB Music Teacher"],
+      ["dsssb-pet", "DSSSB Physical Education Teacher (PET)"],
+      ["dsssb-domestic-science-teacher", "DSSSB Domestic Science Teacher"],
+      ["dsssb-special-educator-primary", "DSSSB Special Educator (Primary)"],
+      ["dsssb-special-educator-tgt", "DSSSB Special Educator (TGT)"],
+      ["dsssb-librarian", "DSSSB Librarian"],
+      ["dsssb-nursing-officer", "DSSSB Nursing Officer (Staff Nurse)"],
+      // One entry for all three streams: the sheet lists them together, and a
+      // per-stream split would only be worth it if each sat a separate paper —
+      // which is an additive change if it turns out they do.
+      ["dsssb-pharmacist", "DSSSB Pharmacist (Allopathy / Ayurveda / Homeopathy)"],
+      ["dsssb-lab-technician", "DSSSB Laboratory Technician"],
+      ["dsssb-ecg-technician", "DSSSB ECG Technician"],
+      ["dsssb-ot-assistant", "DSSSB OT Assistant"],
+      ["dsssb-radiographer", "DSSSB Radiographer"],
+      ["dsssb-dental-hygienist", "DSSSB Dental Hygienist"],
+      ["dsssb-anm", "DSSSB Auxiliary Nurse Midwife (ANM)"],
+      ["dsssb-warder-matron", "DSSSB Warder / Matron (Medical)"],
+      ["dsssb-je-civil", "DSSSB Junior Engineer (Civil)"],
+      ["dsssb-je-electrical", "DSSSB Junior Engineer (Electrical)"],
+      ["dsssb-assistant-engineer", "DSSSB Assistant Engineer"],
+      ["dsssb-section-officer-horticulture", "DSSSB Section Officer (Horticulture)"],
+      ["dsssb-junior-scientific-assistant", "DSSSB Junior Scientific Assistant"],
+      ["dsssb-scientific-assistant", "DSSSB Scientific Assistant"],
+      ["dsssb-laboratory-assistant", "DSSSB Laboratory Assistant"],
+      ["dsssb-it-assistant-a", "DSSSB IT Assistant Grade-A"],
+      ["dsssb-grade-ii-dass", "DSSSB Grade-II (DASS)"],
+      ["dsssb-aso", "DSSSB Assistant Section Officer (ASO)"],
+      ["dsssb-personal-assistant", "DSSSB Personal Assistant"],
+      ["dsssb-stenographer", "DSSSB Stenographer"],
+      ["dsssb-junior-assistant", "DSSSB Junior Assistant"],
+      ["dsssb-ldc", "DSSSB Lower Division Clerk (LDC)"],
+      ["dsssb-head-clerk", "DSSSB Head Clerk"],
+      ["dsssb-junior-clerk", "DSSSB Junior Clerk"],
+      ["dsssb-deo", "DSSSB Data Entry Operator (DEO)"],
+      ["dsssb-welfare-officer", "DSSSB Welfare Officer"],
+      ["dsssb-assistant-superintendent", "DSSSB Assistant Superintendent"],
+      ["dsssb-investigator", "DSSSB Investigator"],
+      ["dsssb-assistant-archivist", "DSSSB Assistant Archivist"],
+      ["dsssb-store-keeper", "DSSSB Store Keeper"],
+      ["dsssb-process-server", "DSSSB Process Server"],
+      ["dsssb-chauffeur", "DSSSB Chauffeur"],
+      ["dsssb-dispatch-rider", "DSSSB Dispatch Rider"],
+      ["dsssb-conservation-assistant", "DSSSB Conservation Assistant"],
+    ],
+  },
+  "Teaching boards": {
+    body: "State board",
+    scheme: "teaching",
+    exams: [
+      ["bseh-htet", "HTET — Haryana TET (BSEH)"],
+      ["bseb-bihar-stet", "Bihar STET (BSEB)"],
+    ],
+  },
+  "AIIMS": {
+    body: "AIIMS",
+    exams: [
+      ["aiims-norcet", "AIIMS NORCET"],
+      ["aiims-cre", "AIIMS CRE"],
+      ["aiims-bsc-nursing", "AIIMS B.Sc Nursing"],
+    ],
+  },
+  "ESIC": {
+    body: "ESIC",
+    exams: [
+      ["esic-nursing-officer", "ESIC Nursing Officer"],
+      ["esic-sso", "ESIC SSO"],
+      ["esic-udc", "ESIC UDC"],
+      ["esic-mts", "ESIC MTS"],
+    ],
+  },
+  "NTA": {
+    body: "NTA",
+    exams: [
+      ["nta-icar-pg", "ICAR PG"],
+      ["nta-icar-phd", "ICAR PhD"],
+    ],
+  },
+  "Madhya Pradesh (MPESB)": {
+    body: "MPESB",
+    exams: [
+      ["mpesb-police-constable", "MP Police Constable"],
+      ["mpesb-group-2-sub-4", "MP Group 2 Sub Group 4"],
+      ["mpesb-group-3", "MP Group 3"],
+      ["mpesb-group-5", "MP Group 5"],
+      ["mpesb-forest-guard", "MP Forest Guard"],
+      ["mpesb-excise-constable", "MP Excise Constable"],
+      ["mpesb-jail-prahari", "MP Jail Prahari"],
+      ["mpesb-primary-teacher", "MP Primary Teacher"],
+      ["mpesb-nursing-officer", "MP Nursing Officer"],
+      ["mpesb-pat", "MP PAT"],
+    ],
+  },
+  "Rajasthan": {
+    body: "RSMSSB",
+    exams: [
+      ["rsmssb-cet-graduate", "Rajasthan CET — Graduate Level"],
+      ["rsmssb-cet-12th", "Rajasthan CET — 12th Level"],
+      ["rsmssb-informatics-assistant", "Rajasthan Informatics Assistant"],
+      ["rsmssb-junior-accountant", "Rajasthan Junior Accountant"],
+      ["rsmssb-cho", "Rajasthan CHO"],
+      ["rsmssb-lab-assistant", "Rajasthan Lab Assistant"],
+      ["rajasthan-jet", "Rajasthan JET (AU Jodhpur)"],
+    ],
+  },
+  "Bihar": {
+    body: "Bihar",
+    exams: [
+      ["bssc-cgl", "BSSC CGL"],
+      ["bssc-inter-level", "BSSC Inter Level"],
+      ["btsc-staff-nurse", "BTSC Staff Nurse"],
+      ["bcece", "BCECE (BCECEB)"],
+      ["bcece-agriculture", "BCECE Agriculture (BCECEB)"],
+      ["bsphcl-correspondence-clerk", "BSPHCL Correspondence Clerk"],
+      ["bsphcl-store-assistant", "BSPHCL Store Assistant"],
+      ["bsphcl-junior-accounts-clerk", "BSPHCL Junior Accounts Clerk"],
+      ["bsphcl-technician-grade-iii", "BSPHCL Technician Grade III"],
+      ["bsphcl-aee", "BSPHCL Assistant Executive Engineer"],
+      ["bsphcl-jee", "BSPHCL Junior Electrical Engineer"],
+      ["bsphcl-assistant-it-manager", "BSPHCL Assistant IT Manager"],
+      ["bsphcl-accounts-officer", "BSPHCL Accounts Officer"],
+      ["bsphcl-assistant-law-officer", "BSPHCL Assistant Law Officer"],
+    ],
+  },
+  "Uttar Pradesh": {
+    body: "UPSSSC / UPPCL",
+    exams: [
+      ["upsssc-junior-assistant", "UPSSSC Junior Assistant"],
+      ["upsssc-agta", "UPSSSC AGTA"],
+      ["uppcl-assistant-engineer", "UPPCL Assistant Engineer"],
+    ],
+  },
+  "Odisha": {
+    body: "OSSC / OSSSC / OPSC",
+    exams: [
+      ["ossc-cgl", "OSSC CGL"],
+      ["ossc-chsl", "OSSC CHSL"],
+      ["osssc-ri", "OSSSC Revenue Inspector (RI)"],
+      ["osssc-ari", "OSSSC Assistant Revenue Inspector (ARI)"],
+      ["osssc-amin", "OSSSC Amin"],
+      ["osssc-icds-supervisor", "OSSSC ICDS Supervisor"],
+      ["osssc-junior-assistant", "OSSSC Junior Assistant"],
+      ["osssc-vaw", "OSSSC Village Agriculture Worker (VAW)"],
+      ["osssc-sfs", "OSSSC Statistical Field Surveyor (SFS)"],
+      ["osssc-forest-guard", "OSSSC Forest Guard"],
+      ["osssc-livestock-inspector", "OSSSC Livestock Inspector"],
+      ["osssc-nursing-officer", "OSSSC Nursing Officer"],
+      ["opsc-aee", "OPSC Assistant Executive Engineer"],
+    ],
+  },
+  "Telangana & Andhra Pradesh": {
+    body: "TG / AP",
+    exams: [
+      ["tghc-junior-assistant", "Telangana High Court Junior Assistant"],
+      ["tghc-examiner", "Telangana High Court Examiner"],
+      ["tghc-typist", "Telangana High Court Typist"],
+      ["tghc-copyist", "Telangana High Court Copyist"],
+      ["tghc-office-subordinate", "Telangana High Court Office Subordinate"],
+      ["tghc-process-server", "Telangana High Court Process Server"],
+      ["tghc-record-assistant", "Telangana High Court Record Assistant"],
+      ["tgche-eapcet-agriculture", "TS EAPCET Agriculture"],
+      ["apsche-eapcet-agriculture", "AP EAPCET Agriculture"],
+      ["tsgenco-ae", "TSGENCO Assistant Engineer"],
+      ["tstransco-ae", "TSTRANSCO Assistant Engineer"],
+      ["apgenco-ae", "APGENCO Assistant Engineer"],
+      ["aptransco-ae", "APTRANSCO Assistant Engineer"],
+    ],
+  },
+  "Other states": {
+    body: "State",
+    exams: [
+      ["cg-vyapam-pat", "CG PAT (CG Vyapam)"],
+      ["hppsc-assistant-engineer", "HPPSC Assistant Engineer"],
+      ["ukpsc-assistant-engineer", "UKPSC Assistant Engineer"],
+      ["tnpsc-combined-engineering", "TNPSC Combined Engineering Services"],
+      ["pspcl-assistant-engineer", "PSPCL Assistant Engineer"],
+      ["mptransco-assistant-engineer", "MPTRANSCO Assistant Engineer"],
+      ["wbsedcl-assistant-engineer", "WBSEDCL Assistant Engineer"],
+      ["wbsetcl-assistant-engineer", "WBSETCL Assistant Engineer"],
+    ],
+  },
+  "Central PSU & undertakings": {
+    body: "PSU",
+    exams: [
+      ["aai-je-atc", "AAI Junior Executive (ATC)"],
+      ["aai-je-engineering", "AAI Junior Executive (Engineering)"],
+      ["aai-non-executive", "AAI Non-Executive"],
+      ["dfccil-junior-executive", "DFCCIL Junior Executive"],
+      ["dfccil-executive", "DFCCIL Executive / JE"],
+      ["fci-category-ii", "FCI Category II"],
+      ["fci-category-iii", "FCI Category III"],
+      ["dmrc-je", "DMRC Junior Engineer"],
+      ["dmrc-assistant-manager", "DMRC Assistant Manager"],
+      ["hpcl-engineer", "HPCL Engineer"],
+      ["iocl-engineer", "IOCL Engineer / Officer"],
+      ["ongc-aee", "ONGC AEE"],
+      ["ecil-get", "ECIL Graduate Engineer Trainee (GET)"],
+      ["bel-probationary-engineer", "BEL Probationary Engineer"],
+      ["bhel-engineer-trainee", "BHEL Engineer Trainee"],
+      ["nlc-get", "NLC India GET"],
+      ["cil-management-trainee", "CIL Management Trainee (Engineering)"],
+      ["nfl-management-trainee", "NFL Management Trainee (Engineering)"],
+      ["sail-management-trainee", "SAIL Management Trainee (Technical)"],
+      ["gail-executive-trainee", "GAIL Executive Trainee / Engineer"],
+      ["nhpc-trainee-engineer", "NHPC Trainee Engineer"],
+      ["thdc-engineer-trainee", "THDC Engineer Trainee"],
+      ["rvnl-site-engineer", "RVNL Site Engineer / Manager"],
+      ["rites-engineer", "RITES Engineer"],
+      ["ircon-works-engineer", "IRCON Works Engineer"],
+      ["npcil-executive-trainee", "NPCIL Executive Trainee"],
+    ],
+  },
+  // Kept for the hand-typed path and for papers not yet catalogued above. These
+  // are marking *patterns*, so they group a whole family together and are a
+  // deliberately coarse cohort — pick the named exam instead where one exists.
+  "Generic marking patterns": {
+    body: "Pattern",
+    exams: [
+      ["pattern-state", "State commission — generic (+1 / −1⁄3)", "state"],
+      ["pattern-defence", "Defence — CDS / AFCAT / Agniveer (+1 / −1⁄3)", "defence"],
+      ["pattern-teaching", "Teaching / TET — generic (+1, no penalty)", "teaching"],
+      ["pattern-upsc", "Civil Services — UPSC Prelims (+2 / −0.66)", "upsc"],
+      ["pattern-jee", "Engineering — JEE Main (+4 / −1)", "jee"],
+      ["pattern-neet", "Medical — NEET (+4 / −1)", "neet"],
+      ["custom", "Custom marking scheme", "custom"],
+    ],
+  },
+};
+
+// The exam picked when the page first loads: the most-sat paper in the sheet
+// that we also hold a sample for.
+export const DEFAULT_EXAM = "ssc-cgl";
+
+// Grouped for <optgroup>, so a ~200-entry dropdown stays navigable.
+export const EXAM_GROUPS = Object.entries(CATALOGUE).map(([group, spec]) => ({
+  group,
+  body: spec.body,
+  options: spec.exams.map(([value, label, ...override]) => ({
+    value,
+    label,
+    body: spec.body,
+    // `override.length` rather than a truthiness test: an explicit null means
+    // "this exam departs from its group and pins nothing", which is different
+    // from "not specified".
+    scheme: override.length ? override[0] : spec.scheme ?? null,
+  })),
+}));
+
+// Flat list, for lookups and for anything that just wants every exam.
+export const EXAM_OPTIONS = EXAM_GROUPS.flatMap((g) => g.options);
+
+const EXAM_BY_VALUE = new Map(EXAM_OPTIONS.map((o) => [o.value, o]));
+
+// The marking profile for an exam, or null when none is pinned — in which case
+// the caller must leave the marks inputs as they are. Note the returned object
+// is a fresh copy: callers put it straight into component state and edit it.
+export function schemeForExam(value) {
+  const profile = EXAM_BY_VALUE.get(value)?.scheme;
+  const preset = profile ? SCHEMES[profile] : null;
+  return preset ? { ...preset } : null;
+}
+
+export function examLabel(value) {
+  return EXAM_BY_VALUE.get(value)?.label || value || "";
+}
 
 const NO_ANSWER = /^(-{1,2}|na|n\/a|not answered|not attempted|—|\.)$/i;
 
