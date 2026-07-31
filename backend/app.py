@@ -1050,8 +1050,22 @@ def tools_resizer_lead():
     lead = data.get("lead") or {}
     if not str(lead.get("name") or "").strip():
         return error("lead name is required")
-    if not str(lead.get("phone") or "").strip():
+    # The form sends ten bare digits, but a browser holding an older bundle may
+    # still send a country code, and dropping a real lead over formatting is
+    # worse than storing it — so normalise the same way the form does, then
+    # require the ten digits. A number that cannot be dialled is worth no row.
+    # This never blocks the candidate's download; the frontend ignores the reply.
+    phone = re.sub(r"\D", "", str(lead.get("phone") or ""))
+    for prefix in ("91", "0"):
+        if len(phone) > 10 and phone.startswith(prefix):
+            phone = phone[len(prefix):]
+    if not phone:
         return error("lead phone is required")
+    if len(phone) != 10:
+        return error("lead phone must be a 10-digit mobile number")
+    # Store what was validated, so every row in the leads table is the same
+    # shape and searching one by number does not depend on how it was typed.
+    data["lead"] = {**lead, "phone": phone}
 
     return _tools_save(tools_store.save_resizer_lead, data)
 
