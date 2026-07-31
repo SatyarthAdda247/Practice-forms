@@ -21,6 +21,7 @@ import {
   MAX_INPUT_BYTES,
   PRESETS,
   encodeWithinBudget,
+  enhanceOutput,
   loadImage,
   padJpegToSize,
   presetFamilyLabel,
@@ -83,6 +84,19 @@ const DOC_TYPES = [
 // upload. Blank forces the one decision only the candidate can make; the
 // placeholders still show the shape of an answer.
 const DEFAULT_CUSTOM = { w: "", h: "", kb: "" };
+
+// Keep the mobile field at the bare ten-digit number.
+//
+// Truncating at ten characters is not enough on its own: a candidate pasting
+// "+91 98765 43210" would be cut to "+91 98765" and, once the punctuation is
+// dropped, left with a plausible-looking but wrong number. So the country code
+// and the trunk "0" are removed before the length cap applies.
+const normalizePhone = (value) => {
+  let digits = value.replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("91")) digits = digits.slice(2);
+  if (digits.length > 10 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits.slice(0, 10);
+};
 
 const PILL = "rounded-[999px]";
 const CARD =
@@ -220,6 +234,10 @@ export default function ImageResizer() {
   // button, and a line of status text that is easy to miss.
   const [sizePromptOpen, setSizePromptOpen] = useState(false);
 
+  // A lead is only worth storing if the number can actually be dialled, so the
+  // field holds exactly ten digits and nothing else.
+  const phoneValid = lead.phone.length === 10;
+
   const isCustom = presetKey === "custom";
   // A max-KB of blank is fine — it means "no ceiling". Width and height are
   // what the tool cannot proceed without.
@@ -325,6 +343,9 @@ export default function ImageResizer() {
     (async () => {
       const mode = fitMode;
       const canvas = renderToCanvas(source.img, target.w, target.h, mode);
+      // Before the encode, so the checklist measures the pixels that actually
+      // get downloaded. Dimensions and byte budget are untouched by it.
+      const enhanced = enhanceOutput(canvas, target, source.img);
       const encoded = await encodeWithinBudget(canvas, target.minKB, target.maxKB);
       // Stamp the DPI the guidelines ask for. Same byte count, so the size
       // budget checked below still holds.
@@ -341,6 +362,8 @@ export default function ImageResizer() {
       const health = await runHealthChecks(canvas, target, blob.size, {
         padded,
         blob,
+        enhanced,
+        source: { w: source.img.width, h: source.img.height },
         // Identifies what the face check depends on, so retyping the KB budget
         // does not fire a fresh request — see imageOps' detectFace.
         face: { img: source.img, mode },
@@ -371,6 +394,11 @@ export default function ImageResizer() {
 
   const submitLead = (e) => {
     e.preventDefault();
+    // The input already refuses anything but digits and the field carries
+    // pattern="\d{10}", so this only catches a submit that got past the browser's
+    // own validation — but a short number is worse than no number in the leads
+    // table, so it is checked here too.
+    if (!phoneValid) return;
     // Fire-and-forget: a warehouse hiccup must never block the download.
     toolsApi.logResizerLead({
       lead,
@@ -776,21 +804,48 @@ export default function ImageResizer() {
             <form className="space-y-4" onSubmit={submitLead}>
               {[
                 ["name", "Full name", "text", "Enter your full name"],
-                ["phone", "Mobile number", "tel", "+91"],
+                ["phone", "Mobile number (10 digits)", "tel", "9876543210"],
                 ["exam", "Target exam", "text", "e.g. UPSC CSE 2026"],
-              ].map(([field, label, type, ph]) => (
-                <div key={field}>
-                  <label className={LABEL}>{label}</label>
-                  <input
-                    required
-                    type={type}
-                    placeholder={ph}
-                    value={lead[field]}
-                    onChange={(e) => setLead({ ...lead, [field]: e.target.value })}
-                    className={FIELD}
-                  />
-                </div>
-              ))}
+              ].map(([field, label, type, ph]) => {
+                const isPhone = field === "phone";
+                return (
+                  <div key={field}>
+                    <label className={LABEL}>{label}</label>
+                    <input
+                      required
+                      type={type}
+                      placeholder={ph}
+                      value={lead[field]}
+                      onChange={(e) =>
+                        setLead({
+                          ...lead,
+                          [field]: isPhone ? normalizePhone(e.target.value) : e.target.value,
+                        })
+                      }
+                      // pattern is what stops the submit: the value is already
+                      // digits-only, so ten of them is the whole requirement.
+                      {...(isPhone && {
+                        inputMode: "numeric",
+                        autoComplete: "tel",
+                        pattern: "\\d{10}",
+                        title: "Enter your 10-digit mobile number",
+                        "aria-invalid": lead.phone.length > 0 && !phoneValid,
+                      })}
+                      className={FIELD}
+                    />
+                    {/* Only once something has been typed — an empty field is
+                        the starting state, not a mistake. */}
+                    {isPhone && lead.phone.length > 0 && !phoneValid && (
+                      <p className="text-label-sm text-tool-error mt-1.5 flex items-start gap-1.5">
+                        <Icon name="error" size={14} className="shrink-0 mt-[2px]" />
+                        <span>
+                          Mobile number must be 10 digits — {lead.phone.length} entered.
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
               <button
                 type="submit"
                 className="w-full bg-tool-primary text-tool-on-primary text-label-md font-medium py-3.5 rounded-lg shadow-sm hover:brightness-110 transition-all"
