@@ -64,12 +64,13 @@ const DOC_TYPES = [
 
 // borderRadius.full is only 0.75rem in this theme, so true pills/circles need
 // an explicit radius.
-// Custom Dimensions start on the spec that satisfies most exams (banking,
-// NTA, AFCAT and most State PSCs all use 200 x 230 at up to 50 KB), so the tool
-// produces something the moment an image is dropped rather than sitting inert
-// until three fields are typed. Freely overwritten, and unused once a preset is
-// selected.
-const DEFAULT_CUSTOM = { w: "200", h: "230", kb: "50" };
+// Custom Dimensions start blank. They used to be pre-filled with the spec that
+// suits most exams (200 x 230 at up to 50 KB), which produced a result the
+// moment an image was dropped — but a number already sitting in the box reads
+// as the size the candidate asked for, and a wrong photo size is rejected at
+// upload. Blank forces the one decision only the candidate can make; the
+// placeholders still show the shape of an answer.
+const DEFAULT_CUSTOM = { w: "", h: "", kb: "" };
 
 const PILL = "rounded-[999px]";
 const CARD =
@@ -196,17 +197,48 @@ export default function ImageResizer() {
   const [error, setError] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
   const [lead, setLead] = useState({ name: "", phone: "", exam: "" });
+  // Asks for a width and height when Custom is selected and they are blank.
+  // Without it the tool just sits there: no preview, a disabled download
+  // button, and a line of status text that is easy to miss.
+  const [sizePromptOpen, setSizePromptOpen] = useState(false);
 
   const isCustom = presetKey === "custom";
+  // A max-KB of blank is fine — it means "no ceiling". Width and height are
+  // what the tool cannot proceed without.
+  const customIncomplete =
+    isCustom && (!(parseInt(custom.w, 10) > 0) || !(parseInt(custom.h, 10) > 0));
   const presetsForType = Object.entries(PRESETS).filter(
     ([key]) => key !== "custom" && presetKind(key) === docType,
   );
+
+  // Drop the loaded image and everything derived from it.
+  const resetImage = () => {
+    // Supersede any encode still running, or it would finish after the reset
+    // and put the old document's preview back on screen.
+    runRef.current++;
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setSource(null);
+    setOutput(null);
+    setChecks(null);
+    setError("");
+    // Without this, re-picking the same file after a reset fires no change
+    // event and the dropzone appears dead.
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
   // Switching document type keeps you in the same exam family where it has an
   // equivalent (SSC photo → SSC signature); otherwise it falls back to custom
   // rather than silently leaving a preset from the wrong type selected.
   const changeDocType = (next) => {
+    if (next === docType) return;
     setDocType(next);
+    // A photograph is not a signature. Carrying the uploaded file across the
+    // switch left the new type showing — and running its checks against — the
+    // old document, which reads as the tool ignoring the change.
+    resetImage();
     if (presetKey === "custom") return;
     const family = presetKey.split("-")[0];
     const twin = `${family}-${next === "photo" ? "photo" : next === "sign" ? "sign" : ""}`;
@@ -247,10 +279,14 @@ export default function ImageResizer() {
         label: file.name,
         size: file.size,
       });
+      // The image is accepted either way — it just cannot be processed until
+      // there is a size to process it to, so ask for one now rather than
+      // leaving the candidate looking at an empty preview.
+      if (customIncomplete) setSizePromptOpen(true);
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [customIncomplete]);
 
   // Re-encode whenever the source or any target setting changes.
   useEffect(() => {
@@ -460,6 +496,23 @@ export default function ImageResizer() {
                   </div>
                 ))}
               </div>
+              {/* Only once there is an image waiting on it. The fields are
+                  blank by design at load, so flagging them before the candidate
+                  has done anything would open the page on an error. */}
+              {customIncomplete && (
+                <p
+                  className={`text-label-sm mt-2 flex items-start gap-1.5 ${
+                    source ? "text-tool-error" : "text-tool-secondary"
+                  }`}
+                >
+                  <Icon name={source ? "error" : "info"} size={14} className="shrink-0 mt-[2px]" />
+                  <span>
+                    {source
+                      ? "Width and height are required to process your image."
+                      : "Enter the width and height your exam asks for, or pick it from the list."}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -596,8 +649,11 @@ export default function ImageResizer() {
 
             <button
               type="button"
-              disabled={!output}
-              onClick={() => setLeadOpen(true)}
+              // Stays clickable when the only thing missing is the custom size,
+              // so pressing it explains what to do. A disabled button with no
+              // explanation is the dead end this is here to avoid.
+              disabled={!output && !(source && customIncomplete)}
+              onClick={() => (customIncomplete ? setSizePromptOpen(true) : setLeadOpen(true))}
               className="mt-auto shrink-0 w-full bg-tool-primary text-tool-on-primary text-label-md font-medium py-3.5 rounded-lg shadow-sm hover:brightness-110 active:brightness-95 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               <Icon name="download" size={18} /> Download image
@@ -605,6 +661,77 @@ export default function ImageResizer() {
           </div>
         </div>
       </main>
+
+      {/* Custom size missing. Carries the same three fields as the card so it
+          can be answered here instead of sending the candidate back up. */}
+      {sizePromptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-tool-on-surface/50 backdrop-blur-sm p-4"
+          onClick={(e) => e.target === e.currentTarget && setSizePromptOpen(false)}
+        >
+          <div className={`${CARD} p-6 max-w-md w-full shadow-xl`}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex gap-3">
+                <span className={`${PILL} grid place-items-center w-10 h-10 shrink-0 bg-tool-primary/10 text-tool-primary`}>
+                  <Icon name="straighten" size={20} />
+                </span>
+                <div>
+                  <h2 className="text-headline-sm font-bold mb-1">Enter a size first</h2>
+                  <p className="text-body-md text-tool-secondary">
+                    Custom dimensions are selected but the width and height are blank.
+                    Fill them in, or pick your exam from the list instead.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSizePromptOpen(false)}
+                className="text-tool-secondary hover:text-tool-on-surface shrink-0"
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!customIncomplete) setSizePromptOpen(false);
+              }}
+            >
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  ["w", "Width (px)", "350"],
+                  ["h", "Height (px)", "450"],
+                  ["kb", "Max Size (KB)", "50"],
+                ].map(([field, label, ph], i) => (
+                  <div key={field} className="min-w-0">
+                    <label className={LABEL}>{label}</label>
+                    <input
+                      autoFocus={i === 0}
+                      type="number"
+                      min="1"
+                      placeholder={ph}
+                      value={custom[field]}
+                      onChange={(e) => setCustom({ ...custom, [field]: e.target.value })}
+                      className={FIELD}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-label-sm text-tool-secondary">
+                Max size is optional — leave it blank for no file-size limit.
+              </p>
+              <button
+                type="submit"
+                disabled={customIncomplete}
+                className="w-full bg-tool-primary text-tool-on-primary text-label-md font-medium py-3.5 rounded-lg shadow-sm hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              >
+                {customIncomplete ? "Enter a width and height" : "Use these dimensions"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Lead capture */}
       {leadOpen && (
