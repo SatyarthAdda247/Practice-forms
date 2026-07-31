@@ -389,10 +389,33 @@ export const api = {
   // URL.revokeObjectURL() it when done.
   sheetImageUrl: async (id) => {
     const token = tokenStore.get();
-    const res = await fetch(`${BASE}/sheets/${id}/image`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) throw new Error(`Could not load sheet image (${res.status})`);
+    const path = `/sheets/${id}/image`;
+    let res;
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch (e) {
+      throw await describeFetchFailure(e, "GET", path);
+    }
+    if (res.status === 401) {
+      tokenStore.clear();
+      clearApiCache();
+      if (onUnauthorized) onUnauthorized();
+      throw apiError("Your session has expired. Please sign in again.", "auth", 401);
+    }
+    if (!res.ok) {
+      // The endpoint returns a JSON reason. Without it a 404 is ambiguous
+      // between "no such sheet" (a stale row) and "the scan is no longer on
+      // the server" (the file went with a pod restart, or landed on a
+      // different replica's disk) — different problems, different fixes.
+      const body = await res.json().catch(() => null);
+      throw apiError(
+        body?.error || `Could not load sheet image (${res.status})`,
+        "http",
+        res.status
+      );
+    }
     return URL.createObjectURL(await res.blob());
   },
   validation: (id) => request(`/exams/${id}/validation`),
