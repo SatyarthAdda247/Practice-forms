@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import { toolsApi } from "../api.js";
+import usePageMeta from "../pageMeta.js";
 import {
   ACCEPTED_TYPES,
   MAX_INPUT_BYTES,
@@ -28,6 +29,10 @@ import {
   runHealthChecks,
   setJpegDpi,
 } from "../tools/lib/imageOps.js";
+
+// The one URL this tool should rank under, absolute because a canonical must be.
+// Mirrors PAGE_META in server.js — change both together.
+const PAGE_CANONICAL = "https://tools.adda247.com/image-resizer";
 
 // Rows shown before anything has been processed. Derived from the chosen target
 // rather than hard-coded, because the panel is the landing state now: a list
@@ -175,6 +180,11 @@ function ChecklistRow({ row }) {
 }
 
 export default function ImageResizer() {
+  // Canonical only. This route has never declared its own title or description,
+  // and writing search copy for it is a separate decision from telling crawlers
+  // which of the several URLs that serve this tool is the real one.
+  usePageMeta({ canonical: PAGE_CANONICAL });
+
   const fileRef = useRef(null);
   // Guards against an older async encode landing after a newer one.
   const runRef = useRef(0);

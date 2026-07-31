@@ -28,6 +28,9 @@ const PAGE_TITLE = "Answer Key Calculator for SSC, Railway & Govt Exams (Free)";
 const PAGE_DESCRIPTION =
   "Calculate your expected score using the official answer key for SSC, Railway, " +
   "Defence, Teaching, State, and Central Government exams.";
+// The one URL this tool should rank under, absolute because a canonical must be.
+// Mirrors PAGE_META in server.js — change both together.
+const PAGE_CANONICAL = "https://tools.adda247.com/answerkey-checker";
 
 const IMPACT_STYLES = {
   correct: "text-tool-success",
@@ -80,7 +83,11 @@ function StatCard({ label, value, className = "", accent = false }) {
 }
 
 export default function AnswerKeyChecker() {
-  usePageMeta({ title: PAGE_TITLE, description: PAGE_DESCRIPTION });
+  usePageMeta({
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    canonical: PAGE_CANONICAL,
+  });
 
   const fileRef = useRef(null);
 
