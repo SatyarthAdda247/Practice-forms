@@ -46,11 +46,12 @@ export const PRESETS = {
     ],
   },
   "ibps-thumb": {
-    label: "IBPS — Left Thumb Impression",
+    label: "Banking (IBPS / SBI / RBI / LIC) — Left Thumb Impression",
     w: 240, h: 240, minKB: 20, maxKB: 50, dpi: 200,
     physical: "3 cm × 3 cm",
     checks: { face: false, background: true, sharpness: true, ink: true },
     source: "IBPS PO — Guidelines for Scanning and Upload of Documents",
+    family: "Banking", covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
     guidance: [
       "Left thumb impression on white paper, in black or blue ink.",
       "If you have no left thumb, use the right thumb; then a left-hand finger from the forefinger, then a right-hand finger, then the left toe.",
@@ -59,11 +60,12 @@ export const PRESETS = {
     ],
   },
   "ibps-declaration": {
-    label: "IBPS — Hand-written Declaration",
+    label: "Banking (IBPS / SBI / RBI / LIC) — Hand-written Declaration",
     w: 800, h: 400, minKB: 50, maxKB: 100, dpi: 200,
     physical: "10 cm × 5 cm",
     checks: { face: false, background: true, sharpness: true, ink: true },
     source: "IBPS PO — Guidelines for Scanning and Upload of Documents",
+    family: "Banking", covers: "IBPS PO/Clerk/SO, SBI PO/Clerk, RBI Assistant/Grade B, LIC AAO/ADO",
     guidance: [
       'Write, in your own hand and in English: "I, ______ (Name of the candidate), hereby declare that all the information submitted by me in the application form is correct, true and valid. I will present the supporting documents as and when required."',
       "Black ink on white paper. The text must NOT be in capital letters.",
@@ -185,15 +187,19 @@ export const presetKind = (key) =>
 // "Other" keeps its full label, because there the suffix is the distinguishing
 // part (thumb impression vs hand-written declaration), not a repeat.
 export const presetFamilyLabel = (key, preset) => {
-  // "Other" keeps its full label — there the suffix distinguishes thumb
-  // impression from hand-written declaration rather than repeating the type.
-  if (presetKind(key) === "other") return preset.label;
   const family = preset.family || preset.label.split(" — ")[0];
   // Spell out the exams a family covers, unless the list would just repeat the
   // family name (AFCAT covers only AFCAT).
-  return preset.covers && preset.covers !== family
+  const scope = preset.covers && preset.covers !== family
     ? `${family} (${preset.covers})`
     : family;
+  // "Other" keeps the document name in front — there the suffix distinguishes
+  // thumb impression from hand-written declaration rather than repeating the
+  // type, and the exam list still follows so a candidate sitting SBI or Clerk
+  // can see the spec applies to them and not only to IBPS PO.
+  return presetKind(key) === "other"
+    ? `${preset.label.split(" — ").pop()} — ${scope}`
+    : scope;
 };
 
 export const MAX_INPUT_BYTES = 10 * 1024 * 1024;
