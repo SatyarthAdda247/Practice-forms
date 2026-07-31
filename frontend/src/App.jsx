@@ -68,10 +68,12 @@ export default function App() {
         <Route path="/image-resizer" element={<ImageResizer />} />
         <Route path="/answerkey-checker" element={<AnswerKeyChecker />} />
         <Route path="/exam-forms" element={<ExamFormsLanding />} />
+        <Route path="/exam-forms/" element={<ExamFormsLanding />} />
         <Route path="/Exam-forms" element={<ExamFormsLanding />} />
+        <Route path="/Exam-forms/" element={<ExamFormsLanding />} />
         <Route path="/exam-forms/IBPS-PO" element={<GovtExamForm />} />
         <Route path="/Exam-forms/IBPS-PO" element={<GovtExamForm />} />
-        <Route path="/" element={<ExamFormsLanding />} />
+        <Route path="/" element={<Navigate to="/exam-forms/" replace />} />
         <Route element={<RequireAuth />}>
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/new" element={<AnswerKeyConfig />} />
@@ -83,8 +85,8 @@ export default function App() {
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/admin/usage" element={<RequireSuperAdmin><Usage /></RequireSuperAdmin>} />
           <Route path="/leads" element={<RequireLeadAccess><Leads /></RequireLeadAccess>} />
-          <Route path="*" element={<Navigate to="/exam-forms" replace />} />
         </Route>
+        <Route path="*" element={<Navigate to="/exam-forms/" replace />} />
       </Routes>
     </AuthProvider>
   );
