@@ -274,6 +274,27 @@ pod a memory limit of ~4Gi. Never rely on a runtime download —
    via `postMessage`, which Chrome blocks under a stricter COOP. If an ingress
    or WAF overrides COOP on this host, sign-in breaks — don't tighten it.
 
+4. **Shared storage for scans** — ⚠️ **not provisioned today.** Uploads are
+   written to `/app/uploads` on the pod's own filesystem (`app.py`,
+   `upload_sheets`), while the sheet rows live in a shared database. The
+   `VOLUME` line in `backend/Dockerfile` is a no-op under Kubernetes, so unless
+   the Deployment mounts something, that path is the container's writable layer.
+   Two consequences, both showing up as **`404 scanned file is no longer on the
+   server`** from `GET /api/sheets/<id>/image` (the Results dashboard's "view
+   scan"):
+
+   - **Pod restart** — the row survives, the file does not. Every scan uploaded
+     before the restart is unviewable.
+   - **More than one replica** — the upload lands on pod A's disk; the image
+     request is load-balanced and may reach pod B, which has never seen it. Both
+     symptoms are intermittent and depend on routing, so retrying "sometimes
+     works" is the tell.
+
+   Fix by putting the scans somewhere shared: a GCS bucket (the service account
+   and `google-cloud-*` deps are already in the image) is the clean option; an
+   RWX PersistentVolume also works. A single replica with an RWO PVC removes the
+   routing half of the problem but not much else.
+
 ---
 
 ## 6b. BigQuery: partitioning the sheets/results tables
