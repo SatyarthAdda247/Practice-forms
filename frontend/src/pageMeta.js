@@ -21,24 +21,53 @@ function metaTag(attr, name) {
   return el;
 }
 
-export default function usePageMeta({ title, description }) {
+// The <link rel="canonical"> tag. Returns [element, created] — index.html ships
+// without a canonical, so the caller has to know whether it is restoring an
+// existing tag or removing one this hook added.
+function canonicalTag() {
+  const existing = document.head.querySelector('link[rel="canonical"]');
+  if (existing) return [existing, false];
+  const el = document.createElement("link");
+  el.setAttribute("rel", "canonical");
+  document.head.appendChild(el);
+  return [el, true];
+}
+
+// Every field is optional and only the ones supplied are touched: the image
+// resizer declares a canonical and nothing else, so blanking the title and
+// description it never set would be a regression, not a reset.
+export default function usePageMeta({ title, description, canonical }) {
   useEffect(() => {
     const tags = [
-      [metaTag("name", "description"), description],
-      [metaTag("property", "og:title"), title],
-      [metaTag("property", "og:description"), description],
-    ];
+      title !== undefined && [metaTag("property", "og:title"), title],
+      description !== undefined && [metaTag("name", "description"), description],
+      description !== undefined && [metaTag("property", "og:description"), description],
+    ].filter(Boolean);
     const previousTitle = document.title;
     const previousContent = tags.map(([el]) => el.content);
 
-    document.title = title;
+    if (title !== undefined) document.title = title;
     for (const [el, content] of tags) el.content = content;
 
+    // A canonical created here is removed again on unmount rather than restored,
+    // so a public tool's URL is never left declared on the portal page that
+    // renders after it.
+    let link = null;
+    let created = false;
+    let previousHref = "";
+    if (canonical) {
+      [link, created] = canonicalTag();
+      previousHref = link.getAttribute("href") || "";
+      link.setAttribute("href", canonical);
+    }
+
     return () => {
-      document.title = previousTitle;
+      if (title !== undefined) document.title = previousTitle;
       tags.forEach(([el], i) => {
         el.content = previousContent[i];
       });
+      if (created) link.remove();
+      else if (link) link.setAttribute("href", previousHref);
     };
-  }, [title, description]);
+  }, [title, description, canonical]);
 }
