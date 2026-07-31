@@ -69,10 +69,15 @@ const CHECK_STYLES = {
 
 // What the candidate is uploading. Chosen first, because it decides which
 // presets can even apply.
+//
+// Each key is the suffix of the presets it selects ("ibps-thumb" is a "thumb"),
+// which is what lets presetKind derive the type and changeDocType find a
+// preset's counterpart in the same family without a lookup table.
 const DOC_TYPES = [
-  { key: "photo", label: "Photograph", icon: "account_box" },
+  { key: "photo", label: "Photograph", icon: "person" },
   { key: "sign", label: "Signature", icon: "draw" },
-  { key: "other", label: "Custom Image", icon: "description" },
+  { key: "thumb", label: "Thumb Impression", icon: "fingerprint" },
+  { key: "declaration", label: "Handwritten Declaration", icon: "description" },
 ];
 
 // borderRadius.full is only 0.75rem in this theme, so true pills/circles need
@@ -141,7 +146,22 @@ const PLACEHOLDER_ART = {
       />
     ),
   },
-  other: {
+  thumb: {
+    // Full ellipses, centred below the viewBox's lower edge so their bottoms are
+    // cropped away. Drawn as arches instead, the ridges curve back in and the
+    // whole thing reads as a rainbow; cropped, the sides run parallel the way a
+    // real print's do.
+    viewBox: "20 42 60 40",
+    art: (
+      <g fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round">
+        <ellipse cx="50" cy="78" rx="26" ry="32" />
+        <ellipse cx="50" cy="78" rx="19" ry="24" />
+        <ellipse cx="50" cy="78" rx="12" ry="16" />
+        <ellipse cx="50" cy="78" rx="5" ry="8" />
+      </g>
+    ),
+  },
+  declaration: {
     viewBox: "20 8 62 90",
     art: (
       <>
@@ -157,14 +177,17 @@ const PLACEHOLDER_ART = {
 const PLACEHOLDER_CAPTION = {
   photo: "Your passport photo will appear here",
   sign: "Your signature will appear here",
-  other: "Your document will appear here",
+  thumb: "Your thumb impression will appear here",
+  declaration: "Your handwritten declaration will appear here",
 };
 
 function PreviewPlaceholder({ docType, target }) {
   // Clamped so a lopsided custom size (2000 × 50) still leaves a frame you can
   // see rather than a hairline.
   const ratio = Math.min(2.2, Math.max(0.45, (target?.w || 200) / (target?.h || 230)));
-  const { viewBox, art } = PLACEHOLDER_ART[docType] || PLACEHOLDER_ART.other;
+  // docType is always one of DOC_TYPES, so the fallback is belt-and-braces for
+  // a type added to that list before its artwork.
+  const { viewBox, art } = PLACEHOLDER_ART[docType] || PLACEHOLDER_ART.declaration;
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
       <div
@@ -176,7 +199,7 @@ function PreviewPlaceholder({ docType, target }) {
         </svg>
       </div>
       <p className="text-label-sm leading-snug text-tool-secondary">
-        {PLACEHOLDER_CAPTION[docType] || PLACEHOLDER_CAPTION.other}
+        {PLACEHOLDER_CAPTION[docType] || PLACEHOLDER_CAPTION.declaration}
       </p>
     </div>
   );
@@ -267,7 +290,10 @@ export default function ImageResizer() {
 
   // Switching document type keeps you in the same exam family where it has an
   // equivalent (SSC photo → SSC signature); otherwise it falls back to custom
-  // rather than silently leaving a preset from the wrong type selected.
+  // rather than silently leaving a preset from the wrong type selected. Only the
+  // banking family has a thumb impression or a declaration, so switching to
+  // either from an SSC photo lands on custom — correctly, since SSC does not
+  // publish one.
   const changeDocType = (next) => {
     if (next === docType) return;
     setDocType(next);
@@ -276,8 +302,8 @@ export default function ImageResizer() {
     // old document, which reads as the tool ignoring the change.
     resetImage();
     if (presetKey === "custom") return;
-    const family = presetKey.split("-")[0];
-    const twin = `${family}-${next === "photo" ? "photo" : next === "sign" ? "sign" : ""}`;
+    const family = presetKey.slice(0, presetKey.lastIndexOf("-"));
+    const twin = `${family}-${next}`;
     setPresetKey(PRESETS[twin] ? twin : "custom");
   };
 
@@ -298,7 +324,17 @@ export default function ImageResizer() {
       // photograph gets the face row here just as a preset would. Without this
       // the default path — Custom dimensions — would never show the check at
       // all. The other rows stay as PRESETS.custom sets them.
-      checks: { ...PRESETS.custom.checks, face: docType === "photo" },
+      //
+      // Every type other than a photograph is ink on paper, and `ink` is also
+      // what turns on the contrast restoration in enhanceOutput. Custom is the
+      // default selection, so leaving it off here was the difference between a
+      // signature at a preset size coming out crisp and the same signature at a
+      // typed-in size coming out faded.
+      checks: {
+        ...PRESETS.custom.checks,
+        face: docType === "photo",
+        ink: docType !== "photo",
+      },
     };
   })();
 
@@ -470,7 +506,11 @@ export default function ImageResizer() {
                 <span className="text-tool-primary">1.</span> What do you want to resize?
               </h2>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            {/* Two across on a phone: four would leave "Handwritten
+                Declaration" a few characters wide. The labels wrap rather than
+                truncate, because a clipped document name is the one thing this
+                row exists to tell the candidate. */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
               {DOC_TYPES.map((d) => {
                 const active = docType === d.key;
                 return (
@@ -485,8 +525,8 @@ export default function ImageResizer() {
                         : "border-tool-outline/70 bg-tool-surface-lowest text-tool-on-surface hover:border-tool-primary/50 hover:bg-tool-surface"
                     }`}
                   >
-                    <Icon name={d.icon} size={18} />
-                    <span className="truncate">{d.label}</span>
+                    <Icon name={d.icon} size={18} filled={active} className="shrink-0" />
+                    <span className="text-center leading-tight">{d.label}</span>
                   </button>
                 );
               })}
