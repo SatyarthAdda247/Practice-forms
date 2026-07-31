@@ -30,8 +30,15 @@ import {
   setJpegDpi,
 } from "../tools/lib/imageOps.js";
 
-// The one URL this tool should rank under, absolute because a canonical must be.
-// Mirrors PAGE_META in server.js — change both together.
+// Search-facing identity for this route. This tool is its own product, not a
+// view of OMR GradePro, so it states its own title and description instead of
+// inheriting the portal defaults in index.html. server.js serves the same three
+// values in the initial HTML — change them together.
+const PAGE_TITLE = "Photo & Signature Image Resizer for Govt Exam Forms (Free)";
+const PAGE_DESCRIPTION =
+  "Resize your photo and signature to the exact pixel and KB limits for SSC, IBPS, " +
+  "Railway, UPSC and NTA exam forms. Runs in your browser — nothing is uploaded.";
+// Absolute, because a canonical must be.
 const PAGE_CANONICAL = "https://tools.adda247.com/image-resizer";
 
 // Rows shown before anything has been processed. Derived from the chosen target
@@ -180,10 +187,11 @@ function ChecklistRow({ row }) {
 }
 
 export default function ImageResizer() {
-  // Canonical only. This route has never declared its own title or description,
-  // and writing search copy for it is a separate decision from telling crawlers
-  // which of the several URLs that serve this tool is the real one.
-  usePageMeta({ canonical: PAGE_CANONICAL });
+  usePageMeta({
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    canonical: PAGE_CANONICAL,
+  });
 
   const fileRef = useRef(null);
   // Guards against an older async encode landing after a newer one.

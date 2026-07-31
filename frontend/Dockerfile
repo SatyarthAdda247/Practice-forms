@@ -31,6 +31,9 @@ WORKDIR /app
 ENV PORT=8080
 COPY --from=build /app/dist ./dist
 COPY frontend/server.js ./server.js
+# server.js imports this for the per-route <head> tags. Omitting it exits the
+# container at startup with ERR_MODULE_NOT_FOUND.
+COPY frontend/routeMeta.js ./routeMeta.js
 COPY --chmod=755 frontend/docker-entrypoint.sh ./docker-entrypoint.sh
 
 # Entrypoint injects runtime config, then starts the server.
