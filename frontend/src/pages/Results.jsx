@@ -69,17 +69,22 @@ export default function Results() {
   const [viewUrl, setViewUrl] = useState("");
   const [viewLoading, setViewLoading] = useState(false);
   const [viewName, setViewName] = useState("");
+  // Why the scan wouldn't load, shown inside the dialog rather than on the page
+  // banner behind it. The name field still works without the image, so this is
+  // an explanation, not a dead end.
+  const [viewError, setViewError] = useState("");
 
   const openView = async (r) => {
     setViewRow(r);
     setViewName(r.studentName || "");
     setViewUrl("");
+    setViewError("");
     setViewLoading(true);
     try {
       const url = await api.sheetImageUrl(r.sheetId);
       setViewUrl(url);
     } catch (e) {
-      setError(e.message);
+      setViewError(e.message);
     } finally {
       setViewLoading(false);
     }
@@ -89,6 +94,7 @@ export default function Results() {
     setViewRow(null);
     setViewUrl("");
     setViewName("");
+    setViewError("");
   };
   const saveView = async () => {
     const value = viewName.trim();
@@ -517,7 +523,15 @@ export default function Results() {
                   className="max-w-full h-auto rounded border border-outline-variant"
                 />
               ) : (
-                <p className="text-on-surface-variant font-body-md">Could not load the scan.</p>
+                <div className="text-center max-w-md">
+                  <Icon name="broken_image" size={32} className="text-outline mb-sm" />
+                  <p className="text-on-surface-variant font-body-md">
+                    {viewError || "Could not load the scan."}
+                  </p>
+                  <p className="text-secondary font-body-sm mt-xs">
+                    You can still type the name from your own copy of the sheet.
+                  </p>
+                </div>
               )}
             </div>
 
