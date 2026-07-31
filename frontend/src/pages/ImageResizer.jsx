@@ -656,7 +656,7 @@ export default function ImageResizer() {
               onClick={() => (customIncomplete ? setSizePromptOpen(true) : setLeadOpen(true))}
               className="mt-auto shrink-0 w-full bg-tool-primary text-tool-on-primary text-label-md font-medium py-3.5 rounded-lg shadow-sm hover:brightness-110 active:brightness-95 transition-all flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              <Icon name="download" size={18} /> Download image
+              <Icon name="download" size={18} /> Download Updated Image
             </button>
           </div>
         </div>
