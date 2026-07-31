@@ -1,50 +1,49 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { api, tokenStore, setUnauthorizedHandler } from "./api.js";
 
-// Auth context: holds the signed-in user, exposes login/logout, and validates
-// any persisted session token on startup.
 const AuthCtx = createContext(null);
+const STORAGE_USER_KEY = "adda247_student_session";
 
 export function useAuth() {
   return useContext(AuthCtx);
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
-    if (tokenStore.get()) {
-      api
-        .me()
-        .then(setUser)
-        .catch(() => tokenStore.clear())
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_USER_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
-  const login = (token, u) => {
-    tokenStore.set(token);
-    setUser(u);
+  const loginWithGoogle = (googleUserData) => {
+    const studentUser = {
+      name: googleUserData?.name || "Student Aspirant",
+      email: googleUserData?.email || "aspirant@gmail.com",
+      picture: googleUserData?.picture || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+      id: googleUserData?.sub || `google-${Date.now()}`,
+    };
+    try {
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(studentUser));
+    } catch {
+      /* ignore */
+    }
+    setUser(studentUser);
   };
 
-  const logout = async () => {
+  const logout = () => {
     try {
-      await api.logout();
+      localStorage.removeItem(STORAGE_USER_KEY);
     } catch {
-      /* ignore network errors on logout */
+      /* ignore */
     }
-    tokenStore.clear();
     setUser(null);
   };
 
   return (
-    <AuthCtx.Provider value={{ user, loading, login, logout }}>
+    <AuthCtx.Provider value={{ user, loginWithGoogle, logout }}>
       {children}
     </AuthCtx.Provider>
   );
 }
-

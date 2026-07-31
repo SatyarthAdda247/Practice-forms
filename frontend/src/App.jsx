@@ -12,6 +12,8 @@ import Usage from "./pages/Usage.jsx";
 import Leads from "./pages/Leads.jsx";
 import ImageResizer from "./pages/ImageResizer.jsx";
 import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
+import GovtExamForm from "./pages/GovtExamForm.jsx";
+import ExamFormsLanding from "./pages/ExamFormsLanding.jsx";
 
 // Auth gate: redirects to /login when there is no signed-in user.
 function RequireAuth() {
@@ -65,8 +67,12 @@ export default function App() {
             the portal's own navigation never links to them. */}
         <Route path="/image-resizer" element={<ImageResizer />} />
         <Route path="/answerkey-checker" element={<AnswerKeyChecker />} />
+        <Route path="/exam-forms" element={<ExamFormsLanding />} />
+        <Route path="/Exam-forms" element={<ExamFormsLanding />} />
+        <Route path="/exam-forms/IBPS-PO" element={<GovtExamForm />} />
+        <Route path="/Exam-forms/IBPS-PO" element={<GovtExamForm />} />
+        <Route path="/" element={<ExamFormsLanding />} />
         <Route element={<RequireAuth />}>
-          <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />
           <Route path="/exams/new" element={<AnswerKeyConfig />} />
           <Route path="/exams/:id" element={<AnswerKeyConfig />} />
@@ -77,7 +83,7 @@ export default function App() {
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/admin/usage" element={<RequireSuperAdmin><Usage /></RequireSuperAdmin>} />
           <Route path="/leads" element={<RequireLeadAccess><Leads /></RequireLeadAccess>} />
-          <Route path="*" element={<Navigate to="/exams" replace />} />
+          <Route path="*" element={<Navigate to="/exam-forms" replace />} />
         </Route>
       </Routes>
     </AuthProvider>
