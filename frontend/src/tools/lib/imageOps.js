@@ -176,30 +176,26 @@ export const PRESETS = {
   },
 };
 
-// Which document a preset targets. Drives the Photograph / Signature switch at
-// the top of the tool, so a candidate picks what they are uploading first and
-// only ever sees the presets that apply to it.
-export const presetKind = (key) =>
-  key.endsWith("-photo") ? "photo" : key.endsWith("-sign") ? "sign" : "other";
+// Which document a preset targets. Drives the document-type switch at the top of
+// the tool, so a candidate picks what they are uploading first and only ever
+// sees the presets that apply to it.
+//
+// The key's last segment IS the type — "ibps-thumb" is a "thumb" — so a new
+// document type needs only a matching preset key and an entry in the page's
+// DOC_TYPES. "custom" falls out of this as its own kind, which is what keeps it
+// out of every type's preset list.
+export const presetKind = (key) => key.slice(key.lastIndexOf("-") + 1);
 
 // Name for the exam-preset dropdown. The document type is already chosen above
-// it, so "SSC — Photograph" would say Photograph twice; show just the family.
-// "Other" keeps its full label, because there the suffix is the distinguishing
-// part (thumb impression vs hand-written declaration), not a repeat.
+// it, so "SSC — Photograph" would say Photograph twice; show just the family and
+// the exams it covers, which is the part a candidate needs to confirm.
 export const presetFamilyLabel = (key, preset) => {
   const family = preset.family || preset.label.split(" — ")[0];
   // Spell out the exams a family covers, unless the list would just repeat the
   // family name (AFCAT covers only AFCAT).
-  const scope = preset.covers && preset.covers !== family
+  return preset.covers && preset.covers !== family
     ? `${family} (${preset.covers})`
     : family;
-  // "Other" keeps the document name in front — there the suffix distinguishes
-  // thumb impression from hand-written declaration rather than repeating the
-  // type, and the exam list still follows so a candidate sitting SBI or Clerk
-  // can see the spec applies to them and not only to IBPS PO.
-  return presetKind(key) === "other"
-    ? `${preset.label.split(" — ").pop()} — ${scope}`
-    : scope;
 };
 
 export const MAX_INPUT_BYTES = 10 * 1024 * 1024;

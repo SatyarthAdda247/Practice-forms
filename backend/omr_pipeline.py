@@ -1,13 +1,17 @@
-"""Real OMR reading pipeline (OpenCV) for the Adda247 100-question sheet.
+"""Real OMR reading pipeline (OpenCV) for the Adda247 answer sheets.
 
 Replaces the filename-hash stub in :mod:`grading` with actual optical-mark
-recognition of the scanned sheet. Layout it is calibrated for:
+recognition of the scanned sheet. Two printed forms are supported, both
+offering options A/B/C/D per question (see :data:`SHEET_TEMPLATES`):
 
-  * 100 questions laid out in 5 vertical blocks of 20 (Q1-20, 21-40, … 81-100),
-    each question offering options A/B/C/D.
-  * The blocks are the five large bordered boxes in the lower ~45% of the page.
+  * 100 questions in 5 vertical blocks of 20, each a large bordered box in the
+    lower ~45% of the page.
+  * 200 questions in 6 columns, printed as small boxes of 5 questions each.
 
-Approach (robust to the mild skew/warp typical of a phone/flatbed scan):
+They need different readers, because the 200-question form has no tall block
+border to find — its columns are recovered from the bubbles themselves.
+
+100-question form (:func:`_find_answer_blocks`, :func:`_read_block`):
 
   1. Render the page to a grayscale raster (PDF via PyMuPDF, or a plain image).
   2. Otsu-threshold the lower region and find the 5 block rectangles by size.
@@ -17,6 +21,16 @@ Approach (robust to the mild skew/warp typical of a phone/flatbed scan):
   4. Sample a disk at each bubble centre and measure its darkness (fraction of
      dark pixels). Per question, the darkest option above a fill threshold is
      the marked answer; two dark options → a MULTIPLE_MARKS review flag.
+
+Other forms (:func:`_detect_grid`, :func:`_read_generic`) instead:
+
+  1. Straighten the page (:func:`_deskew`) — this reader locates columns from
+     an x-histogram spanning the full page width, which even a couple of
+     degrees of tilt smears beyond recognition.
+  2. Group the histogram peaks into question columns and cluster the rows,
+     validating both counts against the declared template.
+  3. Sample each bubble as above, snapping onto the detected bubble centres,
+     then level out per-column shading before classifying.
 
 Returns the same answer shape the rest of the app expects: ``{"1": "A", ...}``.
 """
@@ -43,6 +57,24 @@ STRONG_FILL = 0.70  # >= this ⇒ unmistakably filled, even against heavy shadin
 AMBIG_MIN = 0.30   # [AMBIG_MIN, FILL_MIN) ⇒ a faint/partial mark worth flagging
 MARK_MIN = 0.35    # the darkest bubble must reach this to count as a mark
 MARK_MARGIN = 0.12  # ...and lead the runner-up by this much to be unambiguous
+
+# Where inside a bubble we measure, as a fraction of its radius. Small enough
+# to stay clear of the printed outline, large enough to see a partial fill.
+SAMPLE_RADIUS = 0.7
+# How far the sampler may move off the nominal row/column intersection to land
+# on a bubble that was actually detected, as a fraction of the pitch. Must stay
+# under 0.5 or the search reaches into the neighbouring option or row.
+SNAP_TOLERANCE = 0.40
+
+# Rows of context used to estimate what an *empty* bubble measures at this point
+# down an option column (see :func:`_level_shading`), and the percentile of that
+# window taken as the empty level. The percentile is deliberately well below the
+# median: a student who answers the same option many questions running would
+# otherwise raise their own baseline and erase their marks. At the 25th
+# percentile over 11 rows, three quarters of the window would have to carry the
+# same filled option before the estimate begins to drift.
+SHADE_WINDOW = 11
+SHADE_PERCENTILE = 25
 
 
 # --- NAME block (the A-Z bubble matrix under the handwriting boxes) --------- #
@@ -80,6 +112,28 @@ SHEET_TEMPLATES = {
     200: [35, 35, 35, 35, 35, 25],          # 6 columns, short last column
 }
 DEFAULT_SHEET_QUESTIONS = 200
+
+
+# --- Skew correction -------------------------------------------------------- #
+# A sheet photographed on a desk arrives rotated *and* keystoned, and the two
+# are not the same defect: the rows tilt by one angle and the option columns by
+# another. Both break grid detection well before the tilt is visible to the eye.
+# On a 739x1600 phone photo skewed by ~3 degrees, the option columns smeared
+# into each other (question column 1 measured 20px wide against its true 59px)
+# and the row clusters lost a third of their bubbles to the occupancy filter —
+# the read failed with "answer column has 22 question rows, expected 35".
+#
+# Correcting it as a *shear per axis* rather than a rotation is what handles the
+# keystone: we search for the coefficient that makes each axis' bubble
+# projection sharpest — the true grid is the one alignment where every bubble
+# in a row (or column) lands on the same line — and undo both in one affine
+# warp. Estimating from the thousands of grid bubbles rather than the four
+# corner registration marks matters in practice: phone photos routinely clip a
+# corner off the frame, as the sheet that prompted this did.
+DESKEW_REGION_TOP = 0.40    # deskew off the answer grid, the largest clean grid
+DESKEW_MIN_BUBBLES = 200    # fewer ⇒ we haven't found the grid; leave the page
+DESKEW_MAX_SHEAR = 0.15     # search range, ~8.5 degrees each way
+DESKEW_MIN_SHEAR = 0.005    # below this the page is straight; skip the resample
 
 
 class OMRError(Exception):
@@ -515,6 +569,71 @@ def _answer_bubbles(gray, top):
     return out
 
 
+def _projection_sharpness(vals, k):
+    """How crisply ``vals`` collapse onto a set of lines.
+
+    Sum of squares of the (smoothed) 1-pixel histogram: piling the same points
+    into fewer bins raises it, so it peaks exactly when the projection axis is
+    parallel to the grid and every bubble in a line shares one coordinate."""
+    hist = np.bincount((vals - vals.min()).astype(np.int64)).astype(np.float64)
+    if k > 1:
+        hist = np.convolve(hist, np.ones(k) / k, mode="same")
+    return float((hist ** 2).sum())
+
+
+def _best_shear(vals, along, k):
+    """Shear coefficient ``s`` maximising the sharpness of ``vals + s * along``.
+
+    Coarse pass then a fine one around the winner — a single fine sweep over the
+    full range costs 15x more for the same answer."""
+    centred = along - along.mean()
+    coarse, fine = 0.01, 0.001
+    best = 0.0
+    # The fine window spans slightly more than one coarse step, so the true
+    # optimum is inside it wherever the coarse pass landed.
+    for step, span in ((coarse, DESKEW_MAX_SHEAR), (fine, coarse * 1.2)):
+        lo, hi = best - span, best + span
+        candidates = np.arange(lo, hi + step / 2, step)
+        best = float(max(candidates,
+                         key=lambda s: _projection_sharpness(vals + s * centred, k)))
+    return best
+
+
+def _deskew(gray):
+    """Straighten a photographed sheet so its rows and columns run true.
+
+    Returns ``gray`` unchanged when the grid can't be found or the page is
+    already square, so scans and PDF renders skip the resample entirely.
+
+    The output keeps the input's dimensions: every region in this module is
+    expressed as a page fraction, and growing the canvas to fit the warped
+    corners would silently shift all of them. The warp is anchored on the
+    bubble centroid, which leaves the answer grid — the part that has to land
+    accurately — essentially in place, and moves only the margins."""
+    H, W = gray.shape
+    bubbles = _answer_bubbles(gray, int(H * DESKEW_REGION_TOP))
+    if len(bubbles) < DESKEW_MIN_BUBBLES:
+        return gray
+    xs = np.array([b[0] for b in bubbles])
+    ys = np.array([b[1] for b in bubbles])
+    k = max(1, int(float(np.median([b[2] for b in bubbles])) * 0.6))
+
+    col_tilt = _best_shear(xs, ys, k)   # option columns leaning: x += a * y
+    row_tilt = _best_shear(ys, xs, k)   # question rows leaning:  y += b * x
+    if abs(col_tilt) < DESKEW_MIN_SHEAR and abs(row_tilt) < DESKEW_MIN_SHEAR:
+        return gray
+
+    cx, cy = float(xs.mean()), float(ys.mean())
+    M = np.array([[1.0, col_tilt, -col_tilt * cy],
+                  [row_tilt, 1.0, -row_tilt * cx]])
+    # Fill the exposed margin with white, not by replicating the edge: the sheet
+    # often runs to the frame edge, and replicating smeared its dark border into
+    # long streaks that the bubble finder read as an extra option column,
+    # collapsing the six question columns into five.
+    return cv2.warpAffine(gray, M, (W, H), flags=cv2.INTER_CUBIC,
+                          borderMode=cv2.BORDER_CONSTANT, borderValue=255)
+
+
 def _x_peaks(vals, rad, span):
     """Peak positions (with strength) in a 1-D histogram of ``vals``."""
     hist = np.zeros(int(span) + 2)
@@ -548,6 +667,69 @@ def _x_peaks(vals, rad, span):
             continue
         peaks.append((pos, strength))
     return peaks
+
+
+def _level_shading(darkness):
+    """Restate each bubble's darkness against its own option's local background.
+
+    ``darkness`` is one question column's raw readings, shaped (rows, options).
+
+    :func:`_classify` already compares a question against its own four bubbles,
+    which copes with a block of the form printing as a grey wash. What defeats
+    it is shading that differs *between* the option columns: on one real scan
+    the B column ran 0.2-0.3 darker than A, C and D all the way down a shaded
+    block, which was enough to make every empty B look like a second mark
+    (suppressing eight genuine answers as MULTIPLE_MARKS) and to make two
+    untouched questions report a B.
+
+    So we measure the background per option column rather than per question. A
+    window of neighbouring rows tracks shading that changes down the page,
+    while a low percentile of that window reads the empty level even where
+    several rows in it are filled. Rescaling — rather than subtracting — keeps
+    a saturated bubble at 1.0, so the thresholds above keep their meaning."""
+    out = np.empty_like(darkness)
+    half = SHADE_WINDOW // 2
+    for i in range(len(darkness)):
+        window = darkness[max(0, i - half):i + half + 1]
+        base = np.percentile(window, SHADE_PERCENTILE, axis=0)
+        out[i] = np.clip((darkness[i] - base) / np.maximum(0.15, 1.0 - base),
+                         0.0, 1.0)
+    return out
+
+
+def _bubble_darkness(gray, cx, cy, rad):
+    """Fraction of dark pixels inside the bubble at ``(cx, cy)``.
+
+    Samples a disk rather than the enclosing square. The corners of a square
+    patch fall on the bubble's printed outline, so on a low-resolution phone
+    photo — where the whole bubble is nine pixels across — they contributed
+    enough ink to push empty bubbles over the mark threshold and invent
+    answers on untouched questions."""
+    r = max(2, int(round(rad * SAMPLE_RADIUS)))
+    xi, yi = int(round(cx)), int(round(cy))
+    patch = gray[yi - r:yi + r + 1, xi - r:xi + r + 1]
+    size = 2 * r + 1
+    if patch.shape != (size, size):   # bubble runs off the page edge
+        return 0.0
+    yy, xx = np.ogrid[-r:r + 1, -r:r + 1]
+    return float((patch[xx * xx + yy * yy <= r * r] < 128).mean())
+
+
+def _snap_to_bubble(centres, cx, cy, tol_x, tol_y):
+    """Nearest detected bubble centre to ``(cx, cy)``, or the point itself.
+
+    The row/column intersection is only ever an average over a whole column,
+    so it drifts by a few pixels against any individual bubble — enough, at
+    phone-photo resolution, to sample beside a filled bubble instead of inside
+    it. The detected centre is exact, so prefer it whenever one sits in this
+    cell. Tolerances are per axis and stay inside half a pitch, which is what
+    keeps the search from reaching into the neighbouring option or row —
+    rows on this form are barely half as far apart as options."""
+    dx = (centres[:, 0] - cx) / tol_x
+    dy = (centres[:, 1] - cy) / tol_y
+    d2 = dx * dx + dy * dy
+    i = int(d2.argmin())
+    return centres[i] if d2[i] <= 1.0 else (cx, cy)
 
 
 def _detect_grid(gray, layout, opts=4):
@@ -600,13 +782,13 @@ def _detect_grid(gray, layout, opts=4):
             rowsets.append([c for c, n in _cluster_1d(ys[m], rad * 1.2) if n >= 3])
         err = sum(abs(len(rs) - want) for rs, want in zip(rowsets, layout))
         if best is None or err < best[0]:
-            best = (err, rad, cols, rowsets)
+            best = (err, rad, cols, rowsets, bubbles)
         if err == 0:
             break
     if best is None:
         return None
-    _, rad, cols, rowsets = best
-    return rad, cols, rowsets
+    _, rad, cols, rowsets, bubbles = best
+    return rad, cols, rowsets, bubbles
 
 
 def _read_generic(gray, layout, opts=4):
@@ -617,8 +799,8 @@ def _read_generic(gray, layout, opts=4):
             "could not locate the answer grid — wrong layout selected, or the "
             "scan is cropped/unreadable"
         )
-    rad, cols, rowsets = found
-    rr = max(1, int(rad * 0.6))
+    rad, cols, rowsets, bubbles = found
+    centres = np.array([[b[0], b[1]] for b in bubbles], dtype=np.float64)
     answers, flags, qbase = {}, set(), 0
     for oxs, rows, want in zip(cols, rowsets, layout):
         # Extra clusters sit below the grid (the footer QR block reads as
@@ -626,15 +808,26 @@ def _read_generic(gray, layout, opts=4):
         rows = sorted(rows)[:want]
         if len(rows) != want:
             raise OMRError(
-                f"answer column has {len(rows)} question rows, expected {want}"
+                f"answer column has {len(rows)} question rows, expected {want} "
+                "— the scan is cropped, skewed or unreadable"
             )
-        for ri, cy in enumerate(rows):
-            darkness = []
-            for cx in oxs:
-                xi, yi = int(cx), int(cy)
-                patch = gray[max(0, yi - rr):yi + rr, max(0, xi - rr):xi + rr]
-                darkness.append(float((patch < 128).mean()) if patch.size else 0.0)
-            answer, qflags = _classify(darkness)
+        # Snap tolerances from this column's own pitches. Rows are grouped in
+        # fives with a gap between groups, so take the *tight* gaps as the row
+        # pitch — the median would be inflated by the group breaks.
+        opt_pitch = float(np.median(np.diff(sorted(oxs))))
+        gaps = np.diff(rows)
+        tight = [g for g in gaps if g <= np.median(gaps) * 1.4]
+        row_pitch = float(np.median(tight)) if tight else float(np.median(gaps))
+        tol_x = max(1.0, opt_pitch * SNAP_TOLERANCE)
+        tol_y = max(1.0, row_pitch * SNAP_TOLERANCE)
+        raw = np.array([
+            [_bubble_darkness(gray, *_snap_to_bubble(centres, cx, cy,
+                                                     tol_x, tol_y), rad)
+             for cx in oxs]
+            for cy in rows
+        ])
+        for ri, darkness in enumerate(_level_shading(raw)):
+            answer, qflags = _classify(list(darkness))
             if answer is not None:
                 answers[str(qbase + ri + 1)] = answer
             flags.update(qflags)
@@ -688,7 +881,15 @@ def read_sheet(path, page=0, dpi=200, read_name=False,
     # 200-question form prints each group of 5 in its own small box) defeat
     # border detection, so infer the grid from the bubbles instead.
     if layout != SHEET_TEMPLATES[100]:
-        answers, flags = _read_generic(gray, layout)
+        # Deskew only this path, and only for the answers. The border-based
+        # reader below clusters bubbles *inside* each block it has located, so
+        # it already absorbs skew and a global warp only costs it accuracy
+        # (it started dropping clearly-filled bubbles on the sample scans).
+        # The name grid is likewise read from the untouched page: the warp is
+        # fitted to the answer grid at the bottom, and on a keystoned photo
+        # extrapolating it up to the header is a guess — one that turned a
+        # correctly-read name into a confidently wrong one shifted by a row.
+        answers, flags = _read_generic(_deskew(gray), layout)
         name = read_name_grid(gray)
         if name is None and read_name:
             name = _ocr_name(path, page, dpi)
