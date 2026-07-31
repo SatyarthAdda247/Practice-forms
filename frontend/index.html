@@ -3,9 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <!-- Portal defaults. Public tool routes get their own title/description:
-         server.js rewrites these tags per route, and usePageMeta keeps them
-         right across client-side navigation. -->
+    <!-- OMR GradePro portal defaults. The public tools are separate products and
+         each states its own title, description and canonical: routeMeta.js holds
+         them, server.js applies them per request in production and vite.config.js
+         does the same in dev, and usePageMeta keeps them right across
+         client-side navigation. No canonical here on purpose — the portal routes
+         behind this file are auth-gated and are not meant to be indexed. -->
     <title>OMR GradePro</title>
     <meta
       content="OMR sheet grading and answer key tools for competitive exam aspirants."
