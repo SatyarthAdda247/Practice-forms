@@ -1,0 +1,1854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Details & Qualifications — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+
+  .form-control.is-invalid,.custom-select.is-invalid{border-color:#dc3545 !important;background-color:#fff5f5 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+
+  .section-header {
+    background-color: #f1f5f9;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid #4c56c0;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1e293b;
+    margin-top: 2rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* Sub-tab navigation for Details page */
+  .detail-tabs {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+    gap: 0;
+  }
+  .detail-tabs .tab-btn {
+    padding: 10px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .detail-tabs .tab-btn:hover {
+    background: #e2e8f0;
+    color: #334155;
+  }
+  .detail-tabs .tab-btn.active {
+    background: #fff;
+    color: #4c56c0;
+    border-bottom-color: #4c56c0;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Bank preference panel */
+  .bank-item {
+    padding: 8px 12px;
+    background-color: #fff;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .bank-item:hover { background: #f1f5f9; }
+
+  .pref-selected-panel {
+    background: #f8fafc;
+    border: 2px solid #4c56c0;
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+  }
+  .pref-selected-panel h6 {
+    color: #4c56c0;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    font-size: 14px;
+  }
+  .pref-item {
+    padding: 6px 10px;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    cursor: grab;
+  }
+  .pref-item:active { cursor: grabbing; }
+  .pref-item .pref-rank {
+    background: #4c56c0;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .pref-item .pref-remove {
+    cursor: pointer;
+    color: #dc3545;
+    font-size: 16px;
+    font-weight: 700;
+    margin-left: 8px;
+  }
+  .pref-item .pref-remove:hover { color: #a71d2a; }
+  .pref-item.dragging {
+    opacity: 0.5;
+    background: #e2e8f0;
+  }
+
+  /* Age display */
+  .age-display {
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0369a1;
+    margin-top: 6px;
+  }
+
+  /* Header registration info */
+  .header-reg-info {
+    font-size: 12px;
+    color: #1e293b;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .header-reg-info strong { color: #4c56c0; }
+
+  /* Note box (matches official blue-bordered advisory boxes) */
+  .note-box{
+    background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;
+    padding:10px 14px;font-size:12.5px;color:#1e40af;margin:10px 0;line-height:1.5;
+  }
+
+  /* "Definition of..." / "Guidelines for..." pill buttons */
+  .definition-btn{
+    display:inline-block;border:1px solid #4c56c0;color:#4c56c0;background:#fff;
+    border-radius:6px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;
+    margin:4px 0;
+  }
+  .definition-btn:hover{background:#eef0ff;}
+
+  /* Conditional sub-blocks */
+  .cond-field{display:none;}
+  .cond-field.show{display:block;}
+
+  .field-hint{font-size:11.5px;color:#64748b;margin-top:2px;}
+  .sub-label{font-size:13.5px;color:#334155;font-weight:500;display:block;margin-bottom:4px;margin-top:6px;}
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<!-- PAGE-WIDE COPY/PASTE BLOCK -->
+<script>
+(function(){
+  ['copy','paste','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, true);
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, true);
+})();
+</script>
+
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow d-flex justify-content-between align-items-center">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+    <div class="header-reg-info pr-3" id="headerRegInfo" style="display:none;">
+      <div>Name: <strong id="hdrName"></strong></div>
+      <div>Reg. No: <strong id="hdrRegNo"></strong></div>
+    </div>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-4">
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
+        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="details_frm" name="details_frm" autocomplete="off" novalidate>
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+      <h1 class="m-0">Basic Qualification / Experience / Languages / Preference</h1>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoDetails"><i class="bi bi-magic"></i> Auto Fill Demo Details</button>
+    </div>
+    <p class="text-right error mb-0 mt-1" style="font-size:12px;font-weight:600;">* Mandatory Field</p>
+
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <!-- Sub-Tabs: Basic | Qualification / Experience / Languages | Preference -->
+    <ul class="sub-progressbar">
+      <li class="active sub-tab-btn" data-tab="tab-basic" style="cursor:pointer;"><div class="sub-circle"><i class="bi bi-check"></i></div> Basic</li>
+      <li class="sub-tab-btn" data-tab="tab-qual" style="cursor:pointer;"><div class="sub-circle"><i class="bi bi-check"></i></div> Qualification / Experience / Languages</li>
+      <li class="sub-tab-btn" data-tab="tab-pref" style="cursor:pointer;"><div class="sub-circle"><i class="bi bi-check"></i></div> Preference</li>
+    </ul>
+
+    <!-- ===================== TAB 1: BASIC ===================== -->
+    <div class="tab-panel active" id="tab-basic">
+
+    <!-- ============ BASIC DETAILS ============ -->
+    <div class="section-header">Basic Details</div>
+
+    <div class="form-group">
+      <label>Category <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="GENERAL" name="category" id="cat_general" class="custom-control-input">
+          <label class="custom-control-label" for="cat_general">GENERAL</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="EWS" name="category" id="cat_ews" class="custom-control-input">
+          <label class="custom-control-label" for="cat_ews">EWS</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="OBC" name="category" id="cat_obc" class="custom-control-input">
+          <label class="custom-control-label" for="cat_obc">OBC (NCL)</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="ST" name="category" id="cat_st" class="custom-control-input">
+          <label class="custom-control-label" for="cat_st">ST</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="SC" name="category" id="cat_sc" class="custom-control-input">
+          <label class="custom-control-label" for="cat_sc">SC</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_category"></div>
+      <div class="note-box">No change in category will be permitted after complete registration of your application.</div>
+    </div>
+
+    <!-- ============ DETAILS OF DISABILITY ============ -->
+    <div class="section-header">Details of Disability</div>
+
+    <div class="form-group">
+      <label>Are you a person with benchmark disability of 40% and above ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="disability" id="dis_y" class="custom-control-input">
+          <label class="custom-control-label" for="dis_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="disability" id="dis_n" class="custom-control-input">
+          <label class="custom-control-label" for="dis_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_disability"></div>
+    </div>
+
+    <div class="cond-field" id="disabilitySub">
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="selDisabilityType">Type of Disability</label>
+          <select class="custom-select" name="disability_type" id="selDisabilityType">
+            <option value="" selected>Select</option>
+            <option value="VI">Visually Impaired (VI)</option>
+            <option value="HI">Hearing Impaired (HI)</option>
+            <option value="OC">OC / Locomotor Disability</option>
+            <option value="ID_OTHERS">ID &amp; Others</option>
+            <option value="MD">Multiple Disability (MD)</option>
+          </select>
+          <span class="definition-btn" id="btnDefDisability">Definition of Disabilities</span>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="selSubTypeID">Sub-Type of Disability for 'ID &amp; Others'</label>
+          <select class="custom-select" name="subtype_id" id="selSubTypeID">
+            <option value="" selected>Select</option>
+            <option value="ASD">Autism Spectrum Disorder</option>
+            <option value="ID">Intellectual Disability</option>
+            <option value="SLD">Specific Learning Disability</option>
+            <option value="MI">Mental Illness</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="selSubType">Sub-Type of Disability</label>
+          <select class="custom-select" name="subtype" id="selSubType">
+            <option value="" selected>Select</option>
+            <option value="LV">Low Vision</option>
+            <option value="BLIND">Blindness</option>
+            <option value="DEAF">Deaf</option>
+            <option value="HOH">Hard of Hearing</option>
+            <option value="LOCO">Locomotor Disability</option>
+            <option value="CP">Cerebral Palsy</option>
+            <option value="LEPROSY">Leprosy Cured</option>
+            <option value="DWARFISM">Dwarfism</option>
+            <option value="MD">Muscular Dystrophy</option>
+            <option value="AA">Acid Attack Victim</option>
+          </select>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="multiDisability">Sub-Type of Multiple Disability</label>
+          <select class="custom-select" name="multi_disability" id="multiDisability" multiple size="4" style="height:auto;">
+            <option value="OC">OC / Locomotor Disability</option>
+            <option value="VI">VI - Visually Impaired</option>
+            <option value="HI">HI - Hearing Impaired</option>
+            <option value="ID">ID - Intellectual Disability</option>
+            <option value="SLD">Specific Learning Disability</option>
+            <option value="MI">Mental Illness</option>
+          </select>
+        </div>
+      </div>
+      <div class="note-box">Note: To select multiple disabilities please hold the CTRL key and click on the disabilities but each one from different type i.e. under multiple disabilities a candidate can select only one sub-type from "OC/Locomotor disability" and only one sub-type from "VI" and so on.</div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you as per PwBD guidelines eligible to use compensatory time at the time of examination ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="comp_time" id="comptime_y" class="custom-control-input">
+          <label class="custom-control-label" for="comptime_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="comp_time" id="comptime_n" class="custom-control-input">
+          <label class="custom-control-label" for="comptime_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you suffering from cerebral palsy and your writing speed is affected ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="cerebral" id="cerebral_y" class="custom-control-input">
+          <label class="custom-control-label" for="cerebral_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="cerebral" id="cerebral_n" class="custom-control-input">
+          <label class="custom-control-label" for="cerebral_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">If Yes, Do you need compensatory time at the time of examination ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="cerebral_comp" id="cerebralcomp_y" class="custom-control-input">
+          <label class="custom-control-label" for="cerebralcomp_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="cerebral_comp" id="cerebralcomp_n" class="custom-control-input">
+          <label class="custom-control-label" for="cerebralcomp_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Whether your dominant (Writing) hand is affected ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="dominant_hand" id="dominant_y" class="custom-control-input">
+          <label class="custom-control-label" for="dominant_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="dominant_hand" id="dominant_n" class="custom-control-input">
+          <label class="custom-control-label" for="dominant_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">If Yes, Do you need compensatory time at the time of examination ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="dominant_comp" id="dominantcomp_y" class="custom-control-input">
+          <label class="custom-control-label" for="dominantcomp_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="dominant_comp" id="dominantcomp_n" class="custom-control-input">
+          <label class="custom-control-label" for="dominantcomp_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you eligible to use the services of scribe as per Government guidelines &amp; do you wish to use the services of scribe ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="scribe" id="scribe_y" class="custom-control-input">
+          <label class="custom-control-label" for="scribe_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="scribe" id="scribe_n" class="custom-control-input">
+          <label class="custom-control-label" for="scribe_n">No</label>
+        </div>
+        <div><span class="definition-btn" id="btnGuidelinesScribe">Guidelines for Scribe</span></div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you a person with specified disability covered under the definition of sec 2(s) of the RPwD Act, 2016 and not covered under sec 2(r) of the said act and having difficulty in writing ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="spec_2s" id="spec2s_y" class="custom-control-input">
+          <label class="custom-control-label" for="spec2s_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="spec_2s" id="spec2s_n" class="custom-control-input">
+          <label class="custom-control-label" for="spec2s_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">If Yes, Do you need compensatory time at the time of examination ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="spec_2s_comp" id="spec2scomp_y" class="custom-control-input">
+          <label class="custom-control-label" for="spec2scomp_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="spec_2s_comp" id="spec2scomp_n" class="custom-control-input">
+          <label class="custom-control-label" for="spec2scomp_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you a person with specified disability covered under the definition of sec 2(s) of the RPwD Act, 2016 and having difficulty in writing and not covered under sec 2(r) of the said act and eligible to use the services of Scribe and wish to avail the services of Scribe ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="scribe_2s" id="scribe2s_y" class="custom-control-input">
+          <label class="custom-control-label" for="scribe2s_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="scribe_2s" id="scribe2s_n" class="custom-control-input">
+          <label class="custom-control-label" for="scribe2s_n">No</label>
+        </div>
+      </div>
+
+      <div class="custom-control custom-checkbox mt-2">
+        <input type="checkbox" class="custom-control-input" id="certScribe" name="cert_scribe">
+        <label class="custom-control-label" for="certScribe" style="font-size:12.5px;">I certify that I will upload (in the current application) the certificate from competent medical authority of a Government healthcare institution as per Ministry of Social Justice and Empowerment, Department of Empowerment of Persons with Disabilities (Divyangjan) OM No. F. No. 29-6/2019-DD-III dated 10.08.2022 and education qualification of the scribe accompanying me for the online exam will be one step below my education qualification.</label>
+      </div>
+    </div>
+
+    <!-- ============ EXPERIENCE ============ -->
+    <div class="section-header">Experience</div>
+    <div class="form-group">
+      <label>Whether serving in Govt./ quasi Govt./ Public Sector Undertakings (including Nationalised Banks &amp; Financial Institutions) ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="serving_govt" id="serving_y" class="custom-control-input">
+          <label class="custom-control-label" for="serving_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="serving_govt" id="serving_n" class="custom-control-input">
+          <label class="custom-control-label" for="serving_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_serving_govt"></div>
+    </div>
+
+    <!-- ============ EX-SERVICEMAN DETAILS ============ -->
+    <div class="section-header">Ex-Serviceman Details</div>
+    <div class="form-group">
+      <label>Are you an Ex-Serviceman ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="exserviceman" id="exsvc_y" class="custom-control-input">
+          <label class="custom-control-label" for="exsvc_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="exserviceman" id="exsvc_n" class="custom-control-input">
+          <label class="custom-control-label" for="exsvc_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_exserviceman"></div>
+    </div>
+
+    <div class="cond-field" id="exsvcSub">
+      <div class="form-group">
+        <label for="txtServiceMonths">Actual service rendered in defence services which may be counted for qualifying as an Ex-serviceman (In Months)</label>
+        <input type="number" min="0" max="999" class="form-control" name="service_months" id="txtServiceMonths" placeholder="e.g. 120">
+        <div class="field-hint">( Maximum 3 Digits )</div>
+      </div>
+
+      <div class="form-group">
+        <label>Date of relief from defence services</label>
+        <div class="d-flex" style="gap:8px;max-width:500px;">
+          <select class="custom-select" name="relief_dd" id="relief_dd"><option value="">Day</option></select>
+          <select class="custom-select" name="relief_mm" id="relief_mm">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+          <select class="custom-select" name="relief_yyyy" id="relief_yyyy"><option value="">Year</option></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Have you joined a Government job on the civil side after availing of the benefits given as an ex-serviceman ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="civil_job" id="civil_y" class="custom-control-input">
+          <label class="custom-control-label" for="civil_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="civil_job" id="civil_n" class="custom-control-input">
+          <label class="custom-control-label" for="civil_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="txtCivilOrg">If yes, name of the organization:</label>
+        <input class="form-control" name="civil_org" id="txtCivilOrg" maxlength="20" placeholder="ENTER ORGANIZATION NAME">
+        <div class="field-hint">(Maximum 20 Characters)</div>
+      </div>
+    </div>
+
+    <!-- ============ RELIGIOUS MINORITY ============ -->
+    <div class="section-header">Religious Minority</div>
+    <div class="form-group">
+      <label>Do you belong to Religious Minority Community ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="minority" id="minor_y" class="custom-control-input">
+          <label class="custom-control-label" for="minor_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="minority" id="minor_n" class="custom-control-input">
+          <label class="custom-control-label" for="minor_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_minority"></div>
+    </div>
+
+    <div class="form-group col-md-6 p-0">
+      <label for="selReligion">Religion of the applicant : <sup class="error">*</sup></label>
+      <select class="custom-select" name="religion" id="selReligion">
+        <option value="" selected>Select</option>
+        <option value="HINDU">HINDU</option>
+        <option value="MUSLIM">MUSLIM</option>
+        <option value="CHRISTIAN">CHRISTIAN</option>
+        <option value="SIKH">SIKH</option>
+        <option value="BUDDHIST">BUDDHIST</option>
+        <option value="JAIN">JAIN</option>
+        <option value="ZOROASTRIAN">ZOROASTRIAN (PARSI)</option>
+        <option value="OTHERS">OTHERS</option>
+      </select>
+      <div class="invalid-feedback" id="err_religion"></div>
+    </div>
+
+    <!-- ============ CWE/CRP APPEARED DETAILS ============ -->
+    <div class="section-header">CWE/CRP Appeared Details</div>
+    <div class="form-group">
+      <label>Have you appeared for the CWE/CRP-PO/MT earlier ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="cwe_appeared" id="cwe_y" class="custom-control-input">
+          <label class="custom-control-label" for="cwe_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="cwe_appeared" id="cwe_n" class="custom-control-input">
+          <label class="custom-control-label" for="cwe_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_cwe_appeared"></div>
+    </div>
+
+    <div class="cond-field" id="cweSub">
+      <div class="form-group col-md-6 p-0">
+        <label for="txtCweAttempts">Number of earlier CWE/CRP-PO/MT attempts ?</label>
+        <input type="number" min="1" max="7" class="form-control" name="cwe_attempts" id="txtCweAttempts" placeholder="e.g. 2">
+      </div>
+      <div class="form-group col-md-6 p-0">
+        <label for="multiCwe">Select the CWE/CRP-PO/MT attempted earlier</label>
+        <select class="custom-select" name="cwe_list" id="multiCwe" multiple size="7" style="height:auto;">
+          <option value="IX">CRP PO/MT-IX</option>
+          <option value="X">CRP PO/MT-X</option>
+          <option value="XI">CRP PO/MT-XI</option>
+          <option value="XII">CRP PO/MT-XII</option>
+          <option value="XIII">CRP PO/MT-XIII</option>
+          <option value="XIV">CRP PO/MT-XIV</option>
+          <option value="XV">CRP PO/MT-XV</option>
+        </select>
+      </div>
+      <div class="note-box">Note: To select multiple CWE/CRP-PO/MT attempt please hold the CTRL key and click on the CWE/CRP-PO/MT.</div>
+    </div>
+
+    <!-- ============ DETAILS OF APPRENTICESHIP ============ -->
+    <div class="section-header">Details of Apprenticeship</div>
+    <div class="form-group">
+      <label>Are you a trained Apprentice of any of the Participating Public Sector Banks/State Bank of India/Any other BFSI Sector ? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="apprentice" id="appr_y" class="custom-control-input">
+          <label class="custom-control-label" for="appr_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="apprentice" id="appr_n" class="custom-control-input">
+          <label class="custom-control-label" for="appr_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_apprentice"></div>
+    </div>
+
+    <div class="cond-field" id="apprenticeSub">
+      <div class="form-group col-md-6 p-0">
+        <label for="selBankBFSI">If Yes, select Bank/ BFSI Sector :</label>
+        <select class="custom-select" name="bank_bfsi" id="selBankBFSI">
+          <option value="" selected>Select</option>
+          <option value="SBI">State Bank of India</option>
+          <option value="BOB">Bank of Baroda</option>
+          <option value="PNB">Punjab National Bank</option>
+          <option value="CANARA">Canara Bank</option>
+          <option value="UNION">Union Bank of India</option>
+          <option value="BOI">Bank of India</option>
+          <option value="OTHER_BFSI">Other BFSI Sector</option>
+        </select>
+        <div class="invalid-feedback" id="err_bank_bfsi"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Time period of apprenticeship in the selected PSB/SBI/BFSI Sector : Start Date</label>
+        <div class="d-flex" style="gap:8px;max-width:500px;">
+          <select class="custom-select" name="appstart_dd" id="appstart_dd"><option value="">Day</option></select>
+          <select class="custom-select" name="appstart_mm" id="appstart_mm">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+          <select class="custom-select" name="appstart_yyyy" id="appstart_yyyy"><option value="">Year</option></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Time period of apprenticeship in the selected PSB/SBI/BFSI Sector : End Date</label>
+        <div class="d-flex" style="gap:8px;max-width:500px;">
+          <select class="custom-select" name="append_dd" id="append_dd"><option value="">Day</option></select>
+          <select class="custom-select" name="append_mm" id="append_mm">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+          <select class="custom-select" name="append_yyyy" id="append_yyyy"><option value="">Year</option></select>
+        </div>
+      </div>
+
+      <div class="form-group col-md-6 p-0">
+        <label for="txtHrms">HRMS ID of Apprenticeship in the selected PSB/SBI/BFSI Sector :</label>
+        <input class="form-control" name="hrms_id" id="txtHrms" placeholder="ENTER HRMS ID">
+      </div>
+
+      <div class="form-group">
+        <label>Did you register on National Apprenticeship Training Scheme(NATS)/National Apprenticeship Promotion scheme (NAPS) portal before applying for apprenticeship in the Bank/BFSI Sector ? <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="Y" name="naps_register" id="naps_y" class="custom-control-input">
+            <label class="custom-control-label" for="naps_y">Yes</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="N" name="naps_register" id="naps_n" class="custom-control-input">
+            <label class="custom-control-label" for="naps_n">No</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_naps_register"></div>
+      </div>
+
+      <div class="form-group col-md-6 p-0">
+        <label for="txtNapsNumber">National Apprenticeship Training Scheme (NATS)/National Apprenticeship Promotion scheme (NAPS) Enrollment Number :</label>
+        <input class="form-control" name="naps_number" id="txtNapsNumber" maxlength="16" placeholder="ENTER ENROLLMENT NUMBER">
+        <div class="field-hint">(Maximum 16 digits)</div>
+      </div>
+    </div>
+
+    <!-- ============ NATIONALITY ============ -->
+    <div class="section-header">Nationality / Citizenship</div>
+    <div class="form-group col-md-6 p-0">
+      <label for="selNationality">Nationality / Citizenship <sup class="error">*</sup></label>
+      <select class="custom-select" name="nationality" id="selNationality">
+        <option value="" selected>Select</option>
+        <option value="INDIAN">Indian</option>
+        <option value="NEPAL">Subject of Nepal</option>
+        <option value="BHUTAN">Subject of Bhutan</option>
+        <option value="TIBETAN">Tibetan Refugee</option>
+        <option value="OTHERS">Person of Indian origin (migrated)</option>
+      </select>
+      <div><span class="definition-btn" id="btnDefNationality">Definition of Nationality</span></div>
+      <div class="invalid-feedback" id="err_nationality"></div>
+    </div>
+
+    <!-- ============ EXAM CENTRE DETAILS ============ -->
+    <div class="section-header">Exam Centre Details</div>
+    <div class="form-row">
+      <div class="form-group col-md-8">
+        <label for="selExamState">State/UT/NCR to which centre of examination belongs <sup class="error">*</sup></label>
+        <select class="custom-select" name="exam_state" id="selExamState">
+          <option value="" selected>Select</option>
+          <option value="ANDHRA PRADESH">ANDHRA PRADESH</option>
+          <option value="BIHAR">BIHAR</option>
+          <option value="DELHI-NCR">DELHI / NCR</option>
+          <option value="GUJARAT">GUJARAT</option>
+          <option value="HARYANA">HARYANA</option>
+          <option value="KARNATAKA">KARNATAKA</option>
+          <option value="MADHYA PRADESH">MADHYA PRADESH</option>
+          <option value="MAHARASHTRA">MAHARASHTRA</option>
+          <option value="PUNJAB">PUNJAB</option>
+          <option value="RAJASTHAN">RAJASTHAN</option>
+          <option value="TAMIL NADU">TAMIL NADU</option>
+          <option value="UTTAR PRADESH">UTTAR PRADESH</option>
+          <option value="WEST BENGAL">WEST BENGAL</option>
+        </select>
+        <div class="invalid-feedback" id="err_exam_state"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="txtStateCode">State code</label>
+        <input class="form-control" name="state_code" id="txtStateCode" readonly placeholder="Auto">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="selPrelimI">Centre of Preliminary Examination (Preference I) : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="prelim_i" id="selPrelimI"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_prelim_i"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="selPrelimII">Centre of Preliminary Examination (Preference II) : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="prelim_ii" id="selPrelimII"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_prelim_ii"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="selMainI">Centre of Main Examination (Preference I) : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="main_i" id="selMainI"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_main_i"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="selMainII">Centre of Main Examination (Preference II) : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="main_ii" id="selMainII"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_main_ii"></div>
+      </div>
+    </div>
+
+    <!-- ============ ID PROOF DETAILS ============ -->
+    <div class="section-header">ID proof Details</div>
+    <div class="custom-control custom-checkbox mb-3">
+      <input type="checkbox" class="custom-control-input" id="confirmID" name="confirm_id">
+      <label class="custom-control-label" for="confirmID" style="font-size:13.5px;">I intend to bring the following ID when appearing for the examination <strong>(I confirm my name on this ID and this application exactly match)</strong> <sup class="error">*</sup></label>
+      <div class="invalid-feedback" id="err_confirm_id"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="selIdProof">ID Proof <sup class="error">*</sup></label>
+        <select class="custom-select" name="id_proof" id="selIdProof">
+          <option value="" selected>Select</option>
+          <option value="PAN">PAN Card</option>
+          <option value="PASSPORT">Passport</option>
+          <option value="DL">Driving License</option>
+          <option value="VOTER">Voter's ID / EPIC</option>
+          <option value="AADHAAR">Aadhaar Card</option>
+          <option value="PHOTO_IDENTITY">Photo Identity Proof issued by Gazetted Officer</option>
+        </select>
+        <div class="invalid-feedback" id="err_id_proof"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="txtIdProofNo">ID Proof No. <sup class="error">*</sup></label>
+        <input class="form-control" name="id_proof_no" id="txtIdProofNo" maxlength="100" placeholder="ENTER ID PROOF NUMBER">
+        <div class="field-hint">(maximum 100 AlphaNumeric)</div>
+        <div class="invalid-feedback" id="err_id_proof_no"></div>
+      </div>
+    </div>
+
+    <!-- ============ PERSONAL DETAILS ============ -->
+    <div class="section-header">Personal Details</div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label>Date of Birth <sup class="error">*</sup></label>
+        <div class="d-flex" style="gap: 8px;">
+          <select class="custom-select" name="dob_dd" id="dob_dd" style="max-width:90px;"><option value="">Day</option></select>
+          <select class="custom-select" name="dob_mm" id="dob_mm" style="max-width:120px;">
+            <option value="">Month</option>
+            <option value="01">January</option><option value="02">February</option>
+            <option value="03">March</option><option value="04">April</option>
+            <option value="05">May</option><option value="06">June</option>
+            <option value="07">July</option><option value="08">August</option>
+            <option value="09">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select>
+          <select class="custom-select" name="dob_yyyy" id="dob_yyyy" style="max-width:110px;"><option value="">Year</option></select>
+        </div>
+        <div class="invalid-feedback" id="err_dob"></div>
+        <div class="age-display" id="ageDisplay" style="display:none;"></div>
+        <div class="note-box">NOTE: Please ensure you have already filled in the details under Basic Details in the Online Form especially pertaining to your category. Change in Date of Birth will not be permitted.</div>
+      </div>
+
+      <div class="form-group col-md-6">
+        <label>Gender <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="MALE" name="gender" id="gender_m" class="custom-control-input">
+            <label class="custom-control-label" for="gender_m">Male</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="FEMALE" name="gender" id="gender_f" class="custom-control-input">
+            <label class="custom-control-label" for="gender_f">Female</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="TRANSGENDER" name="gender" id="gender_t" class="custom-control-input">
+            <label class="custom-control-label" for="gender_t">Transgender</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_gender"></div>
+
+        <label class="mt-3">Marital Status <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="UNMARRIED" name="marital" id="mar_unmarried" class="custom-control-input">
+            <label class="custom-control-label" for="mar_unmarried">Unmarried</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="MARRIED" name="marital" id="mar_married" class="custom-control-input">
+            <label class="custom-control-label" for="mar_married">Married</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="WIDOW" name="marital" id="mar_widow" class="custom-control-input">
+            <label class="custom-control-label" for="mar_widow">Widow</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="WIDOWER" name="marital" id="mar_widower" class="custom-control-input">
+            <label class="custom-control-label" for="mar_widower">Widower</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="DIVORCED" name="marital" id="mar_divorced" class="custom-control-input">
+            <label class="custom-control-label" for="mar_divorced">Divorced</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="JUD_SEPARATED" name="marital" id="mar_judsep" class="custom-control-input">
+            <label class="custom-control-label" for="mar_judsep">Judicially Separated</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_marital"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtAadhaar">Aadhaar Card Number</label>
+        <input type="text" inputmode="numeric" class="form-control" name="aadhaar" id="txtAadhaar" maxlength="12" placeholder="XXXXXXXXXXXX">
+        <div class="field-hint">(I consent for use of Aadhaar) — (Maximum 12 Numeric)</div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="txtPan">PAN Card Number</label>
+        <input class="form-control text-uppercase" name="pan" id="txtPan" maxlength="10" placeholder="ABCDE1234F">
+        <div class="field-hint">(Maximum 10 AlphaNumeric)</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Do you have a twin/ triplet/ quadruplet brother/ sister? <sup class="error">*</sup></label>
+      <div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="twin" id="twin_y" class="custom-control-input">
+          <label class="custom-control-label" for="twin_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="twin" id="twin_n" class="custom-control-input">
+          <label class="custom-control-label" for="twin_n">No</label>
+        </div>
+      </div>
+      <div class="invalid-feedback" id="err_twin"></div>
+    </div>
+
+    <div class="cond-field" id="twinSub">
+      <div class="form-group col-md-6 p-0">
+        <label for="selTwinType">If Yes :</label>
+        <select class="custom-select" name="twin_type" id="selTwinType">
+          <option value="" selected>Select</option>
+          <option value="TWIN">Twin</option>
+          <option value="TRIPLET">Triplet</option>
+          <option value="QUADRUPLET">Quadruplet</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="sub-label">Your Twin/Triplet/ Quadruplet (brother / sister) is appearing in the (CRP PO/MT-XVI) examination ?</label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="twin_appearing" id="twinapp_y" class="custom-control-input">
+          <label class="custom-control-label" for="twinapp_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="twin_appearing" id="twinapp_n" class="custom-control-input">
+          <label class="custom-control-label" for="twinapp_n">No</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtFather">Father's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="father_name" id="txtFather" maxlength="35" placeholder="ENTER FATHER'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_father_name"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="txtMother">Mother's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="mother_name" id="txtMother" maxlength="35" placeholder="ENTER MOTHER'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_mother_name"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtSpouse">Spouse's Name</label>
+        <input class="form-control" name="spouse_name" id="txtSpouse" maxlength="35" placeholder="ENTER SPOUSE'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtConfirmFather">Confirm Father's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="confirm_father" id="txtConfirmFather" maxlength="35" placeholder="RE-ENTER FATHER'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_confirm_father"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="txtConfirmMother">Confirm Mother's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="confirm_mother" id="txtConfirmMother" maxlength="35" placeholder="RE-ENTER MOTHER'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_confirm_mother"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtConfirmSpouse">Confirm Spouse's Name</label>
+        <input class="form-control" name="confirm_spouse" id="txtConfirmSpouse" maxlength="35" placeholder="RE-ENTER SPOUSE'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_confirm_spouse"></div>
+      </div>
+    </div>
+
+    <div class="custom-control custom-checkbox mb-2">
+      <input type="checkbox" class="custom-control-input" id="declareName" name="declare_name">
+      <label class="custom-control-label" for="declareName" style="font-size:13px;">I hereby declare that my name is the same as my father's or mother's name.</label>
+    </div>
+
+    <!-- ============ ADDRESS FOR CORRESPONDENCE ============ -->
+    <div class="section-header">Address for Correspondence</div>
+    <div class="form-group">
+      <label for="txtCorrAddr1">Address 1 <sup class="error">*</sup></label>
+      <input class="form-control" name="corr_addr1" id="txtCorrAddr1" maxlength="35" placeholder="ADDRESS LINE 1">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+      <div class="invalid-feedback" id="err_corr_addr1"></div>
+    </div>
+    <div class="form-group">
+      <label for="txtCorrAddr2">Address 2</label>
+      <input class="form-control" name="corr_addr2" id="txtCorrAddr2" maxlength="35" placeholder="ADDRESS LINE 2">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+    </div>
+    <div class="form-group">
+      <label for="txtCorrAddr3">Address 3</label>
+      <input class="form-control" name="corr_addr3" id="txtCorrAddr3" maxlength="35" placeholder="ADDRESS LINE 3">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selCorrState">State <sup class="error">*</sup></label>
+        <select class="custom-select state-select" name="corr_state" id="selCorrState"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_corr_state"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selCorrDistrict">District <sup class="error">*</sup></label>
+        <select class="custom-select" name="corr_district" id="selCorrDistrict"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_corr_district"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="txtCorrPincode">Pincode <sup class="error">*</sup></label>
+        <input type="text" inputmode="numeric" class="form-control" name="corr_pincode" id="txtCorrPincode" maxlength="6" placeholder="PINCODE">
+        <div class="field-hint">(5 or 6 Digits)</div>
+        <div class="invalid-feedback" id="err_corr_pincode"></div>
+      </div>
+    </div>
+
+    <!-- ============ PERMANENT ADDRESS ============ -->
+    <div class="section-header">Permanent address</div>
+    <div class="custom-control custom-checkbox mb-3">
+      <input type="checkbox" class="custom-control-input" id="chkSameAddr" name="same_addr">
+      <label class="custom-control-label" for="chkSameAddr" style="font-size:13.5px;font-weight:600;">Same as Address for Correspondence ( Click if applicable )</label>
+    </div>
+    <div class="form-group">
+      <label for="txtPermAddr1">Address 1 <sup class="error">*</sup></label>
+      <input class="form-control" name="perm_addr1" id="txtPermAddr1" maxlength="35" placeholder="ADDRESS LINE 1">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+      <div class="invalid-feedback" id="err_perm_addr1"></div>
+    </div>
+    <div class="form-group">
+      <label for="txtPermAddr2">Address 2</label>
+      <input class="form-control" name="perm_addr2" id="txtPermAddr2" maxlength="35" placeholder="ADDRESS LINE 2">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+    </div>
+    <div class="form-group">
+      <label for="txtPermAddr3">Address 3</label>
+      <input class="form-control" name="perm_addr3" id="txtPermAddr3" maxlength="35" placeholder="ADDRESS LINE 3">
+      <div class="field-hint">(Maximum 35 Characters)</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selPermState">State <sup class="error">*</sup></label>
+        <select class="custom-select state-select" name="perm_state" id="selPermState"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_perm_state"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selPermDistrict">District <sup class="error">*</sup></label>
+        <select class="custom-select" name="perm_district" id="selPermDistrict"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_perm_district"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="txtPermPincode">Pincode <sup class="error">*</sup></label>
+        <input type="text" inputmode="numeric" class="form-control" name="perm_pincode" id="txtPermPincode" maxlength="6" placeholder="PINCODE">
+        <div class="field-hint">(5 or 6 Digits)</div>
+        <div class="invalid-feedback" id="err_perm_pincode"></div>
+      </div>
+    </div>
+
+    <div class="form-group col-md-6 p-0">
+      <label for="selGst">Choose the Address for GST Invoicing <sup class="error">*</sup></label>
+      <select class="custom-select" name="gst_address" id="selGst">
+        <option value="" selected>Select</option>
+        <option value="CORRESPONDENCE">Address for Correspondence</option>
+        <option value="PERMANENT">Permanent address</option>
+      </select>
+      <div class="invalid-feedback" id="err_gst_address"></div>
+    </div>
+
+    <!-- ============ APPLICATION FEE ============ -->
+    <div class="section-header">Application Fee / Intimation charges</div>
+    <div class="form-group">
+      <label class="mb-0">Amount : <strong id="feeAmount">-</strong></label>
+      <div class="field-hint" id="feeHint">Fee is computed from your selected category.</div>
+    </div>
+
+    </div><!-- end tab-basic -->
+
+    <!-- ===================== TAB 2: QUALIFICATION / EXPERIENCE / LANGUAGES ===================== -->
+    <div class="tab-panel" id="tab-qual">
+
+    <!-- 3. Educational Qualifications -->
+    <div class="section-header">Educational Qualifications (Graduation)</div>
+
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selDegree">Degree / Subject / Stream <sup class="error">*</sup></label>
+        <select class="custom-select" name="degree" id="selDegree">
+          <option value="" selected>Select Degree</option>
+          <option value="ARTS">ARTS (B.A.)</option>
+          <option value="SCIENCE">SCIENCE (B.Sc.)</option>
+          <option value="COMMERCE">COMMERCE (B.Com.)</option>
+          <option value="ENGINEERING">ENGINEERING (B.E. / B.Tech.)</option>
+          <option value="MANAGEMENT">MANAGEMENT (B.B.A. / B.M.S.)</option>
+          <option value="COMPUTERS">COMPUTERS (B.C.A. / B.Sc. IT)</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+        <div class="invalid-feedback" id="err_degree"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="txtDegreeYear">Year of Passing <sup class="error">*</sup></label>
+        <select class="custom-select" name="passing_year" id="txtDegreeYear">
+          <option value="" selected>Select Year</option>
+        </select>
+        <div class="invalid-feedback" id="err_passing_year"></div>
+      </div>
+
+      <div class="form-group col-md-4">
+        <label for="txtPercentage">Percentage of Marks (%) <sup class="error">*</sup></label>
+        <input type="number" step="0.01" min="0" max="100" class="form-control" name="percentage" id="txtPercentage" placeholder="e.g. 74.50">
+        <div class="invalid-feedback" id="err_percentage"></div>
+      </div>
+    </div>
+
+    <!-- 3b. Experience Section -->
+    <div class="section-header">Experience Details</div>
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label>Do you have work experience? <sup class="error">*</sup></label>
+        <div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="Y" name="has_experience" id="exp_y" class="custom-control-input">
+            <label class="custom-control-label" for="exp_y">Yes</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="N" name="has_experience" id="exp_n" class="custom-control-input">
+            <label class="custom-control-label" for="exp_n">No</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_has_experience"></div>
+      </div>
+    </div>
+    <div id="experienceFields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group col-md-4">
+          <label for="txtOrgName">Organisation / Company Name</label>
+          <input class="form-control" name="org_name" id="txtOrgName" placeholder="ENTER ORGANISATION NAME">
+        </div>
+        <div class="form-group col-md-4">
+          <label for="txtDesignation">Designation</label>
+          <input class="form-control" name="designation" id="txtDesignation" placeholder="ENTER DESIGNATION">
+        </div>
+        <div class="form-group col-md-4">
+          <label for="txtExpYears">Total Experience (in Years)</label>
+          <input type="number" min="0" max="40" class="form-control" name="exp_years" id="txtExpYears" placeholder="e.g. 3">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-4">
+          <label for="txtExpFrom">Experience From</label>
+          <input type="date" class="form-control" name="exp_from" id="txtExpFrom">
+        </div>
+        <div class="form-group col-md-4">
+          <label for="txtExpTo">Experience To</label>
+          <input type="date" class="form-control" name="exp_to" id="txtExpTo">
+        </div>
+        <div class="form-group col-md-4">
+          <label for="selExpType">Type of Experience</label>
+          <select class="custom-select" name="exp_type" id="selExpType">
+            <option value="" selected>Select Type</option>
+            <option value="BANKING">Banking</option>
+            <option value="FINANCE">Finance</option>
+            <option value="IT">IT / Software</option>
+            <option value="GOVERNMENT">Government</option>
+            <option value="PRIVATE">Private Sector</option>
+            <option value="OTHERS">Others</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3c. Languages Known -->
+    <div class="section-header">Languages Known</div>
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selLang1">Language 1 (Proficient) <sup class="error">*</sup></label>
+        <select class="custom-select" name="lang1" id="selLang1">
+          <option value="" selected>Select Language</option>
+          <option value="HINDI">HINDI</option>
+          <option value="ENGLISH">ENGLISH</option>
+          <option value="BENGALI">BENGALI</option>
+          <option value="TAMIL">TAMIL</option>
+          <option value="TELUGU">TELUGU</option>
+          <option value="MARATHI">MARATHI</option>
+          <option value="GUJARATI">GUJARATI</option>
+          <option value="KANNADA">KANNADA</option>
+          <option value="PUNJABI">PUNJABI</option>
+          <option value="MALAYALAM">MALAYALAM</option>
+          <option value="URDU">URDU</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+        <div class="invalid-feedback" id="err_lang1"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selLang2">Language 2 (Optional)</label>
+        <select class="custom-select" name="lang2" id="selLang2">
+          <option value="" selected>Select Language</option>
+          <option value="HINDI">HINDI</option>
+          <option value="ENGLISH">ENGLISH</option>
+          <option value="BENGALI">BENGALI</option>
+          <option value="TAMIL">TAMIL</option>
+          <option value="TELUGU">TELUGU</option>
+          <option value="MARATHI">MARATHI</option>
+          <option value="GUJARATI">GUJARATI</option>
+          <option value="KANNADA">KANNADA</option>
+          <option value="PUNJABI">PUNJABI</option>
+          <option value="MALAYALAM">MALAYALAM</option>
+          <option value="URDU">URDU</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selLang3">Language 3 (Optional)</label>
+        <select class="custom-select" name="lang3" id="selLang3">
+          <option value="" selected>Select Language</option>
+          <option value="HINDI">HINDI</option>
+          <option value="ENGLISH">ENGLISH</option>
+          <option value="BENGALI">BENGALI</option>
+          <option value="TAMIL">TAMIL</option>
+          <option value="TELUGU">TELUGU</option>
+          <option value="MARATHI">MARATHI</option>
+          <option value="GUJARATI">GUJARATI</option>
+          <option value="KANNADA">KANNADA</option>
+          <option value="PUNJABI">PUNJABI</option>
+          <option value="MALAYALAM">MALAYALAM</option>
+          <option value="URDU">URDU</option>
+          <option value="OTHERS">OTHERS</option>
+        </select>
+      </div>
+    </div>
+
+    </div><!-- end tab-qual -->
+
+    <!-- ===================== TAB 3: PREFERENCE ===================== -->
+    <div class="tab-panel" id="tab-pref">
+
+    <!-- 4. Bank Preferences -->
+    <div class="section-header">Participating Bank Preferences</div>
+    <p class="small text-muted mb-3"><i class="bi bi-info-circle-fill"></i> Click a bank on the left to add it to your preference list on the right. Drag items on the right to reorder your priority.</p>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h6 class="font-weight-bold mb-2" style="font-size:13px;color:#475569;">Available Banks (click to select)</h6>
+        <div id="bankList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="pref-selected-panel" id="prefPanel">
+          <h6><i class="bi bi-list-ol"></i> Your Preference Order</h6>
+          <div id="prefList">
+            <!-- Populated dynamically when user selects banks -->
+          </div>
+          <p class="text-muted small mt-2 mb-0" id="prefEmptyMsg">No banks selected yet. Click banks on the left to add them.</p>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end tab-pref -->
+
+    <div class="row justify-content-center mt-5 mb-5">
+      <a href="photo_signature.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn1 mr-3" type="button" id="btnValidateDetails" value="Validate your details">
+      <input class="btn sbtn" type="button" id="btnNext" value="Save & Next">
+    </div>
+  </form>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// ====== HEADER REGISTRATION INFO ======
+(function(){
+  var regName = sessionStorage.getItem('ibps_fullname');
+  var regNo = sessionStorage.getItem('ibps_reg_no');
+  if(regName && regNo){
+    $('headerRegInfo').style.display = 'block';
+    $('hdrName').textContent = regName;
+    $('hdrRegNo').textContent = regNo;
+  }
+})();
+
+// ====== DISABLE COPY-PASTE ======
+document.addEventListener('DOMContentLoaded', function(){
+  var allInputs = document.querySelectorAll('#details_frm input, #details_frm select, #details_frm textarea');
+  allInputs.forEach(function(el){
+    el.addEventListener('copy', function(e){ e.preventDefault(); });
+    el.addEventListener('paste', function(e){ e.preventDefault(); });
+    el.addEventListener('cut', function(e){ e.preventDefault(); });
+  });
+});
+
+// ====== SUB-TAB NAVIGATION ======
+document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active');
+    $(btn.getAttribute('data-tab')).classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+
+var curYear = new Date().getFullYear();
+
+// ====== POPULATE DAY / YEAR DROPDOWNS ======
+function fillDays(sel){
+  for(var d=1;d<=31;d++){
+    var o=document.createElement('option');
+    o.value = d<10?'0'+d:''+d; o.textContent = d<10?'0'+d:''+d;
+    sel.appendChild(o);
+  }
+}
+function fillYears(sel, from, to){
+  for(var y=from;y>=to;y--){
+    var o=document.createElement('option');
+    o.value=y; o.textContent=y; sel.appendChild(o);
+  }
+}
+fillDays($('dob_dd'));
+fillYears($('dob_yyyy'), curYear, curYear-60);
+fillDays($('relief_dd'));
+fillYears($('relief_yyyy'), curYear, curYear-45);
+fillDays($('appstart_dd'));
+fillYears($('appstart_yyyy'), curYear, curYear-20);
+fillDays($('append_dd'));
+fillYears($('append_yyyy'), curYear, curYear-20);
+
+// ====== AGE CALCULATION (as on 01.07.2026) ======
+var ELIGIBILITY_DATE = new Date(2026, 6, 1);
+function calculateAge(){
+  var dd=$('dob_dd').value, mm=$('dob_mm').value, yyyy=$('dob_yyyy').value;
+  var ageEl=$('ageDisplay');
+  if(!dd||!mm||!yyyy){ ageEl.style.display='none'; return; }
+  var dob=new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
+  if(isNaN(dob.getTime())){ ageEl.style.display='none'; return; }
+  var ref=ELIGIBILITY_DATE;
+  var years=ref.getFullYear()-dob.getFullYear();
+  var months=ref.getMonth()-dob.getMonth();
+  var days=ref.getDate()-dob.getDate();
+  if(days<0){ months--; var pm=new Date(ref.getFullYear(), ref.getMonth(), 0); days+=pm.getDate(); }
+  if(months<0){ years--; months+=12; }
+  ageEl.style.display='block';
+  ageEl.innerHTML='<i class="bi bi-calendar-check"></i> Age completed as on 01.07.2026 is <strong>'+years+' Years, '+months+' Month(s), '+days+' Day(s)</strong>';
+}
+['dob_dd','dob_mm','dob_yyyy'].forEach(function(id){ $(id).addEventListener('change', calculateAge); });
+
+// ====== CONDITIONAL SECTION TOGGLES ======
+function toggleOnYes(radioName, subId){
+  document.getElementsByName(radioName).forEach(function(r){
+    r.addEventListener('change', function(){
+      $(subId).classList.toggle('show', this.value==='Y');
+    });
+  });
+}
+toggleOnYes('disability', 'disabilitySub');
+toggleOnYes('exserviceman', 'exsvcSub');
+toggleOnYes('cwe_appeared', 'cweSub');
+toggleOnYes('apprentice', 'apprenticeSub');
+toggleOnYes('twin', 'twinSub');
+
+// ====== EXPERIENCE TOGGLE (Qualification tab) ======
+document.getElementsByName('has_experience').forEach(function(r){
+  r.addEventListener('change', function(){
+    $('experienceFields').style.display = this.value==='Y' ? 'block' : 'none';
+  });
+});
+
+// ====== EXAM CENTRE + STATE/DISTRICT DATA ======
+var STATES = ['ANDHRA PRADESH','BIHAR','DELHI','GUJARAT','HARYANA','KARNATAKA','MADHYA PRADESH','MAHARASHTRA','PUNJAB','RAJASTHAN','TAMIL NADU','UTTAR PRADESH','WEST BENGAL'];
+var DISTRICTS = {
+  'DELHI':['CENTRAL DELHI','NEW DELHI','NORTH DELHI','SOUTH DELHI','WEST DELHI'],
+  'UTTAR PRADESH':['LUCKNOW','NOIDA','GHAZIABAD','KANPUR','VARANASI','AGRA'],
+  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','THANE'],
+  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
+  'DEFAULT':['DISTRICT 1','DISTRICT 2','DISTRICT 3']
+};
+var STATE_CODES = {'ANDHRA PRADESH':'28','BIHAR':'10','DELHI-NCR':'07','GUJARAT':'24','HARYANA':'06','KARNATAKA':'29','MADHYA PRADESH':'23','MAHARASHTRA':'27','PUNJAB':'03','RAJASTHAN':'08','TAMIL NADU':'33','UTTAR PRADESH':'09','WEST BENGAL':'19'};
+var EXAM_CENTRES = {
+  'DELHI-NCR':['NEW DELHI','GHAZIABAD','GURUGRAM','NOIDA','FARIDABAD'],
+  'UTTAR PRADESH':['LUCKNOW','KANPUR','VARANASI','AGRA','ALLAHABAD'],
+  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','AURANGABAD'],
+  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
+  'DEFAULT':['CENTRE 1','CENTRE 2','CENTRE 3','CENTRE 4']
+};
+
+// Populate correspondence/permanent state selects
+document.querySelectorAll('.state-select').forEach(function(sel){
+  STATES.forEach(function(s){
+    var o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);
+  });
+});
+function fillDistricts(stateSelId, distSelId){
+  var st=$(stateSelId).value;
+  var dsel=$(distSelId);
+  dsel.innerHTML='<option value="">Select</option>';
+  var list=DISTRICTS[st]||DISTRICTS['DEFAULT'];
+  list.forEach(function(d){ var o=document.createElement('option'); o.value=d; o.textContent=d; dsel.appendChild(o); });
+}
+$('selCorrState').addEventListener('change', function(){ fillDistricts('selCorrState','selCorrDistrict'); });
+$('selPermState').addEventListener('change', function(){ fillDistricts('selPermState','selPermDistrict'); });
+
+// Exam state -> state code + centre lists
+$('selExamState').addEventListener('change', function(){
+  var st=this.value;
+  $('txtStateCode').value = STATE_CODES[st] || '';
+  var centres = EXAM_CENTRES[st] || EXAM_CENTRES['DEFAULT'];
+  document.querySelectorAll('.exam-centre').forEach(function(sel){
+    sel.innerHTML='<option value="">Select</option>';
+    centres.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+});
+
+// ====== APPLICATION FEE (by category) ======
+function updateFee(){
+  var cat = radioVal('category');
+  var el=$('feeAmount');
+  if(cat==='SC'||cat==='ST'||cat==='PWBD'){ el.textContent='₹ 175/-'; }
+  else if(cat){ el.textContent='₹ 850/-'; }
+  else { el.textContent='-'; }
+}
+document.getElementsByName('category').forEach(function(r){ r.addEventListener('change', updateFee); });
+
+// ====== SAME AS CORRESPONDENCE ADDRESS ======
+var PERM_FIELDS = [['txtCorrAddr1','txtPermAddr1'],['txtCorrAddr2','txtPermAddr2'],['txtCorrAddr3','txtPermAddr3'],['txtCorrPincode','txtPermPincode']];
+$('chkSameAddr').addEventListener('change', function(){
+  var same=this.checked;
+  if(same){
+    PERM_FIELDS.forEach(function(p){ $(p[1]).value=$(p[0]).value; $(p[1]).setAttribute('readonly','readonly'); });
+    // Copy state + build district then copy district
+    $('selPermState').value=$('selCorrState').value;
+    fillDistricts('selPermState','selPermDistrict');
+    $('selPermDistrict').value=$('selCorrDistrict').value;
+    $('selPermState').setAttribute('disabled','disabled');
+    $('selPermDistrict').setAttribute('disabled','disabled');
+  } else {
+    PERM_FIELDS.forEach(function(p){ $(p[1]).removeAttribute('readonly'); });
+    $('selPermState').removeAttribute('disabled');
+    $('selPermDistrict').removeAttribute('disabled');
+  }
+});
+
+// Populate graduation passing years
+var yearSelect = $('txtDegreeYear');
+fillYears(yearSelect, curYear, curYear-15);
+
+// ====== PARTICIPATING BANKS (Preference tab) ======
+var banks = [
+  "BANK OF BARODA", "BANK OF INDIA", "BANK OF MAHARASHTRA", "CANARA BANK",
+  "CENTRAL BANK OF INDIA", "INDIAN BANK", "INDIAN OVERSEAS BANK",
+  "PUNJAB NATIONAL BANK", "PUNJAB & SIND BANK", "UCO BANK", "UNION BANK OF INDIA"
+];
+var selectedBankOrder = [];
+var bankList = $('bankList');
+banks.forEach(function(bank, idx) {
+  var div = document.createElement('div');
+  div.className = 'bank-item shadow-sm';
+  div.setAttribute('data-bank', bank);
+  div.innerHTML = '<span>' + (idx + 1) + '. ' + bank + '</span> <button type="button" class="btn btn-sm btn-outline-primary bank-add-btn" data-bank="' + bank + '"><i class="bi bi-plus-circle"></i> Add</button>';
+  bankList.appendChild(div);
+});
+bankList.addEventListener('click', function(e){
+  var btn = e.target.closest('.bank-add-btn');
+  if(!btn) return;
+  var bankName = btn.getAttribute('data-bank');
+  if(selectedBankOrder.indexOf(bankName) !== -1) return;
+  selectedBankOrder.push(bankName);
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Added';
+  btn.classList.remove('btn-outline-primary');
+  btn.classList.add('btn-success');
+  renderPrefList();
+});
+function renderPrefList(){
+  var prefList = $('prefList');
+  var emptyMsg = $('prefEmptyMsg');
+  prefList.innerHTML = '';
+  if(selectedBankOrder.length === 0){ emptyMsg.style.display = 'block'; return; }
+  emptyMsg.style.display = 'none';
+  selectedBankOrder.forEach(function(bank, idx){
+    var div = document.createElement('div');
+    div.className = 'pref-item';
+    div.setAttribute('draggable', 'true');
+    div.setAttribute('data-idx', idx);
+    div.innerHTML = '<div class="d-flex align-items-center"><span class="pref-rank">' + (idx+1) + '</span> <span>' + bank + '</span></div> <span class="pref-remove" data-bank="' + bank + '" title="Remove">&times;</span>';
+    prefList.appendChild(div);
+  });
+  var items = prefList.querySelectorAll('.pref-item');
+  var dragIdx = null;
+  items.forEach(function(item){
+    item.addEventListener('dragstart', function(e){ dragIdx = parseInt(this.getAttribute('data-idx')); this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    item.addEventListener('dragend', function(){ this.classList.remove('dragging'); });
+    item.addEventListener('dragover', function(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+    item.addEventListener('drop', function(e){
+      e.preventDefault();
+      var dropIdx = parseInt(this.getAttribute('data-idx'));
+      if(dragIdx === null || dragIdx === dropIdx) return;
+      var moved = selectedBankOrder.splice(dragIdx, 1)[0];
+      selectedBankOrder.splice(dropIdx, 0, moved);
+      renderPrefList();
+    });
+  });
+  prefList.querySelectorAll('.pref-remove').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var bankName = this.getAttribute('data-bank');
+      selectedBankOrder = selectedBankOrder.filter(function(b){ return b !== bankName; });
+      bankList.querySelectorAll('.bank-add-btn').forEach(function(ab){
+        if(ab.getAttribute('data-bank') === bankName){
+          ab.disabled = false;
+          ab.innerHTML = '<i class="bi bi-plus-circle"></i> Add';
+          ab.classList.remove('btn-success');
+          ab.classList.add('btn-outline-primary');
+        }
+      });
+      renderPrefList();
+    });
+  });
+}
+
+// Uppercase text fields
+['txtFather','txtMother','txtSpouse','txtConfirmFather','txtConfirmMother','txtConfirmSpouse','txtCivilOrg','txtCorrAddr1','txtCorrAddr2','txtCorrAddr3','txtPermAddr1','txtPermAddr2','txtPermAddr3','txtPan','txtIdProofNo','txtHrms'].forEach(function(id){
+  var el=$(id);
+  if(el) el.addEventListener('input', function(){ this.value=this.value.toUpperCase(); });
+});
+// Numeric-only fields
+['txtAadhaar','txtCorrPincode','txtPermPincode','txtNapsNumber','txtServiceMonths','txtCweAttempts'].forEach(function(id){
+  var el=$(id);
+  if(el) el.addEventListener('input', function(){ this.value=this.value.replace(/[^0-9]/g,''); });
+});
+
+// ====== "Definition"/"Guidelines" info pills ======
+[['btnDefDisability','Definition of Disabilities — refer to the categories defined under the RPwD Act, 2016 (VI, HI, OC/Locomotor, ID & Others, and Multiple Disabilities).'],
+ ['btnGuidelinesScribe','Guidelines for Scribe — the scribe must be arranged by the candidate as per the latest Government of India / DoPT guidelines. Educational qualification of the scribe must be one step below that of the candidate.'],
+ ['btnDefNationality','Definition of Nationality — a candidate must be a citizen of India, or a subject of Nepal/Bhutan, or a Tibetan refugee, or a person of Indian origin who migrated as per the notified rules.']
+].forEach(function(pair){
+  var el=$(pair[0]);
+  if(el) el.addEventListener('click', function(){ alert(pair[1]); });
+});
+
+// ====== DEMO AUTOFILL ======
+$('btnDemoDetails').addEventListener('click', function() {
+  // Switch to basic tab first
+  document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelector('[data-tab="tab-basic"]').classList.add('active');
+  $('tab-basic').classList.add('active');
+
+  $('cat_general').checked = true; updateFee();
+  $('dis_n').checked = true; $('disabilitySub').classList.remove('show');
+  $('serving_n').checked = true;
+  $('exsvc_n').checked = true; $('exsvcSub').classList.remove('show');
+  $('minor_n').checked = true;
+  $('selReligion').value = "HINDU";
+  $('cwe_n').checked = true; $('cweSub').classList.remove('show');
+  $('appr_n').checked = true; $('apprenticeSub').classList.remove('show');
+  $('selNationality').value = "INDIAN";
+
+  $('selExamState').value = "DELHI-NCR";
+  $('selExamState').dispatchEvent(new Event('change'));
+  $('selPrelimI').value = "NEW DELHI";
+  $('selPrelimII').value = "NOIDA";
+  $('selMainI').value = "NEW DELHI";
+  $('selMainII').value = "GHAZIABAD";
+
+  $('confirmID').checked = true;
+  $('selIdProof').value = "AADHAAR";
+  $('txtIdProofNo').value = "9876 5432 1012";
+
+  $('dob_dd').value = "15";
+  $('dob_mm').value = "05";
+  $('dob_yyyy').value = "2001";
+  calculateAge();
+  $('gender_m').checked = true;
+  $('mar_unmarried').checked = true;
+  $('txtAadhaar').value = "987654321012";
+  $('txtPan').value = "ABCDE1234F";
+  $('twin_n').checked = true; $('twinSub').classList.remove('show');
+  $('txtFather').value = "RAMESH SRIVASTAVA";
+  $('txtMother').value = "SUSHMA SRIVASTAVA";
+  $('txtConfirmFather').value = "RAMESH SRIVASTAVA";
+  $('txtConfirmMother').value = "SUSHMA SRIVASTAVA";
+
+  $('txtCorrAddr1').value = "123/A, SECTOR-4";
+  $('txtCorrAddr2').value = "NEAR CITY PARK";
+  $('selCorrState').value = "UTTAR PRADESH";
+  fillDistricts('selCorrState','selCorrDistrict');
+  $('selCorrDistrict').value = "NOIDA";
+  $('txtCorrPincode').value = "201301";
+
+  $('chkSameAddr').checked = true;
+  $('chkSameAddr').dispatchEvent(new Event('change'));
+
+  $('selGst').value = "CORRESPONDENCE";
+
+  // Qualification tab demo
+  $('selDegree').value = "ENGINEERING";
+  $('txtDegreeYear').value = "2023";
+  $('txtPercentage').value = "78.45";
+  $('exp_n').checked = true;
+  $('selLang1').value = "HINDI";
+  $('selLang2').value = "ENGLISH";
+
+  clearAllErrors();
+});
+
+function val(id){ return ($(id) && $(id).value || '').trim(); }
+function radioVal(name){
+  var els = document.getElementsByName(name);
+  for(var i=0;i<els.length;i++){ if(els[i].checked) return els[i].value; }
+  return '';
+}
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','lang1'];
+function clearAllErrors(){ ERROR_FIELDS.forEach(clearError); }
+
+// Map field key -> actual element id (where they differ)
+function fieldEl(key){
+  var map = {
+    'religion':'selReligion','nationality':'selNationality','exam_state':'selExamState',
+    'prelim_i':'selPrelimI','prelim_ii':'selPrelimII','main_i':'selMainI','main_ii':'selMainII',
+    'id_proof':'selIdProof','id_proof_no':'txtIdProofNo','confirm_id':'confirmID',
+    'father_name':'txtFather','mother_name':'txtMother','confirm_father':'txtConfirmFather','confirm_mother':'txtConfirmMother','confirm_spouse':'txtConfirmSpouse',
+    'corr_addr1':'txtCorrAddr1','corr_state':'selCorrState','corr_district':'selCorrDistrict','corr_pincode':'txtCorrPincode',
+    'perm_addr1':'txtPermAddr1','perm_state':'selPermState','perm_district':'selPermDistrict','perm_pincode':'txtPermPincode',
+    'gst_address':'selGst','bank_bfsi':'selBankBFSI','degree':'selDegree','passing_year':'txtDegreeYear','percentage':'txtPercentage','lang1':'selLang1'
+  };
+  return $(map[key] || key);
+}
+function setErr(key, msg, errors){
+  var el = fieldEl(key);
+  if(el) el.classList.add('is-invalid');
+  var e = $('err_'+key);
+  if(e){ e.textContent=msg; e.classList.add('show'); }
+  errors.push(key);
+}
+
+function validateAll(){
+  var errors=[];
+  $('result').style.display='none';
+  clearAllErrors();
+
+  // Basic Details
+  if(!radioVal('category')) setErr('category','Please choose Category.', errors);
+
+  if(!radioVal('disability')) setErr('disability','Please select Yes/No.', errors);
+
+  if(!radioVal('serving_govt')) setErr('serving_govt','Please select an option.', errors);
+  if(!radioVal('exserviceman')) setErr('exserviceman','Please select an option.', errors);
+  if(!radioVal('minority')) setErr('minority','Please choose Do you belong to Religious Minority Community ?', errors);
+  if(!val('selReligion')) setErr('religion','Please select Religion of the applicant.', errors);
+
+  if(!radioVal('cwe_appeared')) setErr('cwe_appeared','Please select an option.', errors);
+
+  var appr = radioVal('apprentice');
+  if(!appr) setErr('apprentice','Please select an option.', errors);
+  if(appr==='Y'){
+    if(!val('selBankBFSI')) setErr('bank_bfsi','Please select If Yes, select Bank/ BFSI Sector.', errors);
+    if(!radioVal('naps_register')) setErr('naps_register','Please choose an option.', errors);
+  }
+
+  if(!val('selNationality')) setErr('nationality','Please select Nationality / Citizenship.', errors);
+
+  if(!val('selExamState')) setErr('exam_state','Please select State/UT/NCR of examination centre.', errors);
+  if(!val('selPrelimI')) setErr('prelim_i','Please select Preliminary centre (Preference I).', errors);
+  if(!val('selPrelimII')) setErr('prelim_ii','Please select Preliminary centre (Preference II).', errors);
+  if(!val('selMainI')) setErr('main_i','Please select Main centre (Preference I).', errors);
+  if(!val('selMainII')) setErr('main_ii','Please select Main centre (Preference II).', errors);
+
+  if(!$('confirmID').checked) setErr('confirm_id','Please confirm your ID declaration.', errors);
+  if(!val('selIdProof')) setErr('id_proof','Please select ID Proof.', errors);
+  if(!val('txtIdProofNo')) setErr('id_proof_no','Please enter ID Proof No.', errors);
+
+  // Personal Details
+  if(!val('dob_dd')||!val('dob_mm')||!val('dob_yyyy')) setErr('dob','Please select Date of Birth.', errors);
+  if(!radioVal('gender')) setErr('gender','Please choose Gender.', errors);
+  if(!radioVal('marital')) setErr('marital','Please choose Marital Status.', errors);
+  if(!radioVal('twin')) setErr('twin','Please select an option.', errors);
+
+  var f=val('txtFather'), m=val('txtMother'), cf=val('txtConfirmFather'), cm=val('txtConfirmMother');
+  var sp=val('txtSpouse'), csp=val('txtConfirmSpouse');
+  if(!f) setErr('father_name',"Please enter Father's Name.", errors);
+  if(!m) setErr('mother_name',"Please enter Mother's Name.", errors);
+  if(!cf) setErr('confirm_father',"Please enter Confirm Father's Name.", errors);
+  else if(f && cf && f.toUpperCase()!==cf.toUpperCase()) setErr('confirm_father',"Father's Name and Confirm Father's Name do not match.", errors);
+  if(!cm) setErr('confirm_mother',"Please enter Confirm Mother's Name.", errors);
+  else if(m && cm && m.toUpperCase()!==cm.toUpperCase()) setErr('confirm_mother',"Mother's Name and Confirm Mother's Name do not match.", errors);
+  if(sp && sp.toUpperCase()!==csp.toUpperCase()) setErr('confirm_spouse',"Spouse's Name and Confirm Spouse's Name do not match.", errors);
+
+  // Addresses
+  if(!val('txtCorrAddr1')) setErr('corr_addr1','Please enter Address for Correspondence.', errors);
+  if(!val('selCorrState')) setErr('corr_state','Please select State.', errors);
+  if(!val('selCorrDistrict')) setErr('corr_district','Please select District.', errors);
+  var cp=val('txtCorrPincode');
+  if(!cp || cp.length<5 || cp.length>6) setErr('corr_pincode','Please enter a valid Pincode (5 or 6 digits).', errors);
+
+  if(!val('txtPermAddr1')) setErr('perm_addr1','Please enter Permanent Address.', errors);
+  if(!val('selPermState')) setErr('perm_state','Please select State.', errors);
+  if(!val('selPermDistrict')) setErr('perm_district','Please select District.', errors);
+  var pp=val('txtPermPincode');
+  if(!pp || pp.length<5 || pp.length>6) setErr('perm_pincode','Please enter a valid Pincode (5 or 6 digits).', errors);
+
+  if(!val('selGst')) setErr('gst_address','Please select the Address for GST Invoicing.', errors);
+
+  // Qualification tab
+  if(!val('selDegree')) setErr('degree','Degree is required.', errors);
+  if(!val('txtDegreeYear')) setErr('passing_year','Passing year is required.', errors);
+  var pct=val('txtPercentage');
+  if(!pct || isNaN(pct) || pct<0 || pct>100) setErr('percentage','Enter a valid graduation percentage between 0 and 100.', errors);
+  if(!radioVal('has_experience')) setErr('has_experience','Please select an option.', errors);
+  if(!val('selLang1')) setErr('lang1','At least one language is required.', errors);
+
+  return errors;
+}
+
+function focusFirstError(errors){
+  var el = fieldEl(errors[0]);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+// Build a complete, human-readable snapshot of the whole form for the preview page
+function radioLabel(name){
+  var els = document.getElementsByName(name);
+  for(var i=0;i<els.length;i++){
+    if(els[i].checked){
+      var lab = document.querySelector('label[for="'+els[i].id+'"]');
+      return lab ? lab.textContent.trim() : els[i].value;
+    }
+  }
+  return '';
+}
+function buildSnapshot(){
+  var snap = {}, seenRadio = {};
+  var els = document.querySelectorAll('#details_frm input[name], #details_frm select[name], #details_frm textarea[name]');
+  els.forEach(function(el){
+    var name = el.name;
+    if(el.type === 'radio'){
+      if(seenRadio[name]) return; seenRadio[name] = 1;
+      snap[name] = radioLabel(name);
+    } else if(el.type === 'checkbox'){
+      snap[name] = el.checked ? 'Yes' : 'No';
+    } else if(el.tagName === 'SELECT'){
+      if(el.multiple){
+        snap[name] = Array.prototype.filter.call(el.options, function(o){ return o.selected; })
+                      .map(function(o){ return o.text; }).join(', ');
+      } else {
+        snap[name] = el.value ? el.options[el.selectedIndex].text : '';
+      }
+    } else {
+      snap[name] = (el.value || '').trim();
+    }
+  });
+  return snap;
+}
+
+$('btnValidateDetails').addEventListener('click', function(){
+  var errors = validateAll();
+  var result = $('result');
+  if(errors.length){
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'One or more error(s) found in page. Please correct the ' + errors.length + ' highlighted field(s).';
+    focusFirstError(errors);
+  } else {
+    result.className = 'alert-box success show';
+    result.style.display = 'block';
+    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+});
+
+$('btnNext').addEventListener('click', function() {
+  var errors = validateAll();
+  var result = $('result');
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'One or more error(s) found in page. Please correct the ' + errors.length + ' highlighted field(s) before continuing.';
+    focusFirstError(errors);
+    return;
+  }
+
+  var dobStr = val('dob_yyyy') + '-' + val('dob_mm') + '-' + val('dob_dd');
+
+  sessionStorage.setItem('ibps_category', radioVal('category'));
+  sessionStorage.setItem('ibps_disability', radioVal('disability'));
+  if(radioVal('disability') === 'Y'){
+    sessionStorage.setItem('ibps_disability_type', val('selDisabilityType'));
+  }
+  sessionStorage.setItem('ibps_serving_govt', radioVal('serving_govt'));
+  sessionStorage.setItem('ibps_exserviceman', radioVal('exserviceman'));
+  sessionStorage.setItem('ibps_minority', radioVal('minority'));
+  sessionStorage.setItem('ibps_religion', val('selReligion'));
+  sessionStorage.setItem('ibps_cwe_appeared', radioVal('cwe_appeared'));
+  sessionStorage.setItem('ibps_apprentice', radioVal('apprentice'));
+  sessionStorage.setItem('ibps_nationality', val('selNationality'));
+  sessionStorage.setItem('ibps_exam_state', val('selExamState'));
+  sessionStorage.setItem('ibps_prelim_i', val('selPrelimI'));
+  sessionStorage.setItem('ibps_prelim_ii', val('selPrelimII'));
+  sessionStorage.setItem('ibps_main_i', val('selMainI'));
+  sessionStorage.setItem('ibps_main_ii', val('selMainII'));
+  sessionStorage.setItem('ibps_id_proof', val('selIdProof'));
+  sessionStorage.setItem('ibps_id_proof_no', val('txtIdProofNo'));
+  sessionStorage.setItem('ibps_dob', dobStr);
+  sessionStorage.setItem('ibps_gender', radioVal('gender'));
+  sessionStorage.setItem('ibps_marital', radioVal('marital'));
+  sessionStorage.setItem('ibps_aadhaar', val('txtAadhaar'));
+  sessionStorage.setItem('ibps_pan', val('txtPan'));
+  sessionStorage.setItem('ibps_father', val('txtFather'));
+  sessionStorage.setItem('ibps_mother', val('txtMother'));
+  sessionStorage.setItem('ibps_spouse', val('txtSpouse'));
+  sessionStorage.setItem('ibps_corr_addr', [val('txtCorrAddr1'),val('txtCorrAddr2'),val('txtCorrAddr3')].filter(Boolean).join(', '));
+  sessionStorage.setItem('ibps_corr_state', val('selCorrState'));
+  sessionStorage.setItem('ibps_corr_district', val('selCorrDistrict'));
+  sessionStorage.setItem('ibps_corr_pincode', val('txtCorrPincode'));
+  sessionStorage.setItem('ibps_perm_addr', [val('txtPermAddr1'),val('txtPermAddr2'),val('txtPermAddr3')].filter(Boolean).join(', '));
+  sessionStorage.setItem('ibps_perm_state', val('selPermState'));
+  sessionStorage.setItem('ibps_perm_pincode', val('txtPermPincode'));
+  sessionStorage.setItem('ibps_gst_address', val('selGst'));
+  // legacy keys kept for preview compatibility
+  sessionStorage.setItem('ibps_state', val('selCorrState'));
+  sessionStorage.setItem('ibps_address', [val('txtCorrAddr1'),val('txtCorrAddr2'),val('txtCorrAddr3')].filter(Boolean).join(', '));
+  sessionStorage.setItem('ibps_degree', val('selDegree'));
+  sessionStorage.setItem('ibps_year', val('txtDegreeYear'));
+  sessionStorage.setItem('ibps_percentage', val('txtPercentage'));
+  sessionStorage.setItem('ibps_lang1', val('selLang1'));
+  sessionStorage.setItem('ibps_lang2', val('selLang2'));
+  sessionStorage.setItem('ibps_lang3', val('selLang3'));
+  sessionStorage.setItem('ibps_banks', JSON.stringify(selectedBankOrder));
+
+  // Full snapshot of every field for a complete preview
+  sessionStorage.setItem('ibps_snapshot', JSON.stringify(buildSnapshot()));
+
+  window.location.href = 'preview.html';
+});
+</script>
+
+</body>
+</html>

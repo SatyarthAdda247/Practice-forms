@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Common Recruitment Process (CRP) for Recruitment of Probationary Officers / Management Trainees in Participating Banks (CRP PO/MT-XVI) — PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  .form-control.is-invalid{border-color:#dc3545 !important;background-color:#fff5f5 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  .form-control.is-valid{border-color:#28a745 !important;background-color:#f0fff4 !important;}
+  #result.show{display:block !important;}
+  .alert-box.error{background:#fdecea;border:1px solid #f5c2c0;color:#842029;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
+  .alert-box.success{background:#e6f6ea;border:1px solid #b7e4c3;color:#0f5132;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
+  #captchaImg{font-family:monospace;font-size:22px;letter-spacing:5px;background:#eee repeating-linear-gradient(45deg,#eee,#eee 4px,#e2e2e2 4px,#e2e2e2 8px);padding:6px 18px;border:1px solid #ccc;user-select:none;text-decoration:line-through;display:inline-block;}
+
+  /* Green tick icon for validated fields */
+  .input-group.validated .form-control.is-valid {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2328a745' viewBox='0 0 16 16'%3e%3cpath d='M13.485 1.929a.75.75 0 0 1 .057 1.05l-7.93 8.75a.75.75 0 0 1-1.085.02L1.293 8.515a.75.75 0 0 1 1.06-1.06l2.78 2.78 7.38-8.15a.75.75 0 0 1 1.05-.057h-.078z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px;
+    padding-right: 36px;
+  }
+
+  /* Confirmation Modal Overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.show {
+    display: flex;
+  }
+  .modal-dialog-custom {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+    max-width: 520px;
+    width: 90%;
+    padding: 2rem;
+    text-align: center;
+    animation: modalSlideIn 0.25s ease-out;
+  }
+  @keyframes modalSlideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-dialog-custom h4 {
+    color: #1e293b;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  .modal-dialog-custom p {
+    color: #475569;
+    font-size: 14px;
+    margin-bottom: 1.5rem;
+  }
+  .modal-dialog-custom .btn-modal {
+    padding: 8px 28px;
+    border-radius: 6px;
+    font-weight: 600;
+    margin: 0 6px;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+  }
+  .modal-dialog-custom .btn-modal-ok {
+    background: #4c56c0;
+    color: #fff;
+  }
+  .modal-dialog-custom .btn-modal-ok:hover {
+    background: #3b44a0;
+  }
+  .modal-dialog-custom .btn-modal-cancel {
+    background: #e2e8f0;
+    color: #475569;
+  }
+  .modal-dialog-custom .btn-modal-cancel:hover {
+    background: #cbd5e1;
+  }
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<!-- PAGE-WIDE COPY/PASTE BLOCK -->
+<script>
+(function(){
+  ['copy','paste','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, true);
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, true);
+})();
+</script>
+
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-4">
+        <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="reg_frm" name="reg_frm" autocomplete="off" novalidate>
+    <h1>Basic Information</h1>
+    <span class="col error text-right" style="float:left;margin-bottom:4px;"><b>* Mandatory Field</b></span>
+
+    <div class="row mb-3">
+      <div class="info_box_new">
+        <div class="blob blue"></div>
+        <a href="javascript:void(0);">Click here for Important Points to be noted</a>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div id="result" class="alert-box error" style="display:none"></div>
+
+      <div class="mb-2 label text-note">
+        <span class="info_box_note_green">
+          <div class="blob blue"></div>
+          The name entered in the online application form should match exactly with the requisite documents (photo ID, DOB etc.) to be produced at the time of the examination and document verification/ interview. If there is any discrepancy (difference) in the name entered by you in the online application form and the name printed in the documents produced at the time of examination/ document verification/ interview, you will be debarred from the selection process. However only 35 characters will be printed in your call letter. Any requests for subsequent changes/ consideration regarding any changes will not be entertained.
+        </span>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="fullname">First Name <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="fullname" id="fullname">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_fullname"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="cfullname">Confirm First Name <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="cfullname" id="cfullname">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_cfullname"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="middlename">Middle Name</label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="middlename" id="middlename">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_middlename"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="cmiddlename">Confirm Middle Name</label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="cmiddlename" id="cmiddlename">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_cmiddlename"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="lastname">Last Name</label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="lastname" id="lastname">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_lastname"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6">
+        <label for="clastname">Confirm Last Name</label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-person-fill"></i></span></div>
+          <input class="form-control" size="30" maxlength="35" name="clastname" id="clastname">
+        </div>
+        <small class="form-text text-muted">(Maximum 35 Characters)</small>
+        <div class="invalid-feedback" id="err_clastname"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-12">
+        <div class="custom-control custom-checkbox">
+          <input class="custom-control-input" type="checkbox" id="same_first_middle_name" name="same_first_middle_name" value="Y">
+          <label class="custom-control-label" for="same_first_middle_name">I confirm that my first and middle name are same as entered in the application form.</label>
+        </div>
+      </div>
+
+      <div class="form-group col-md-12">
+        <label for="fmlname">Full Name (as per the 10th std., certificate/DOB proof)</label>
+        <input class="form-control" size="105" maxlength="105" name="fmlname" id="fmlname" readonly disabled>
+      </div>
+
+      <div class="form-group col-md-12">
+        <label>Have you ever changed your name ?<sup class="error">*</sup></label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="namechange" id="namechange1" class="custom-control-input">
+          <label class="custom-control-label" for="namechange1">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="namechange" id="namechange2" class="custom-control-input">
+          <label class="custom-control-label" for="namechange2">No</label>
+        </div>
+        <div class="invalid-feedback" id="err_namechange"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_fullname_updated">
+        <label for="fullname_updated">Updated First Name <sup class="error">*</sup></label>
+        <input class="form-control" maxlength="35" name="fullname_updated" id="fullname_updated">
+        <div class="invalid-feedback" id="err_fullname_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_cfullname_updated">
+        <label for="cfullname_updated">Confirm Updated First Name <sup class="error">*</sup></label>
+        <input class="form-control" maxlength="35" name="cfullname_updated" id="cfullname_updated">
+        <div class="invalid-feedback" id="err_cfullname_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-12 hide" id="div_namechange_confirmation">
+        <div class="custom-control custom-checkbox">
+          <input class="custom-control-input" type="checkbox" id="namechange_confirmation" name="namechange_confirmation" value="Y">
+          <label class="custom-control-label" for="namechange_confirmation">I confirm that the updated name differs from the name in DOB proof / 10th Marksheet / Certificate</label>
+        </div>
+        <div class="invalid-feedback" id="err_namechange_confirmation"></div>
+      </div>
+
+      <div class="mb-2 label text-note">
+        <span class="info_box_note_green">
+          <div class="blob blue"></div>
+          Please note that the mentioned mobile number and email id will be the only way to notify you on the updates. It is in your own interest that the mobile number & email id should be valid and should be kept active till the completion of this round of selection process. Any requests for subsequent changes/consideration regarding any changes will not be entertained.
+        </span>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-4">
+        <label for="txtmobile">Mobile Number <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><div class="input-group-text">+91</div></div>
+          <input name="txtmobile" class="form-control" id="txtmobile" size="25" maxlength="10">
+        </div>
+        <small class="form-text text-muted">(10 digits) Please Do not prefix zero (0)</small>
+        <div class="invalid-feedback" id="err_txtmobile"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-4">
+        <label for="txtcmobile">Confirm Mobile Number <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><div class="input-group-text">+91</div></div>
+          <input name="txtcmobile" class="form-control" id="txtcmobile" size="25" maxlength="10">
+        </div>
+        <small class="form-text text-muted">(10 digits) Please Do not prefix zero (0)</small>
+        <div class="invalid-feedback" id="err_txtcmobile"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-4">
+        <label for="txtaltphone">Alternative Number (Mobile Number/Landline Number)</label>
+        <div class="input-group">
+          <div class="input-group-prepend"><div class="input-group-text">+91</div></div>
+          <input name="txtaltphone" class="form-control" id="txtaltphone" size="25" maxlength="10">
+        </div>
+        <small class="form-text text-muted">(10 digits) Please Do not prefix zero (0)</small>
+        <div class="invalid-feedback" id="err_txtaltphone"></div>
+      </div>
+
+      <div class="form-group col-md-12">
+        <label>I confirm that the mobile number belongs to<sup class="error">*</sup></label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="mobileno_agree" id="mobileno_agree1" class="custom-control-input">
+          <label class="custom-control-label" for="mobileno_agree1">Self</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="mobileno_agree" id="mobileno_agree2" class="custom-control-input">
+          <label class="custom-control-label" for="mobileno_agree2">Parents/Relatives</label>
+        </div>
+        <div class="invalid-feedback" id="err_mobileno_agree"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-8 mailid_details">
+        <label for="txtemail">Email ID <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-envelope-fill"></i></span></div>
+          <input class="form-control" id="txtemail" maxlength="29" size="12" name="txtemail">
+          <div class="input-group col pl-0">
+            <div class="input-group-prepend"><div class="input-group-text" style="background-color:#e9ecef;color:#495057;">@</div></div>
+            <select class="custom-select" size="1" name="seldomain" id="seldomain">
+              <option value="" selected>Domain Names</option>
+              <option value="aol.in">aol.in</option>
+              <option value="gmail.com">gmail.com</option>
+              <option value="hotmail.com">hotmail.com</option>
+              <option value="in.com">in.com</option>
+              <option value="live.com">live.com</option>
+              <option value="rediffmail.com">rediffmail.com</option>
+              <option value="yahoo.co.in">yahoo.co.in</option>
+              <option value="yahoo.com">yahoo.com</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+        </div>
+        <small class="form-text text-muted">(Maximum 60 Characters)</small>
+        <div class="invalid-feedback" id="err_txtemail"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-4 hide" id="othdomain">
+        <label for="txtothdomain">Others <sup class="error">*</sup></label>
+        <input class="form-control" id="txtothdomain" size="12" name="txtothdomain" maxlength="30">
+        <div class="invalid-feedback" id="err_seldomain"></div>
+      </div>
+
+      <div class="form-group col-sm-6 col-md-4">
+        <label for="txtcemail">Confirm Email ID <sup class="error">*</sup></label>
+        <div class="input-group">
+          <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-envelope-fill"></i></span></div>
+          <input class="form-control" id="txtcemail" maxlength="60" size="30" name="txtcemail">
+        </div>
+        <small class="form-text text-muted">(Maximum 60 Characters)</small>
+        <div class="invalid-feedback" id="err_txtcemail"></div>
+      </div>
+
+      <div class="form-group security col-md-12">
+        <label for="txtCode">Security Code <sup class="error">*</sup></label>
+        <div class="row">
+          <div class="col-auto">
+            <div class="input-group">
+              <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-fill-exclamation"></i></span></div>
+              <input name="txtCode" type="text" id="txtCode" class="form-control col" size="20">
+            </div>
+            <small class="form-text text-muted">Enter the code shown in the image (not case-sensitive)</small>
+            <div class="invalid-feedback" id="err_txtCode"></div>
+          </div>
+          <a href="javascript:void(0);" class="refresh-btn d-flex align-items-center" id="refreshCaptcha" title="Refresh code">
+            <svg class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" width="22px" height="22px" viewBox="0 0 322.447 322.447">
+              <path d="M321.832,230.327c-2.133-6.565-9.184-10.154-15.75-8.025l-16.254,5.281C299.785,206.991,305,184.347,305,161.224 c0-84.089-68.41-152.5-152.5-152.5C68.411,8.724,0,77.135,0,161.224s68.411,152.5,152.5,152.5c6.903,0,12.5-5.597,12.5-12.5 c0-6.902-5.597-12.5-12.5-12.5c-70.304,0-127.5-57.195-127.5-127.5c0-70.304,57.196-127.5,127.5-127.5 c70.305,0,127.5,57.196,127.5,127.5c0,19.372-4.371,38.337-12.723,55.568l-5.553-17.096c-2.133-6.564-9.186-10.156-15.75-8.025 c-6.566,2.134-10.16,9.186-8.027,15.751l14.74,45.368c1.715,5.283,6.615,8.642,11.885,8.642c1.279,0,2.582-0.198,3.865-0.614 l45.369-14.738C320.371,243.946,323.965,236.895,321.832,230.327z"/>
+            </svg>
+          </a>
+          <div class="col-auto d-flex align-items-center">
+            <span id="captchaImg"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clear"></div>
+    <div class="spacer"></div>
+
+    <div class="row justify-content-center mb-5 mt-5">
+      <input class="btn sbtn1 mr-3" type="button" id="ValidateBtn" value="Validate your details">
+      <input class="btn sbtn" type="button" id="FinalSubmit" value="Save & Next">
+    </div>
+  </form>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-dialog-custom">
+    <h4><i class="bi bi-exclamation-triangle-fill" style="color:#f59e0b"></i> Confirm Submission</h4>
+    <p>Are you sure the data entered is correct? No change/edit will be allowed after clicking OK. Do you want to continue?</p>
+    <div>
+      <button class="btn-modal btn-modal-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-modal btn-modal-ok" id="modalOk">OK — Proceed</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var NAME_RE = /^[A-Za-z' ]+$/;
+  var currentCaptcha = '';
+
+  // ====== DISABLE COPY-PASTE ON ALL INPUTS ======
+  document.addEventListener('DOMContentLoaded', function(){
+    var allInputs = document.querySelectorAll('#reg_frm input, #reg_frm select, #reg_frm textarea');
+    allInputs.forEach(function(el){
+      el.addEventListener('copy', function(e){ e.preventDefault(); });
+      el.addEventListener('paste', function(e){ e.preventDefault(); });
+      el.addEventListener('cut', function(e){ e.preventDefault(); });
+    });
+  });
+
+  // ====== CLEAR STATE ON TAB/VISIBILITY CHANGE ======
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      var allInputs = document.querySelectorAll('#reg_frm input:not([type="radio"]):not([type="checkbox"]):not([type="button"]):not([type="submit"]), #reg_frm select, #reg_frm textarea');
+      allInputs.forEach(function(el){
+        if(!el.disabled && !el.readOnly){
+          if(el.tagName === 'SELECT'){
+            el.selectedIndex = 0;
+          } else {
+            el.value = '';
+          }
+          el.classList.remove('is-valid','is-invalid');
+        }
+      });
+      // Uncheck radios and checkboxes
+      document.querySelectorAll('#reg_frm input[type="radio"], #reg_frm input[type="checkbox"]').forEach(function(el){
+        el.checked = false;
+      });
+      // Reset full name
+      $('fmlname').value = '';
+      // Hide conditional sections
+      ['div_fullname_updated','div_cfullname_updated','div_namechange_confirmation'].forEach(function(id){
+        $(id).classList.add('hide');
+      });
+      $('othdomain').classList.add('hide');
+      // Clear errors
+      var result = $('result');
+      if(result){ result.style.display = 'none'; }
+    }
+  });
+
+  function genCaptcha(){
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var s = '';
+    for(var i=0;i<6;i++){ s += chars.charAt(Math.floor(Math.random()*chars.length)); }
+    currentCaptcha = s;
+    $('captchaImg').textContent = s;
+  }
+  genCaptcha();
+  $('refreshCaptcha').addEventListener('click', function(){
+    genCaptcha();
+    $('txtCode').value = '';
+    clearError('txtCode');
+  });
+
+  function showError(field, msg){
+    var input = $(field);
+    var err = $('err_' + field);
+    if(input){
+      input.classList.add('is-invalid');
+      input.classList.remove('is-valid');
+    }
+    if(err){ err.textContent = msg; err.classList.add('show'); }
+  }
+  function clearError(field){
+    var input = $(field);
+    var err = $('err_' + field);
+    if(input) input.classList.remove('is-invalid');
+    if(err){ err.textContent = ''; err.classList.remove('show'); }
+  }
+  function markValid(field){
+    var input = $(field);
+    if(input){
+      input.classList.add('is-valid');
+      input.classList.remove('is-invalid');
+    }
+  }
+
+  function val(id){ return ($(id) && $(id).value || '').trim(); }
+  function radioVal(name){
+    var els = document.getElementsByName(name);
+    for(var i=0;i<els.length;i++){ if(els[i].checked) return els[i].value; }
+    return '';
+  }
+
+  function updateFullName(){
+    var f = val('fullname'), m = val('middlename'), l = val('lastname');
+    $('fmlname').value = [f,m,l].filter(Boolean).join(' ');
+  }
+  ['fullname','middlename','lastname'].forEach(function(id){
+    $(id).addEventListener('input', updateFullName);
+  });
+
+  $('same_first_middle_name').addEventListener('change', function(){
+    var checked = this.checked;
+    $('middlename').disabled = checked;
+    $('cmiddlename').disabled = checked;
+    if(checked){
+      $('middlename').value = val('fullname');
+      $('cmiddlename').value = val('fullname');
+      updateFullName();
+      // Run real-time validation on the auto-filled fields
+      liveValidateConfirmPair('middlename','cmiddlename','Middle Name');
+    }
+  });
+
+  // Name-change toggle
+  var namechangeRadios = document.getElementsByName('namechange');
+  namechangeRadios.forEach ? null : (namechangeRadios = Array.prototype.slice.call(namechangeRadios));
+  Array.prototype.slice.call(namechangeRadios).forEach(function(r){
+    r.addEventListener('change', function(){
+      var show = radioVal('namechange') === 'Y';
+      ['div_fullname_updated','div_cfullname_updated','div_namechange_confirmation'].forEach(function(id){
+        $(id).classList.toggle('hide', !show);
+      });
+      clearError('namechange');
+    });
+  });
+
+  // Email domain "Others" toggle
+  $('seldomain').addEventListener('change', function(){
+    var isOther = this.value === 'Others';
+    $('othdomain').classList.toggle('hide', !isOther);
+    if(!isOther) $('txtothdomain').value = '';
+    clearError('seldomain');
+  });
+
+  function composedEmail(){
+    var local = val('txtemail');
+    var domain = val('seldomain') === 'Others' ? val('txtothdomain') : val('seldomain');
+    if(!local || !domain) return '';
+    return local + '@' + domain;
+  }
+
+  // Numeric-only enforcement for mobile fields
+  ['txtmobile','txtcmobile','txtaltphone'].forEach(function(id){
+    $(id).addEventListener('input', function(){
+      this.value = this.value.replace(/[^0-9]/g,'').slice(0,10);
+    });
+  });
+
+  // Alpha-only enforcement and uppercase conversion for name fields
+  ['fullname','cfullname','middlename','cmiddlename','lastname','clastname','fullname_updated','cfullname_updated'].forEach(function(id){
+    var el = $(id);
+    if(el) {
+      var handler = function(){
+        this.value = this.value.replace(/[^A-Za-z' ]/g,'').toUpperCase();
+      };
+      el.addEventListener('input', handler);
+      el.addEventListener('change', handler);
+      el.addEventListener('blur', handler);
+    }
+  });
+
+  // ====== REAL-TIME VALIDATION FOR CONFIRM FIELDS ======
+  function liveValidateConfirmPair(origId, confirmId, label){
+    var origVal = val(origId).toUpperCase();
+    var confVal = val(confirmId).toUpperCase();
+    if(!confVal){
+      clearError(confirmId);
+      var confInput = $(confirmId);
+      if(confInput) confInput.classList.remove('is-valid');
+      return;
+    }
+    if(origVal !== confVal){
+      showError(confirmId, 'Confirm ' + label + ' does not match ' + label + '.');
+    } else {
+      clearError(confirmId);
+      markValid(confirmId);
+    }
+  }
+
+  function liveValidateName(id, label){
+    var v = val(id);
+    if(!v){
+      clearError(id);
+      var el = $(id);
+      if(el) el.classList.remove('is-valid');
+      return;
+    }
+    if(!NAME_RE.test(v)){
+      showError(id, label + ' can contain only letters, spaces and apostrophe.');
+    } else {
+      clearError(id);
+      markValid(id);
+    }
+  }
+
+  function liveValidateMobile(id, label){
+    var v = val(id);
+    if(!v){
+      clearError(id);
+      var el = $(id);
+      if(el) el.classList.remove('is-valid');
+      return;
+    }
+    if(!/^[1-9][0-9]{9}$/.test(v)){
+      showError(id, 'Enter a valid 10-digit mobile number (no leading 0).');
+    } else {
+      clearError(id);
+      markValid(id);
+    }
+  }
+
+  // Real-time: First Name
+  $('fullname').addEventListener('input', function(){
+    liveValidateName('fullname','First Name');
+  });
+  $('fullname').addEventListener('blur', function(){
+    liveValidateName('fullname','First Name');
+    if(val('cfullname')) liveValidateConfirmPair('fullname','cfullname','First Name');
+  });
+
+  // Real-time: Confirm First Name
+  $('cfullname').addEventListener('input', function(){
+    liveValidateConfirmPair('fullname','cfullname','First Name');
+  });
+  $('cfullname').addEventListener('blur', function(){
+    liveValidateConfirmPair('fullname','cfullname','First Name');
+  });
+
+  // Real-time: Middle Name
+  $('middlename').addEventListener('input', function(){
+    liveValidateName('middlename','Middle Name');
+    if(val('cmiddlename')) liveValidateConfirmPair('middlename','cmiddlename','Middle Name');
+  });
+  $('cmiddlename').addEventListener('input', function(){
+    liveValidateConfirmPair('middlename','cmiddlename','Middle Name');
+  });
+  $('cmiddlename').addEventListener('blur', function(){
+    liveValidateConfirmPair('middlename','cmiddlename','Middle Name');
+  });
+
+  // Real-time: Last Name
+  $('lastname').addEventListener('input', function(){
+    liveValidateName('lastname','Last Name');
+    if(val('clastname')) liveValidateConfirmPair('lastname','clastname','Last Name');
+  });
+  $('clastname').addEventListener('input', function(){
+    liveValidateConfirmPair('lastname','clastname','Last Name');
+  });
+  $('clastname').addEventListener('blur', function(){
+    liveValidateConfirmPair('lastname','clastname','Last Name');
+  });
+
+  // Real-time: Mobile Number
+  $('txtmobile').addEventListener('input', function(){
+    liveValidateMobile('txtmobile','Mobile Number');
+    if(val('txtcmobile')){
+      if(val('txtmobile') !== val('txtcmobile')){
+        showError('txtcmobile','Confirm Mobile Number does not match.');
+      } else {
+        clearError('txtcmobile');
+        markValid('txtcmobile');
+      }
+    }
+  });
+
+  // Real-time: Confirm Mobile Number
+  $('txtcmobile').addEventListener('input', function(){
+    var mob = val('txtmobile');
+    var cmob = val('txtcmobile');
+    if(!cmob){
+      clearError('txtcmobile');
+      $(this.id).classList.remove('is-valid');
+      return;
+    }
+    if(mob !== cmob){
+      showError('txtcmobile','Confirm Mobile Number does not match.');
+    } else {
+      clearError('txtcmobile');
+      markValid('txtcmobile');
+    }
+  });
+
+  // Full validation
+  function validateAll(){
+    var errors = [];
+
+    function req(id, label){
+      var v = val(id);
+      if(!v){ showError(id, label + ' is required.'); errors.push(id); return false; }
+      return true;
+    }
+    function reqName(id, label, maxlen){
+      if(!req(id, label)) return false;
+      var v = val(id);
+      if(!NAME_RE.test(v)){ showError(id, label + ' can contain only letters, spaces and apostrophe.'); errors.push(id); return false; }
+      if(v.length > maxlen){ showError(id, label + ' exceeds ' + maxlen + ' characters.'); errors.push(id); return false; }
+      clearError(id); markValid(id);
+      return true;
+    }
+    function matchPair(id, cid, label){
+      if(val(id).toUpperCase() !== val(cid).toUpperCase()){
+        showError(cid, 'Confirm ' + label + ' does not match ' + label + '.');
+        errors.push(cid);
+        return false;
+      }
+      clearError(cid); markValid(cid);
+      return true;
+    }
+
+    // clear all first
+    ['fullname','cfullname','middlename','cmiddlename','lastname','clastname','namechange',
+     'fullname_updated','cfullname_updated','namechange_confirmation',
+     'txtmobile','txtcmobile','txtaltphone','mobileno_agree','txtemail','seldomain','txtcemail','txtCode']
+     .forEach(clearError);
+
+    // Convert name fields to uppercase and trim before validating to avoid case mismatch
+    ['fullname','cfullname','middlename','cmiddlename','lastname','clastname','fullname_updated','cfullname_updated'].forEach(function(id){
+      var el = $(id);
+      if(el) el.value = el.value.toUpperCase().trim();
+    });
+
+    reqName('fullname', 'First Name', 35);
+    reqName('cfullname', 'Confirm First Name', 35);
+    if(val('fullname') && val('cfullname')) matchPair('fullname','cfullname','First Name');
+
+    if(val('middlename')){
+      if(!NAME_RE.test(val('middlename'))){ showError('middlename','Middle Name can contain only letters, spaces and apostrophe.'); errors.push('middlename'); }
+      else { clearError('middlename'); markValid('middlename'); }
+      if(val('cmiddlename').toUpperCase() !== val('middlename').toUpperCase()){ showError('cmiddlename','Confirm Middle Name does not match Middle Name.'); errors.push('cmiddlename'); }
+      else { clearError('cmiddlename'); markValid('cmiddlename'); }
+    }
+
+    if(val('lastname')){
+      if(!NAME_RE.test(val('lastname'))){ showError('lastname','Last Name can contain only letters, spaces and apostrophe.'); errors.push('lastname'); }
+      else { clearError('lastname'); markValid('lastname'); }
+      if(val('clastname').toUpperCase() !== val('lastname').toUpperCase()){ showError('clastname','Confirm Last Name does not match Last Name.'); errors.push('clastname'); }
+      else { clearError('clastname'); markValid('clastname'); }
+    }
+
+    if(!radioVal('namechange')){ showError('namechange','Please select Yes or No.'); errors.push('namechange'); }
+    else { clearError('namechange'); }
+
+    if(radioVal('namechange') === 'Y'){
+      if(!reqName('fullname_updated','Updated First Name',35)) errors.push('fullname_updated');
+      if(val('fullname_updated').toUpperCase() !== val('cfullname_updated').toUpperCase()){
+        showError('cfullname_updated','Confirm Updated First Name does not match.');
+        errors.push('cfullname_updated');
+      } else { clearError('cfullname_updated'); markValid('cfullname_updated'); }
+      if(!$('namechange_confirmation').checked){
+        showError('namechange_confirmation','Please confirm the declaration.');
+        errors.push('namechange_confirmation');
+      }
+    }
+
+    var mob = val('txtmobile');
+    if(!mob){ showError('txtmobile','Mobile Number is required.'); errors.push('txtmobile'); }
+    else if(!/^[1-9][0-9]{9}$/.test(mob)){ showError('txtmobile','Enter a valid 10-digit mobile number (no leading 0).'); errors.push('txtmobile'); }
+    else { clearError('txtmobile'); markValid('txtmobile'); }
+
+    if(val('txtcmobile') !== mob || !val('txtcmobile')){
+      showError('txtcmobile','Confirm Mobile Number does not match.');
+      errors.push('txtcmobile');
+    } else { clearError('txtcmobile'); markValid('txtcmobile'); }
+
+    var alt = val('txtaltphone');
+    if(alt && !/^[1-9][0-9]{9}$/.test(alt)){
+      showError('txtaltphone','Enter a valid 10-digit number (no leading 0).');
+      errors.push('txtaltphone');
+    } else { clearError('txtaltphone'); }
+
+    if(!radioVal('mobileno_agree')){ showError('mobileno_agree','Please select an option.'); errors.push('mobileno_agree'); }
+    else { clearError('mobileno_agree'); }
+
+    var localPart = val('txtemail');
+    var domain = val('seldomain');
+    if(!localPart){ showError('txtemail','Email ID is required.'); errors.push('txtemail'); }
+    else if(!/^[A-Za-z0-9._%+-]+$/.test(localPart)){ showError('txtemail','Email ID contains invalid characters.'); errors.push('txtemail'); }
+    else { clearError('txtemail'); markValid('txtemail'); }
+
+    if(!domain){ showError('seldomain','Please select a domain.'); errors.push('seldomain'); }
+    else if(domain === 'Others' && !val('txtothdomain')){ showError('seldomain','Please enter the domain name.'); errors.push('seldomain'); }
+    else { clearError('seldomain'); }
+
+    var fullEmail = composedEmail();
+    if(fullEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fullEmail)){
+      showError('txtemail','Composed email address is not valid.');
+      errors.push('txtemail');
+    }
+
+    if(!val('txtcemail')){ showError('txtcemail','Confirm Email ID is required.'); errors.push('txtcemail'); }
+    else if(fullEmail && val('txtcemail').toLowerCase() !== fullEmail.toLowerCase()){
+      showError('txtcemail','Confirm Email ID does not match Email ID (' + fullEmail + ').');
+      errors.push('txtcemail');
+    } else if(fullEmail){ clearError('txtcemail'); markValid('txtcemail'); }
+
+    var code = val('txtCode');
+    if(!code){ showError('txtCode','Please enter the security code.'); errors.push('txtCode'); }
+    else if(code.toUpperCase() !== currentCaptcha.toUpperCase()){
+      showError('txtCode','Security code does not match. Please try again.');
+      errors.push('txtCode');
+      genCaptcha();
+      $('txtCode').value = '';
+    } else { clearError('txtCode'); markValid('txtCode'); }
+
+    return errors;
+  }
+
+  // ====== VALIDATE YOUR DETAILS BUTTON ======
+  $('ValidateBtn').addEventListener('click', function(){
+    var errors = validateAll();
+    var result = $('result');
+    if(errors.length){
+      result.className = 'alert-box error show';
+      result.style.display = 'block';
+      result.textContent = 'Validation found ' + errors.length + ' error(s). Please correct the highlighted fields.';
+      var firstBad = $(errors[0]);
+      if(firstBad) firstBad.scrollIntoView({behavior:'smooth', block:'center'});
+    } else {
+      result.className = 'alert-box success show';
+      result.style.display = 'block';
+      result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
+    }
+  });
+
+  // ====== SAVE & NEXT — SHOW CENTER MODAL ======
+  $('FinalSubmit').addEventListener('click', function(){
+    var errors = validateAll();
+    var result = $('result');
+    if(errors.length){
+      result.className = 'alert-box error show';
+      result.style.display = 'block';
+      result.textContent = 'Please correct the ' + errors.length + ' highlighted error(s) below before continuing.';
+      var firstBad = $(errors[0]);
+      if(firstBad) firstBad.scrollIntoView({behavior:'smooth', block:'center'});
+    } else {
+      // Show center modal instead of confirm()
+      $('confirmModal').classList.add('show');
+    }
+  });
+
+  // Modal: Cancel
+  $('modalCancel').addEventListener('click', function(){
+    $('confirmModal').classList.remove('show');
+  });
+
+  // Modal: OK — Proceed
+  $('modalOk').addEventListener('click', function(){
+    $('confirmModal').classList.remove('show');
+
+    // Store details for next steps
+    sessionStorage.setItem('ibps_fullname', val('fmlname'));
+    sessionStorage.setItem('ibps_mobile', val('txtmobile'));
+    sessionStorage.setItem('ibps_email', composedEmail());
+
+    // Generate random registration number and password
+    var regNo = Math.floor(1000000000 + Math.random() * 9000000000);
+    var pwdChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var pwd = '';
+    for (var i = 0; i < 8; i++) {
+      pwd += pwdChars.charAt(Math.floor(Math.random() * pwdChars.length));
+    }
+    sessionStorage.setItem('ibps_reg_no', regNo);
+    sessionStorage.setItem('ibps_password', pwd);
+
+    // Redirect to OTP verification (mobile + email) before photo & signature
+    window.location.href = 'otp_verification.html';
+  });
+
+  // Close modal on overlay click
+  $('confirmModal').addEventListener('click', function(e){
+    if(e.target === this) this.classList.remove('show');
+  });
+
+  // live-clear errors as user types/fixes
+  document.querySelectorAll('#reg_frm input, #reg_frm select').forEach(function(el){
+    el.addEventListener('input', function(){ clearError(this.id); });
+    el.addEventListener('change', function(){ clearError(this.id); });
+  });
+})();
+</script>
+
+</body>
+</html>
