@@ -212,12 +212,13 @@
   <div class="reg_container">
     <div class="container-lg p-0" id="menu">
       <ul class="progressbar mb-4">
-        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
-        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Information</span></a></li>
+        <li class="completed"><a href="otp_verification.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Verification</span></a></li>
+        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo &amp; Signature</span></a></li>
         <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
-        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
-        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
-        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+        <li class=""><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li class=""><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li class=""><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
       </ul>
     </div>
   </div>
@@ -1232,6 +1233,82 @@
     <!-- ===================== TAB 3: PREFERENCE ===================== -->
     <div class="tab-panel" id="tab-pref">
 
+    <!-- 4a. State/UT of Vacancy — IBPS Clerk is STATE-WISE recruitment -->
+    <div class="section-header">State / UT of Vacancy</div>
+    <div class="mb-2 label text-note">
+      <span class="info_box_note_green">
+        <div class="blob blue"></div>
+        IBPS Clerk (CRP CSA-XVI) is a <strong>state-wise</strong> recruitment. Select the <strong>one</strong> State/UT whose vacancies you wish to apply for. A candidate can apply for vacancies in <strong>only one</strong> State/UT and must be proficient (read, write, speak &amp; understand) in the <strong>official/local language</strong> of that State/UT.
+      </span>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="selVacancyState">State/UT for which you desire to apply <sup class="error">*</sup></label>
+        <select class="custom-select" name="vacancy_state" id="selVacancyState">
+          <option value="" selected>Select State/UT</option>
+          <option value="ANDHRA PRADESH">ANDHRA PRADESH</option>
+          <option value="ARUNACHAL PRADESH">ARUNACHAL PRADESH</option>
+          <option value="ASSAM">ASSAM</option>
+          <option value="BIHAR">BIHAR</option>
+          <option value="CHHATTISGARH">CHHATTISGARH</option>
+          <option value="GOA">GOA</option>
+          <option value="GUJARAT">GUJARAT</option>
+          <option value="HARYANA">HARYANA</option>
+          <option value="HIMACHAL PRADESH">HIMACHAL PRADESH</option>
+          <option value="JHARKHAND">JHARKHAND</option>
+          <option value="KARNATAKA">KARNATAKA</option>
+          <option value="KERALA">KERALA</option>
+          <option value="MADHYA PRADESH">MADHYA PRADESH</option>
+          <option value="MAHARASHTRA">MAHARASHTRA</option>
+          <option value="MANIPUR">MANIPUR</option>
+          <option value="MEGHALAYA">MEGHALAYA</option>
+          <option value="MIZORAM">MIZORAM</option>
+          <option value="NAGALAND">NAGALAND</option>
+          <option value="ODISHA">ODISHA</option>
+          <option value="PUNJAB">PUNJAB</option>
+          <option value="RAJASTHAN">RAJASTHAN</option>
+          <option value="SIKKIM">SIKKIM</option>
+          <option value="TAMIL NADU">TAMIL NADU</option>
+          <option value="TELANGANA">TELANGANA</option>
+          <option value="TRIPURA">TRIPURA</option>
+          <option value="UTTAR PRADESH">UTTAR PRADESH</option>
+          <option value="UTTARAKHAND">UTTARAKHAND</option>
+          <option value="WEST BENGAL">WEST BENGAL</option>
+          <option value="ANDAMAN &amp; NICOBAR ISLANDS">ANDAMAN &amp; NICOBAR ISLANDS</option>
+          <option value="CHANDIGARH">CHANDIGARH</option>
+          <option value="DADRA &amp; NAGAR HAVELI AND DAMAN &amp; DIU">DADRA &amp; NAGAR HAVELI AND DAMAN &amp; DIU</option>
+          <option value="DELHI (NCT)">DELHI (NCT)</option>
+          <option value="JAMMU &amp; KASHMIR">JAMMU &amp; KASHMIR</option>
+          <option value="LADAKH">LADAKH</option>
+          <option value="LAKSHADWEEP">LAKSHADWEEP</option>
+          <option value="PUDUCHERRY">PUDUCHERRY</option>
+        </select>
+        <div class="invalid-feedback" id="err_vacancy_state"></div>
+      </div>
+      <div class="form-group col-md-6">
+        <label for="selOfficialLang">Official / Local Language of the State/UT opted <sup class="error">*</sup></label>
+        <select class="custom-select" name="official_lang" id="selOfficialLang">
+          <option value="" selected>Select State/UT first</option>
+        </select>
+        <small class="form-text text-muted">Auto-filled from the State/UT you selected.</small>
+        <div class="invalid-feedback" id="err_official_lang"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-12">
+        <label>Do you possess proficiency (able to read, write, speak &amp; understand) in the official language of the State/UT opted for? <sup class="error">*</sup></label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="lang_proficiency" id="langProf1" class="custom-control-input">
+          <label class="custom-control-label" for="langProf1">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="lang_proficiency" id="langProf2" class="custom-control-input">
+          <label class="custom-control-label" for="langProf2">No</label>
+        </div>
+        <div class="invalid-feedback" id="err_lang_proficiency"></div>
+      </div>
+    </div>
+
     <!-- 4. Bank Preferences -->
     <div class="section-header">Participating Bank Preferences</div>
     <p class="small text-muted mb-3"><i class="bi bi-info-circle-fill"></i> Click a bank on the left to add it to your preference list on the right. Drag items on the right to reorder your priority.</p>
@@ -1848,6 +1925,94 @@ $('btnNext').addEventListener('click', function() {
 
   window.location.href = 'preview.html';
 });
+</script>
+
+<!-- ===== IBPS Clerk-specific: State/UT vacancy + official-language eligibility ===== -->
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+
+  // Official / local language(s) of each State/UT (Clerk is state-wise).
+  var STATE_LANG = {
+    'ANDHRA PRADESH':['TELUGU'], 'ARUNACHAL PRADESH':['ENGLISH','HINDI'], 'ASSAM':['ASSAMESE','BENGALI','BODO'],
+    'BIHAR':['HINDI'], 'CHHATTISGARH':['HINDI'], 'GOA':['KONKANI','MARATHI'], 'GUJARAT':['GUJARATI'],
+    'HARYANA':['HINDI','PUNJABI'], 'HIMACHAL PRADESH':['HINDI'], 'JHARKHAND':['HINDI'], 'KARNATAKA':['KANNADA'],
+    'KERALA':['MALAYALAM'], 'MADHYA PRADESH':['HINDI'], 'MAHARASHTRA':['MARATHI'], 'MANIPUR':['MANIPURI'],
+    'MEGHALAYA':['ENGLISH'], 'MIZORAM':['MIZO','ENGLISH'], 'NAGALAND':['ENGLISH'], 'ODISHA':['ODIA'],
+    'PUNJAB':['PUNJABI'], 'RAJASTHAN':['HINDI'], 'SIKKIM':['NEPALI','ENGLISH'], 'TAMIL NADU':['TAMIL'],
+    'TELANGANA':['TELUGU','URDU'], 'TRIPURA':['BENGALI','KOKBOROK'], 'UTTAR PRADESH':['HINDI'],
+    'UTTARAKHAND':['HINDI'], 'WEST BENGAL':['BENGALI','NEPALI'],
+    'ANDAMAN & NICOBAR ISLANDS':['HINDI','ENGLISH','TAMIL','BENGALI'],
+    'CHANDIGARH':['HINDI','PUNJABI','ENGLISH'],
+    'DADRA & NAGAR HAVELI AND DAMAN & DIU':['GUJARATI','HINDI','MARATHI'],
+    'DELHI (NCT)':['HINDI'], 'JAMMU & KASHMIR':['URDU','HINDI','KASHMIRI','DOGRI'],
+    'LADAKH':['HINDI','ENGLISH'], 'LAKSHADWEEP':['MALAYALAM'], 'PUDUCHERRY':['TAMIL']
+  };
+
+  function fillLanguages(){
+    var st = $('selVacancyState').value;
+    var sel = $('selOfficialLang');
+    var langs = STATE_LANG[st] || [];
+    sel.innerHTML = '';
+    if(!langs.length){
+      sel.appendChild(new Option('Select State/UT first',''));
+      return;
+    }
+    if(langs.length > 1) sel.appendChild(new Option('Select Language',''));
+    langs.forEach(function(l){ sel.appendChild(new Option(l, l)); });
+    if(langs.length === 1) sel.value = langs[0]; // auto-select when unambiguous
+  }
+  $('selVacancyState').addEventListener('change', function(){
+    fillLanguages();
+    clr('vacancy_state');
+  });
+
+  function err(field,msg){ var f=$(field), e=$('err_'+field); if(f&&f.classList)f.classList.add('valid_error'); if(e){e.textContent=msg;e.style.display='inline-block';} }
+  function clr(field){ var f=$(field), e=$('err_'+field); if(f&&f.classList)f.classList.remove('valid_error'); if(e){e.textContent='';e.style.display='none';} }
+  function radioVal(name){ var els=document.getElementsByName(name); for(var i=0;i<els.length;i++){ if(els[i].checked) return els[i].value; } return ''; }
+
+  function validateClerk(){
+    var bad = [];
+    if(!$('selVacancyState').value){ err('vacancy_state','Please select the State/UT you are applying for.'); bad.push('selVacancyState'); } else clr('vacancy_state');
+    if(!$('selOfficialLang').value){ err('official_lang','Please select the official language of the State/UT.'); bad.push('selOfficialLang'); } else clr('official_lang');
+    var prof = radioVal('lang_proficiency');
+    if(!prof){ err('lang_proficiency','Please confirm your language proficiency.'); bad.push('langProf1'); }
+    else if(prof === 'N'){ err('lang_proficiency','You must be proficient in the official language of the State/UT to apply for it.'); bad.push('langProf1'); }
+    else clr('lang_proficiency');
+    return bad;
+  }
+
+  ['selOfficialLang'].forEach(function(id){ $(id).addEventListener('change', function(){ clr('official_lang'); }); });
+  ['langProf1','langProf2'].forEach(function(id){ $(id).addEventListener('change', function(){ clr('lang_proficiency'); }); });
+
+  // Capture-phase gate: run BEFORE the page's own Save & Next handler so a
+  // missing Clerk-specific field blocks navigation the same way other fields do.
+  $('btnNext').addEventListener('click', function(e){
+    var bad = validateClerk();
+    if(bad.length){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      var result = $('result');
+      if(result){
+        result.className = 'alert-box error show';
+        result.style.display = 'block';
+        result.textContent = 'One or more error(s) found in page. Please complete the State/UT vacancy and language section before continuing.';
+      }
+      // Make sure the Preference tab is visible, then focus the first bad field.
+      var prefTabBtn = document.querySelector('.sub-tab-btn[data-tab="tab-pref"]');
+      if(prefTabBtn) prefTabBtn.click();
+      var first = $(bad[0]);
+      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    // Valid — persist the Clerk fields for the preview before the main handler navigates.
+    sessionStorage.setItem('ibps_vacancy_state', $('selVacancyState').value);
+    sessionStorage.setItem('ibps_official_lang', $('selOfficialLang').value);
+    sessionStorage.setItem('ibps_lang_proficiency', radioVal('lang_proficiency'));
+  }, true);
+
+  fillLanguages();
+})();
 </script>
 
   <script src="form-persist.js"></script>

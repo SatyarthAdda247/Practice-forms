@@ -102,12 +102,13 @@
   <div class="reg_container">
     <div class="container-lg p-0" id="menu">
       <ul class="progressbar mb-4">
-        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
-        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Information</span></a></li>
+        <li class="completed"><a href="otp_verification.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Verification</span></a></li>
+        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo &amp; Signature</span></a></li>
         <li class="completed"><a href="details.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
         <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
-        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
-        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+        <li class=""><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li class=""><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
       </ul>
     </div>
   </div>
@@ -313,6 +314,12 @@ var $ = function(id){ return document.getElementById(id); };
 
   sections.push(['Nationality / Citizenship', [
     ["Nationality / Citizenship", g('nationality')]
+  ]]);
+
+  sections.push(['State / UT of Vacancy', [
+    ["State/UT applied for (vacancy)", g('vacancy_state')],
+    ["Official / local language of State/UT", g('official_lang')],
+    ["Proficient in the official language", g('lang_proficiency')]
   ]]);
 
   sections.push(['Exam Centre Details', [
