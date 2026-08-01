@@ -19,24 +19,28 @@
   .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
   .practice-banner .brand{color:#ffe08a;}
 
-  /* ---- OTP box styling copied verbatim from the official verification.php ---- */
+  /* ---- OTP box styling (based on the official verification.php) ---- */
   .otp-wrapper .otp-box,
   .email-otp-wrapper .email-otp-box {
-    width: 40px;
-    height: 45px;
+    width: 46px !important;
+    height: 50px !important;
+    padding: 0 !important;
     text-align: center;
     font-size: 1.25rem;
     font-weight: bold;
+    line-height: 50px;
     border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    margin-right: 8px;
-    background-color: transparent;
+    border-radius: 0.375rem;
+    margin-right: 10px;
+    background-color: #fff;
+    box-sizing: border-box;
+    flex: 0 0 auto;
   }
   .otp-wrapper .otp-box:focus,
   .email-otp-wrapper .email-otp-box:focus {
-    border-color: #80bdff;
+    border-color: #4c56c0;
     outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(76, 86, 192, 0.25);
   }
   .otp-inputbox{ flex: 1; font-weight: bold; height: auto; }
   .otp-buttonsection{ white-space: nowrap; margin-left: 10px; }
