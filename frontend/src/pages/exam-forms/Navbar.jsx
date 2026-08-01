@@ -2,10 +2,12 @@
 // Exam Forms portal navbar: Official Adda247 logo, divider, product name,
 // search bar, and Google Sign-In / user profile.
 
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
 import GoogleSignIn from "../../components/GoogleSignIn.jsx";
 import { Adda247Logo } from "../../components/GovtLogos.jsx";
+import { api } from "../../api.js";
 import { useAuth } from "../../auth.jsx";
 
 /**
@@ -13,7 +15,23 @@ import { useAuth } from "../../auth.jsx";
  */
 export default function ExamFormsNavbar({ searchQuery, onSearchChange }) {
   const navigate = useNavigate();
-  const { user, loginWithGoogle, logout } = useAuth();
+  const { user, login, logout } = useAuth();
+  const [signInError, setSignInError] = useState("");
+
+  // Same exchange as the /login page: the Google ID token is worthless to us
+  // until the backend verifies it and hands back our own session token.
+  const handleCredential = useCallback(
+    async (credential) => {
+      setSignInError("");
+      try {
+        const { token, user: u } = await api.googleLogin(credential);
+        login(token, u);
+      } catch (e) {
+        setSignInError(e.message);
+      }
+    },
+    [login],
+  );
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -83,7 +101,14 @@ export default function ExamFormsNavbar({ searchQuery, onSearchChange }) {
               </button>
             </div>
           ) : (
-            <GoogleSignIn onLogin={loginWithGoogle} />
+            <div className="flex flex-col items-end gap-1">
+              <GoogleSignIn onCredential={handleCredential} onError={setSignInError} />
+              {signInError && (
+                <span className="text-[11px] text-red-600 max-w-[220px] text-right">
+                  {signInError}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
