@@ -85,6 +85,7 @@ from auth import (
     issue_session,
     login_required,
     role_for_email,
+    super_admin_required,
     verify_google_token,
 )
 import exam_forms_store
@@ -243,6 +244,8 @@ def api_index():
             {"method": "POST", "path": "/api/auth/logout", "desc": "Client-side logout (stateless)"},
             {"method": "GET", "path": "/api/admin/users", "desc": "List users + allowed domains (admin)"},
             {"method": "POST", "path": "/api/admin/users", "desc": "Pre-authorise a user by email (admin)"},
+            {"method": "POST", "path": "/api/admin/impersonate", "desc": "Start a Test-as-User session (super admin)"},
+            {"method": "POST", "path": "/api/auth/impersonate/stop", "desc": "End a Test-as-User session"},
             {"method": "PATCH", "path": "/api/admin/users/<id>", "desc": "Set a user's role / access (admin)"},
             {"method": "DELETE", "path": "/api/admin/users/<id>", "desc": "Delete a user (admin)"},
             {"method": "GET", "path": "/api/exams", "desc": "List exams"},
@@ -336,8 +339,90 @@ def auth_me():
 
     ``canViewLeads`` is included so the UI can hide the leads page from users
     who have not been approved for it. The endpoint itself re-checks — this is
-    only to avoid showing a link that would 403."""
-    return jsonify({**g.user, "canViewLeads": tools_store.can_view_leads(g.user)})
+    only to avoid showing a link that would 403.
+
+    ``impersonator`` is set when a super admin is acting as this user, so the
+    UI can show a banner and an exit. It must survive a page reload, which is
+    why it comes from here rather than being held in the client."""
+    return jsonify({
+        **g.user,
+        "canViewLeads": tools_store.can_view_leads(g.user),
+        "impersonator": _impersonator_summary(),
+    })
+
+
+def _impersonator_summary():
+    """``{email, name}`` for the admin acting through this session, else None."""
+    actor = getattr(g, "impersonator", None)
+    return {"email": actor["email"], "name": actor["name"]} if actor else None
+
+
+@app.post("/api/admin/impersonate")
+@super_admin_required
+def admin_impersonate():
+    """Start a "Test as User" session as the user with the given email.
+
+    Body: ``{ "email": "user@adda247.com" }``. Returns ``{ token, user }`` in
+    the same shape as sign-in, so the client swaps its session wholesale.
+
+    **Super admins only**, and never onto another super admin: impersonation
+    exists to see the product through a less-privileged pair of eyes, and
+    letting it reach a peer account would turn it into a way to act as another
+    administrator with nothing but the target's email address. The resulting
+    token is short-lived (see ``OMR_IMPERSONATION_MAX_AGE``).
+    """
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        return error("a valid email is required")
+
+    target = db.get_user_by_email(email)
+    if target is None:
+        return error("no user with that email", 404)
+    if target["id"] == g.user["id"]:
+        return error("you are already signed in as that user")
+    if not target["active"]:
+        return error("that user's access has been revoked", 403)
+    if target["role"] == "super_admin":
+        return error("a super admin cannot be impersonated", 403)
+
+    # Deliberately noisy: borrowing someone's identity is exactly the kind of
+    # action an audit needs to be able to reconstruct after the fact.
+    app.logger.warning(
+        "IMPERSONATION START actor=%s (id=%s) target=%s (id=%s role=%s)",
+        g.user["email"], g.user["id"], target["email"], target["id"], target["role"],
+    )
+    return jsonify({
+        "token": issue_session(target, actor=g.user),
+        "user": {
+            **target,
+            "canViewLeads": tools_store.can_view_leads(target),
+            "impersonator": {"email": g.user["email"], "name": g.user["name"]},
+        },
+    })
+
+
+@app.post("/api/auth/impersonate/stop")
+@login_required
+def auth_impersonate_stop():
+    """End a "Test as User" session and return to the admin's own identity.
+
+    The actor is read from the impersonation token itself, so the client never
+    has to hold on to the original session — nothing to leak, and nothing left
+    behind if the tab is closed mid-session.
+    """
+    actor = getattr(g, "impersonator", None)
+    if actor is None:
+        return error("not currently impersonating", 400)
+
+    app.logger.warning(
+        "IMPERSONATION STOP actor=%s (id=%s) target=%s (id=%s)",
+        actor["email"], actor["id"], g.user["email"], g.user["id"],
+    )
+    return jsonify({
+        "token": issue_session(actor),
+        "user": {**actor, "canViewLeads": tools_store.can_view_leads(actor)},
+    })
 
 
 @app.post("/api/auth/logout")
