@@ -52,6 +52,12 @@ export const PAGE_META = {
       "Defence, Teaching, State, and Central Government exams.",
     canonical: `${CANONICAL_ORIGIN}/answerkey-checker`,
   },
+  "/exam-forms": {
+    title: "Government Exam Registration Rehearsal Form (IBPS PO Replica)",
+    description:
+      "Practice completing multi-step government exam registration forms (Basic Info, Photo/Sig, Details, Uploads, Payment).",
+    canonical: `${CANONICAL_ORIGIN}/exam-forms`,
+  },
 };
 
 const escapeAttr = (s) =>

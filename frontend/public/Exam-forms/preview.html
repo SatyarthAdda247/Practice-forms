@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Application Preview — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+  .header-reg-info{font-size:12px;color:#1e293b;text-align:right;line-height:1.4;}
+  .header-reg-info strong{color:#4c56c0;}
+  
+  .preview-section-header {
+    background-color: #334155;
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .preview-table th {
+    background-color: #f8fafc;
+    width: 30%;
+    font-weight: 600;
+    color: #475569;
+  }
+  
+  .preview-photo {
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    width: 140px;
+    height: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-sig {
+    border: 1px solid #cbd5e1;
+    padding: 4px;
+    background: #fff;
+    width: 180px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<!-- PAGE-WIDE COPY/PASTE BLOCK -->
+<script>
+(function(){
+  ['copy','paste','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, true);
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, true);
+})();
+</script>
+
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow d-flex justify-content-between align-items-center">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+    <div class="header-reg-info pr-3" id="headerRegInfo" style="display:none;">
+      <div>Name: <strong id="hdrName"></strong></div>
+      <div>Reg. No: <strong id="hdrRegNo"></strong></div>
+    </div>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-4">
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
+        <li class="completed"><a href="photo_signature.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li class="completed"><a href="details.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
+        <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="basic_details_form p-4 p-md-5">
+    <div class="border-bottom pb-2 mb-4 d-flex justify-content-between align-items-center">
+      <h1 class="m-0">Application Preview</h1>
+      <span class="badge badge-secondary p-2">Practice Mode</span>
+    </div>
+    
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <div class="row mb-4">
+      <div class="col-sm-8">
+        <h4 class="font-weight-bold mb-1">Registration Details Summary</h4>
+        <p class="text-muted small">Please verify all the details before clicking "Complete Registration". No modifications will be allowed after this step.</p>
+      </div>
+      <div class="col-sm-4 d-flex justify-content-end">
+        <div class="preview-photo shadow-sm">
+          <img id="prevPhoto" src="" alt="Photo Preview" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+      </div>
+    </div>
+
+<div id="previewBody"></div>
+
+    <div class="row align-items-center mt-5 mb-4">
+      <div class="col-sm-8">
+        <div class="custom-control custom-checkbox mb-2">
+          <input type="checkbox" class="custom-control-input" id="confirmAgree">
+          <label class="custom-control-label font-weight-bold" for="confirmAgree">I agree to the terms and declarations mentioned in the application guidelines.</label>
+        </div>
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="confirmData">
+          <label class="custom-control-label font-weight-bold" for="confirmData">I confirm that my name in this application matches the identity proof produced at the exam.</label>
+        </div>
+        <div class="invalid-feedback" id="err_confirmAgree"></div>
+      </div>
+      <div class="col-sm-4 d-flex justify-content-end">
+        <div class="preview-sig shadow-sm">
+          <img id="prevSig" src="" alt="Signature Preview" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-5 mb-3">
+      <a href="details.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn" type="button" id="btnNext" value="Complete Registration">
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Load details from sessionStorage and render the full application preview
+(function() {
+  $('prevPhoto').src = sessionStorage.getItem('ibps_photoImg') || '';
+  $('prevSig').src = sessionStorage.getItem('ibps_sigImg') || '';
+
+  // Header registration info
+  var regName = sessionStorage.getItem('ibps_fullname');
+  var regNo = sessionStorage.getItem('ibps_reg_no');
+  if(regName && regNo){
+    $('headerRegInfo').style.display = 'block';
+    $('hdrName').textContent = regName;
+    $('hdrRegNo').textContent = regNo;
+  }
+
+  var snap = {};
+  try { snap = JSON.parse(sessionStorage.getItem('ibps_snapshot') || '{}'); } catch(e){ snap = {}; }
+
+  // Fallback to the individual keys details.html has always stored, so the
+  // preview stays complete even if the full snapshot isn't present.
+  var LEGACY = {
+    category:'ibps_category', disability:'ibps_disability', serving_govt:'ibps_serving_govt',
+    exserviceman:'ibps_exserviceman', minority:'ibps_minority', religion:'ibps_religion',
+    cwe_appeared:'ibps_cwe_appeared', apprentice:'ibps_apprentice', nationality:'ibps_nationality',
+    exam_state:'ibps_exam_state', prelim_i:'ibps_prelim_i', prelim_ii:'ibps_prelim_ii',
+    main_i:'ibps_main_i', main_ii:'ibps_main_ii', id_proof:'ibps_id_proof', id_proof_no:'ibps_id_proof_no',
+    gender:'ibps_gender', marital:'ibps_marital', aadhaar:'ibps_aadhaar', pan:'ibps_pan',
+    father_name:'ibps_father', mother_name:'ibps_mother', spouse_name:'ibps_spouse',
+    corr_state:'ibps_corr_state', corr_district:'ibps_corr_district', corr_pincode:'ibps_corr_pincode',
+    perm_state:'ibps_perm_state', perm_pincode:'ibps_perm_pincode', gst_address:'ibps_gst_address',
+    degree:'ibps_degree', passing_year:'ibps_year', percentage:'ibps_percentage',
+    lang1:'ibps_lang1', lang2:'ibps_lang2', lang3:'ibps_lang3'
+  };
+  var YN = { Y:'Yes', N:'No' };
+  function g(k){
+    var v = snap[k];
+    if(v === undefined || v === null || ('' + v).trim() === ''){
+      var lk = LEGACY[k];
+      if(lk){ var lv = sessionStorage.getItem(lk); if(lv){ v = YN[lv] || lv; } }
+    }
+    return (v === undefined || v === null) ? '' : ('' + v).trim();
+  }
+  function isYes(v){ return /^yes$/i.test((v||'').trim()); }
+  function join(sep, parts){ return parts.filter(function(p){ return p && (''+p).trim(); }).join(sep); }
+  function esc(s){
+    return ('' + s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  // Combined helpers
+  var mobile = sessionStorage.getItem('ibps_mobile') || '';
+  var email  = sessionStorage.getItem('ibps_email')  || '';
+  var fullName = regName || '';
+  var dob = join(' ', [g('dob_dd'), g('dob_mm'), g('dob_yyyy')]) || (sessionStorage.getItem('ibps_dob') || '');
+  var reliefDate = join(' ', [g('relief_dd'), g('relief_mm'), g('relief_yyyy')]);
+  var appStart = join(' ', [g('appstart_dd'), g('appstart_mm'), g('appstart_yyyy')]);
+  var appEnd   = join(' ', [g('append_dd'), g('append_mm'), g('append_yyyy')]);
+  var corrAddr = join(', ', [g('corr_addr1'), g('corr_addr2'), g('corr_addr3')])
+                 || sessionStorage.getItem('ibps_corr_addr') || sessionStorage.getItem('ibps_address') || '';
+  var permAddr = join(', ', [g('perm_addr1'), g('perm_addr2'), g('perm_addr3')])
+                 || sessionStorage.getItem('ibps_perm_addr') || '';
+
+  var disabilityYes = isYes(g('disability'));
+  var exsvcYes      = isYes(g('exserviceman'));
+  var cweYes        = isYes(g('cwe_appeared'));
+  var apprYes       = isYes(g('apprentice'));
+  var twinYes       = isYes(g('twin'));
+  var expYes        = isYes(g('has_experience'));
+
+  // Build sections: each is [title, rows[]] where a row is [label, value]
+  var sections = [];
+
+  sections.push(['Basic Details', [
+    ["Full Name", fullName],
+    ["Mobile Number", mobile ? ('+91 ' + mobile) : ''],
+    ["Email Address", email],
+    ["Category", g('category')]
+  ]]);
+
+  var disRows = [["Person with benchmark disability (>= 40%)", g('disability')]];
+  if(disabilityYes){
+    disRows.push(
+      ["Type of Disability", g('disability_type')],
+      ["Sub-Type ('ID & Others')", g('subtype_id')],
+      ["Sub-Type of Disability", g('subtype')],
+      ["Sub-Type of Multiple Disability", g('multi_disability')],
+      ["Eligible for compensatory time (PwBD)", g('comp_time')],
+      ["Cerebral palsy affecting writing speed", g('cerebral')],
+      ["→ Needs compensatory time", g('cerebral_comp')],
+      ["Dominant (writing) hand affected", g('dominant_hand')],
+      ["→ Needs compensatory time", g('dominant_comp')],
+      ["Wishes to use scribe", g('scribe')],
+      ["Specified disability u/s 2(s), not 2(r), difficulty writing", g('spec_2s')],
+      ["→ Needs compensatory time", g('spec_2s_comp')],
+      ["Eligible & wishes to use scribe u/s 2(s)", g('scribe_2s')],
+      ["Scribe certificate declaration accepted", g('cert_scribe')]
+    );
+  }
+  sections.push(['Details of Disability', disRows]);
+
+  sections.push(['Experience', [
+    ["Serving in Govt./ quasi-Govt./ PSU", g('serving_govt')]
+  ]]);
+
+  var exRows = [["Ex-Serviceman", g('exserviceman')]];
+  if(exsvcYes){
+    exRows.push(
+      ["Service rendered (in months)", g('service_months')],
+      ["Date of relief from defence services", reliefDate],
+      ["Joined Govt. civil job after ex-serviceman benefits", g('civil_job')],
+      ["Organization name", g('civil_org')]
+    );
+  }
+  sections.push(['Ex-Serviceman Details', exRows]);
+
+  sections.push(['Religious Minority', [
+    ["Belongs to Religious Minority Community", g('minority')],
+    ["Religion of the applicant", g('religion')]
+  ]]);
+
+  var cweRows = [["Appeared for CWE/CRP-PO/MT earlier", g('cwe_appeared')]];
+  if(cweYes){
+    cweRows.push(
+      ["Number of earlier attempts", g('cwe_attempts')],
+      ["Attempts selected", g('cwe_list')]
+    );
+  }
+  sections.push(['CWE/CRP Appeared Details', cweRows]);
+
+  var apprRows = [["Trained Apprentice (PSB/SBI/BFSI)", g('apprentice')]];
+  if(apprYes){
+    apprRows.push(
+      ["Bank / BFSI Sector", g('bank_bfsi')],
+      ["Apprenticeship start date", appStart],
+      ["Apprenticeship end date", appEnd],
+      ["HRMS ID", g('hrms_id')],
+      ["Registered on NATS/NAPS portal", g('naps_register')],
+      ["NATS/NAPS Enrollment Number", g('naps_number')]
+    );
+  }
+  sections.push(['Details of Apprenticeship', apprRows]);
+
+  sections.push(['Nationality / Citizenship', [
+    ["Nationality / Citizenship", g('nationality')]
+  ]]);
+
+  sections.push(['Exam Centre Details', [
+    ["State/UT/NCR of examination centre", g('exam_state')],
+    ["State code", g('state_code')],
+    ["Preliminary Exam — Preference I", g('prelim_i')],
+    ["Preliminary Exam — Preference II", g('prelim_ii')],
+    ["Main Exam — Preference I", g('main_i')],
+    ["Main Exam — Preference II", g('main_ii')]
+  ]]);
+
+  sections.push(['ID Proof Details', [
+    ["ID name-match declaration confirmed", g('confirm_id')],
+    ["ID Proof", g('id_proof')],
+    ["ID Proof No.", g('id_proof_no')]
+  ]]);
+
+  var perRows = [
+    ["Date of Birth", dob],
+    ["Gender", g('gender')],
+    ["Marital Status", g('marital')],
+    ["Aadhaar Card Number", g('aadhaar')],
+    ["PAN Card Number", g('pan')],
+    ["Has twin/ triplet/ quadruplet", g('twin')]
+  ];
+  if(twinYes){
+    perRows.push(
+      ["Twin type", g('twin_type')],
+      ["Sibling appearing in CRP PO/MT-XVI", g('twin_appearing')]
+    );
+  }
+  perRows.push(
+    ["Father's Name", g('father_name')],
+    ["Mother's Name", g('mother_name')],
+    ["Spouse's Name", g('spouse_name')],
+    ["Name-same-as-parent declaration", g('declare_name')]
+  );
+  sections.push(['Personal Details', perRows]);
+
+  sections.push(['Address for Correspondence', [
+    ["Address", corrAddr],
+    ["State", g('corr_state')],
+    ["District", g('corr_district')],
+    ["Pincode", g('corr_pincode')]
+  ]]);
+
+  sections.push(['Permanent Address', [
+    ["Same as Correspondence address", g('same_addr')],
+    ["Address", permAddr],
+    ["State", g('perm_state')],
+    ["District", g('perm_district')],
+    ["Pincode", g('perm_pincode')]
+  ]]);
+
+  sections.push(['GST Invoicing', [
+    ["Address chosen for GST invoicing", g('gst_address')]
+  ]]);
+
+  sections.push(['Educational Qualifications', [
+    ["Graduation Stream", g('degree')],
+    ["Year of Passing", g('passing_year')],
+    ["Marks Obtained (%)", g('percentage') ? (g('percentage') + '%') : '']
+  ]]);
+
+  var qexpRows = [["Has work experience", g('has_experience')]];
+  if(expYes){
+    qexpRows.push(
+      ["Organisation / Company", g('org_name')],
+      ["Designation", g('designation')],
+      ["Total experience (years)", g('exp_years')],
+      ["Experience from", g('exp_from')],
+      ["Experience to", g('exp_to')],
+      ["Type of experience", g('exp_type')]
+    );
+  }
+  sections.push(['Experience Details', qexpRows]);
+
+  sections.push(['Languages Known', [
+    ["Language 1 (Proficient)", g('lang1')],
+    ["Language 2", g('lang2')],
+    ["Language 3", g('lang3')]
+  ]]);
+
+  // Render sections
+  var html = '';
+  sections.forEach(function(sec){
+    var title = sec[0];
+    var rows = sec[1].filter(function(r){ return r[1] && (''+r[1]).trim(); });
+    if(!rows.length) return;
+    html += '<div class="preview-section-header">' + esc(title) + '</div>';
+    html += '<div class="table-responsive"><table class="table table-bordered preview-table bg-white"><tbody>';
+    rows.forEach(function(r){
+      html += '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  // Participating Bank Preferences
+  var bankList = [];
+  try { bankList = JSON.parse(sessionStorage.getItem('ibps_banks') || '[]'); } catch(e){ bankList = []; }
+  html += '<div class="preview-section-header">Participating Bank Preferences</div>';
+  html += '<div class="table-responsive"><table class="table table-bordered preview-table bg-white"><tbody><tr><th>Bank order of preference</th><td>';
+  if(bankList.length){
+    html += '<ol class="pl-3 mb-0">';
+    bankList.forEach(function(b){ html += '<li>' + esc(b) + '</li>'; });
+    html += '</ol>';
+  } else {
+    html += 'No preference set';
+  }
+  html += '</td></tr></tbody></table></div>';
+
+  $('previewBody').innerHTML = html;
+})();
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var errors = [];
+  var result = $('result');
+  result.style.display = 'none';
+  clearError('confirmAgree');
+
+  if (!$('confirmAgree').checked || !$('confirmData').checked) {
+    showError('confirmAgree', 'You must agree to the declarations and confirm your name identity.');
+    errors.push('confirmAgree');
+  }
+
+  if (errors.length) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please confirm all declarations by checking the boxes above before completing registration.';
+    return;
+  }
+
+  // Go to Uploads Page
+  window.location.href = 'uploads.html';
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Photo & Signature Upload — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+
+  .form-control.is-invalid{border-color:#dc3545 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  .header-reg-info{font-size:12px;color:#1e293b;text-align:right;line-height:1.4;}
+  .header-reg-info strong{color:#4c56c0;}
+
+  /* Green advisory boxes (as on the official page) */
+  .advisory-box{
+    background:#f0fdf4;border:1px solid #86efac;border-radius:6px;
+    padding:12px 16px;color:#166534;font-size:13px;line-height:1.55;margin-bottom:14px;
+  }
+
+  /* Upload card */
+  .upload-card{
+    border:1px solid #cbd5e1;border-radius:8px;background:#fff;
+    padding:22px;margin-bottom:24px;
+  }
+  .upload-card .col-label{font-weight:700;color:#334155;font-size:15px;margin-bottom:10px;}
+
+  .file-picker{display:flex;align-items:stretch;max-width:340px;border:1px solid #cbd5e1;border-radius:4px;overflow:hidden;}
+  .file-picker .fp-name{flex:1;padding:7px 10px;font-size:13px;color:#64748b;background:#fff;}
+  .file-picker .fp-btn{border:none;background:#e2e8f0;color:#334155;font-weight:600;font-size:13px;padding:7px 16px;cursor:pointer;border-left:1px solid #cbd5e1;}
+  .file-picker .fp-btn:hover{background:#cbd5e1;}
+
+  .guidelines-link{display:inline-block;color:#2563eb;font-size:12.5px;text-decoration:underline;cursor:pointer;margin:10px 0 4px;}
+  .and-or{font-weight:700;color:#334155;text-align:center;margin:16px 0 10px;font-size:14px;}
+
+  .capture-btn{
+    display:block;width:100%;max-width:340px;text-align:center;
+    background:#e2e8f0;color:#94a3b8;border:1px solid #cbd5e1;border-radius:4px;
+    padding:9px;font-weight:600;font-size:13.5px;cursor:pointer;margin-bottom:12px;
+  }
+  .capture-btn.enabled{background:#3b82f6;color:#fff;border-color:#3b82f6;cursor:pointer;}
+  .capture-btn.enabled:hover{background:#2563eb;}
+
+  .qr-label{font-weight:700;color:#334155;font-size:13.5px;margin-bottom:8px;}
+  .qr-box{
+    width:150px;height:150px;border:1px solid #cbd5e1;border-radius:4px;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    color:#64748b;font-size:12.5px;cursor:pointer;position:relative;overflow:hidden;
+    background:
+      repeating-linear-gradient(45deg,#e2e8f0 0 6px,#f1f5f9 6px 12px);
+  }
+  .qr-box span{background:rgba(255,255,255,.85);padding:6px 10px;border-radius:4px;}
+
+  /* Image preview boxes */
+  .img-preview-wrap{text-align:center;margin-bottom:8px;}
+  .img-box{
+    width:150px;height:180px;border:1px solid #cbd5e1;border-radius:4px;background:#fff;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto 6px;
+  }
+  .img-box.sig{width:230px;height:90px;}
+  .img-box img{max-width:100%;max-height:100%;display:none;}
+  .img-box .ph{color:#94a3b8;font-size:12px;}
+  .img-caption{font-weight:700;color:#334155;font-size:13px;margin-bottom:6px;}
+
+  .confirm-row{display:flex;align-items:flex-start;gap:8px;max-width:340px;margin:0 auto 18px;}
+  .confirm-row .custom-control-label{font-size:12.5px;color:#1e293b;line-height:1.4;}
+
+  .divider-vert{border-right:1px solid #e2e8f0;}
+  @media (max-width:767px){ .divider-vert{border-right:none;border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:16px;} }
+
+  /* ===== Webcam capture modal ===== */
+  .cam-overlay{
+    display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);
+    z-index:10000;justify-content:center;align-items:center;padding:16px;
+  }
+  .cam-overlay.show{display:flex;}
+  .cam-dialog{
+    background:#fff;border-radius:12px;box-shadow:0 12px 48px rgba(0,0,0,.35);
+    width:100%;max-width:520px;padding:20px 22px;text-align:center;
+  }
+  .cam-dialog h4{font-weight:700;color:#1e293b;font-size:18px;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .cam-dialog .cam-sub{font-size:12.5px;color:#64748b;margin-bottom:14px;}
+  .cam-stage{
+    width:100%;max-width:360px;margin:0 auto 14px;background:#0f172a;border-radius:10px;
+    overflow:hidden;position:relative;aspect-ratio:3.5/4.5;display:flex;align-items:center;justify-content:center;
+  }
+  .cam-stage video,.cam-stage img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cam-stage video{transform:scaleX(-1);} /* mirror live preview */
+  .cam-guide{
+    position:absolute;inset:12%;border:2px dashed rgba(255,255,255,.6);border-radius:8px;pointer-events:none;
+  }
+  .cam-msg{color:#e2e8f0;font-size:13px;padding:24px;line-height:1.5;}
+  .cam-btn{border-radius:6px;font-weight:600;font-size:13.5px;padding:8px 20px;margin:4px;border:none;cursor:pointer;}
+  .cam-btn-primary{background:#3b82f6;color:#fff;}
+  .cam-btn-primary:hover{background:#2563eb;}
+  .cam-btn-success{background:#16a34a;color:#fff;}
+  .cam-btn-success:hover{background:#15803d;}
+  .cam-btn-light{background:#e2e8f0;color:#334155;}
+  .cam-btn-light:hover{background:#cbd5e1;}
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<!-- PAGE-WIDE COPY/PASTE BLOCK -->
+<script>
+(function(){
+  ['copy','paste','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, true);
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, true);
+})();
+</script>
+
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. Nothing typed here is submitted, transmitted, or stored anywhere.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow d-flex justify-content-between align-items-center">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+    <div class="header-reg-info pr-3" id="headerRegInfo" style="display:none;">
+      <div>Name: <strong id="hdrName"></strong></div>
+      <div>Reg. No: <strong id="hdrRegNo"></strong></div>
+    </div>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-4">
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
+        <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Uploads</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="photo_sig_frm" name="photo_sig_frm" autocomplete="off" novalidate>
+    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+      <h1 class="m-0">Photo &amp; Signature</h1>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoData"><i class="bi bi-magic"></i> Use Demo Photo &amp; Signature</button>
+    </div>
+
+    <!-- Advisory boxes (as on the official page) -->
+    <div class="advisory-box">
+      A recent, CLEARLY recognizable passport size photograph (4.5cm x 3.5cm) should be uploaded by the candidate in the online application form and the signature uploaded should be clear and legible. Candidates are also advised not to change their appearance till the process is completed. Any doubt about photograph or signature at any stage of the process could lead to disqualification.
+    </div>
+    <div class="advisory-box">
+      Candidates are required to capture and upload their photograph either by using webcam or mobile phone.
+    </div>
+
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <!-- ===================== PHOTOGRAPH CARD ===================== -->
+    <div class="upload-card">
+      <div class="row">
+        <!-- LEFT: controls -->
+        <div class="col-md-6 divider-vert">
+          <div class="col-label">Scanned Photograph of the Candidate:</div>
+
+          <div class="file-picker">
+            <span class="fp-name" id="photoFileName">Choose file</span>
+            <button type="button" class="fp-btn" onclick="$('photoFile').click()">Browse</button>
+          </div>
+          <input type="file" id="photoFile" accept=".jpg,.jpeg" style="display:none">
+
+          <span class="guidelines-link" id="lnkGuidelines1">Guidelines for scanning the Photograph &amp; Signature</span>
+          <p class="small text-muted mb-0">Photo should be clearly visible in the adjacent box</p>
+
+          <div class="and-or">(AND)</div>
+
+          <div class="qr-label text-center">Capture Photo using Webcamera</div>
+          <button type="button" class="capture-btn enabled" id="btnCapturePhoto">Capture Photo</button>
+
+          <div class="and-or">(OR)</div>
+
+          <div class="qr-label text-center">Scan QR to capture the Photo via Mobile</div>
+          <div class="d-flex justify-content-center">
+            <div class="qr-box" id="qrBox"><span>Click here to scan</span></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: uploaded + live captured images -->
+        <div class="col-md-6">
+          <!-- Uploaded Image -->
+          <div class="img-preview-wrap">
+            <div class="img-box">
+              <img id="photoImg" src="" alt="Uploaded Image">
+              <div class="ph" id="photoPlaceholder">Uploaded Image</div>
+            </div>
+            <div class="img-caption">Uploaded Image</div>
+          </div>
+          <div class="confirm-row">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="confirmRecent" name="confirmRecent">
+              <label class="custom-control-label" for="confirmRecent">I confirm that this is my recent (not more than 6 months old) photograph.</label>
+            </div>
+          </div>
+          <div class="invalid-feedback" id="err_confirmRecent"></div>
+
+          <!-- Live Captured Image -->
+          <div class="img-preview-wrap mt-2">
+            <div class="img-box">
+              <img id="liveImg" src="" alt="Live Captured Image">
+              <div class="ph" id="livePlaceholder">Live Captured Image</div>
+            </div>
+            <div class="img-caption">Live Captured Image</div>
+          </div>
+          <div class="confirm-row">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="confirmCaptured" name="confirmCaptured">
+              <label class="custom-control-label" for="confirmCaptured">I confirm that this is my photograph and has been captured while filling the application.</label>
+            </div>
+          </div>
+          <div class="invalid-feedback" id="err_confirmCaptured"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== SIGNATURE CARD ===================== -->
+    <div class="upload-card">
+      <div class="row">
+        <div class="col-md-6 divider-vert">
+          <div class="col-label">Scanned Signature of the Candidate:</div>
+          <div class="file-picker">
+            <span class="fp-name" id="sigFileName">Choose file</span>
+            <button type="button" class="fp-btn" onclick="$('sigFile').click()">Browse</button>
+          </div>
+          <input type="file" id="sigFile" accept=".jpg,.jpeg" style="display:none">
+
+          <div class="mt-2">
+            <span class="capture-btn" style="max-width:150px;display:inline-block;cursor:pointer;" id="btnSigScan">Click here to scan</span>
+          </div>
+
+          <span class="guidelines-link" id="lnkGuidelines2">Guidelines for scanning the Photograph &amp; Signature</span>
+          <p class="small text-muted mb-0">Signature should not be in CAPITAL / BLOCK letters</p>
+        </div>
+
+        <div class="col-md-6">
+          <div class="img-preview-wrap">
+            <div class="img-box sig">
+              <img id="sigImg" src="" alt="Uploaded Signature">
+              <div class="ph" id="sigPlaceholder">Uploaded Signature</div>
+            </div>
+          </div>
+          <div class="confirm-row" style="max-width:100%;">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="confirmSig" name="confirmSig">
+              <label class="custom-control-label" for="confirmSig">I confirm that this is my valid signature and also agree to above mentioned Note.</label>
+            </div>
+          </div>
+          <div class="invalid-feedback" id="err_confirmSig"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-4 mb-5">
+      <a href="otp_verification.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn" type="button" id="btnNext" value="Next">
+    </div>
+  </form>
+</div>
+
+<!-- ===== Webcam capture modal ===== -->
+<div class="cam-overlay" id="camOverlay">
+  <div class="cam-dialog">
+    <h4><i class="bi bi-camera-fill" style="color:#3b82f6"></i> Capture Photo</h4>
+    <div class="cam-sub">Position your face inside the dashed guide, then click Capture.</div>
+
+    <div class="cam-stage" id="camStage">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <img id="camShot" style="display:none;" alt="Captured frame">
+      <div class="cam-guide" id="camGuide"></div>
+      <div class="cam-msg" id="camMsg" style="display:none;"></div>
+    </div>
+    <canvas id="camCanvas" style="display:none;"></canvas>
+
+    <div id="camControls">
+      <button type="button" class="cam-btn cam-btn-primary" id="camCapture"><i class="bi bi-camera"></i> Capture</button>
+      <button type="button" class="cam-btn cam-btn-light" id="camClose">Cancel</button>
+    </div>
+    <div id="camControlsAfter" style="display:none;">
+      <button type="button" class="cam-btn cam-btn-light" id="camRetake"><i class="bi bi-arrow-counterclockwise"></i> Retake</button>
+      <button type="button" class="cam-btn cam-btn-success" id="camUse"><i class="bi bi-check-lg"></i> Use this Photo</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+
+// Header registration info + disable copy/paste
+(function() {
+  var regNo = sessionStorage.getItem('ibps_reg_no');
+  var regName = sessionStorage.getItem('ibps_fullname');
+  if(regName && regNo){
+    $('headerRegInfo').style.display = 'block';
+    $('hdrName').textContent = regName;
+    $('hdrRegNo').textContent = regNo;
+  }
+  document.querySelectorAll('#photo_sig_frm input').forEach(function(el){
+    el.addEventListener('copy', function(e){ e.preventDefault(); });
+    el.addEventListener('paste', function(e){ e.preventDefault(); });
+    el.addEventListener('cut', function(e){ e.preventDefault(); });
+  });
+})();
+
+// Guidelines links
+['lnkGuidelines1','lnkGuidelines2'].forEach(function(id){
+  $(id).addEventListener('click', function(){
+    alert('Guidelines for scanning the Photograph & Signature:\n\n' +
+      '• Photograph: recent, passport size (4.5cm x 3.5cm), clear background, face clearly visible.\n' +
+      '• File format JPG/JPEG, dimensions ~200x230 px, size 20 KB - 50 KB.\n' +
+      '• Signature: on white paper with black ink, size ~140x60 px, 10 KB - 20 KB.\n' +
+      '• Signature must NOT be in CAPITAL / BLOCK letters.');
+  });
+});
+
+// File readers
+$('photoFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  $('photoFileName').textContent = file ? file.name : 'Choose file';
+  handleFileSelect(file, 'photoImg', 'photoPlaceholder', 'ibps_photoImg');
+});
+$('sigFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  $('sigFileName').textContent = file ? file.name : 'Choose file';
+  handleFileSelect(file, 'sigImg', 'sigPlaceholder', 'ibps_sigImg');
+});
+
+function handleFileSelect(file, imgId, placeholderId, storeKey) {
+  if (!file) return;
+  if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
+    alert('Please upload only JPG or JPEG files.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var img = $(imgId);
+    img.src = evt.target.result;
+    img.style.display = 'block';
+    $(placeholderId).style.display = 'none';
+    sessionStorage.setItem(storeKey, evt.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===== Real webcam capture -> Live Captured Image =====
+var camStream = null;
+var capturedDataUrl = null;
+
+function stopCam(){
+  if(camStream){ camStream.getTracks().forEach(function(t){ t.stop(); }); camStream = null; }
+}
+function showCamMessage(html){
+  $('camVideo').style.display = 'none';
+  $('camShot').style.display = 'none';
+  $('camGuide').style.display = 'none';
+  var msg = $('camMsg');
+  msg.style.display = 'block';
+  msg.innerHTML = html;
+  $('camControls').style.display = 'none';
+  $('camControlsAfter').style.display = 'none';
+}
+function resetCamToLive(){
+  $('camShot').style.display = 'none';
+  $('camMsg').style.display = 'none';
+  $('camVideo').style.display = 'block';
+  $('camGuide').style.display = 'block';
+  $('camControls').style.display = 'block';
+  $('camControlsAfter').style.display = 'none';
+  capturedDataUrl = null;
+}
+function closeCam(){
+  stopCam();
+  $('camOverlay').classList.remove('show');
+}
+
+async function openCam(){
+  $('camOverlay').classList.add('show');
+  resetCamToLive();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showCamMessage('Your browser does not support live camera capture. Please use the <b>Browse</b> option to upload a photo instead.');
+    return;
+  }
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 800 } },
+      audio: false
+    });
+    var v = $('camVideo');
+    v.srcObject = camStream;
+    await v.play().catch(function(){});
+  }catch(err){
+    var hint = 'Unable to access the camera.';
+    if(err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')){
+      hint = 'Camera permission was blocked. Please allow camera access for this site in your browser and try again.';
+    } else if(err && err.name === 'NotFoundError'){
+      hint = 'No camera was found on this device.';
+    } else if(err && err.name === 'NotReadableError'){
+      hint = 'The camera is currently in use by another application. Close it and try again.';
+    }
+    showCamMessage(hint + '<br><br>You can also use the <b>Browse</b> option to upload a photo.');
+  }
+}
+
+$('btnCapturePhoto').addEventListener('click', openCam);
+$('camClose').addEventListener('click', closeCam);
+$('camOverlay').addEventListener('click', function(e){ if(e.target === this) closeCam(); });
+
+$('camCapture').addEventListener('click', function(){
+  var v = $('camVideo');
+  if(!v.videoWidth){ return; }
+  var canvas = $('camCanvas');
+  canvas.width = v.videoWidth;
+  canvas.height = v.videoHeight;
+  var ctx = canvas.getContext('2d');
+  // mirror horizontally to match the previewed (mirrored) video
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+  capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+  var shot = $('camShot');
+  shot.src = capturedDataUrl;
+  shot.style.display = 'block';
+  v.style.display = 'none';
+  $('camGuide').style.display = 'none';
+  $('camControls').style.display = 'none';
+  $('camControlsAfter').style.display = 'block';
+});
+
+$('camRetake').addEventListener('click', resetCamToLive);
+
+$('camUse').addEventListener('click', function(){
+  if(!capturedDataUrl){ return; }
+  var img = $('liveImg');
+  img.src = capturedDataUrl;
+  img.style.display = 'block';
+  $('livePlaceholder').style.display = 'none';
+  sessionStorage.setItem('ibps_liveImg', capturedDataUrl);
+  closeCam();
+});
+
+// QR / signature scan info
+$('qrBox').addEventListener('click', function(){ alert('In the official portal this opens a QR code to capture your photo from a mobile phone. (Disabled in this practice copy.)'); });
+$('btnSigScan').addEventListener('click', function(){ alert('In the official portal this lets you scan your signature. Use "Browse" to upload a JPG in this practice copy.'); });
+
+// Demo data
+$('btnDemoData').addEventListener('click', function() {
+  var demoPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23e2e8f0'/><circle cx='75' cy='70' r='30' fill='%2394a3b8'/><path d='M35,140 C35,110 115,110 115,140 L115,180 L35,180 Z' fill='%2394a3b8'/><text x='75' y='160' font-family='sans-serif' font-size='12' fill='%23475569' text-anchor='middle'>DEMO PHOTO</text></svg>";
+  var demoLive = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23dbeafe'/><circle cx='75' cy='68' r='30' fill='%2360a5fa'/><path d='M32,142 C32,110 118,110 118,142 L118,180 L32,180 Z' fill='%2360a5fa'/><text x='75' y='168' font-family='sans-serif' font-size='11' fill='%231e3a8a' text-anchor='middle'>LIVE CAPTURE</text></svg>";
+  var demoSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80' viewBox='0 0 200 80'><rect width='200' height='80' fill='%23f1f5f9'/><path d='M20,40 Q40,10 60,40 T100,40 T140,40 T180,30' fill='none' stroke='%230f172a' stroke-width='2'/><text x='100' y='68' font-family='sans-serif' font-size='10' fill='%2364748b' text-anchor='middle'>Demo Signature</text></svg>";
+
+  $('photoImg').src = demoPhoto; $('photoImg').style.display='block'; $('photoPlaceholder').style.display='none';
+  $('photoFileName').textContent = 'demo_photo.jpg';
+  sessionStorage.setItem('ibps_photoImg', demoPhoto);
+
+  $('liveImg').src = demoLive; $('liveImg').style.display='block'; $('livePlaceholder').style.display='none';
+  sessionStorage.setItem('ibps_liveImg', demoLive);
+
+  $('sigImg').src = demoSig; $('sigImg').style.display='block'; $('sigPlaceholder').style.display='none';
+  $('sigFileName').textContent = 'demo_sig.jpg';
+  sessionStorage.setItem('ibps_sigImg', demoSig);
+
+  $('confirmRecent').checked = true;
+  $('confirmCaptured').checked = true;
+  $('confirmSig').checked = true;
+  clearError('confirmRecent'); clearError('confirmCaptured'); clearError('confirmSig');
+});
+
+function showError(field, msg){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.add('is-invalid');
+  if(err){ err.textContent = msg; err.classList.add('show'); }
+}
+function clearError(field){
+  var err = $('err_' + field);
+  var input = $(field);
+  if(input) input.classList.remove('is-invalid');
+  if(err){ err.textContent = ''; err.classList.remove('show'); }
+}
+
+$('btnNext').addEventListener('click', function() {
+  var result = $('result');
+  clearError('confirmRecent'); clearError('confirmCaptured'); clearError('confirmSig');
+  result.style.display = 'none';
+
+  var hasPhoto = sessionStorage.getItem('ibps_photoImg');
+  var hasLive  = sessionStorage.getItem('ibps_liveImg');
+  var hasSig   = sessionStorage.getItem('ibps_sigImg');
+  var errors = 0;
+
+  if (!hasPhoto) { alert('Please upload your scanned photograph (use "Browse").'); return; }
+  if (!$('confirmRecent').checked) { showError('confirmRecent','Please confirm this is your recent photograph.'); errors++; }
+
+  if (!hasLive) { alert('Please capture your live photograph (click "Capture Photo").'); return; }
+  if (!$('confirmCaptured').checked) { showError('confirmCaptured','Please confirm the captured photograph declaration.'); errors++; }
+
+  if (!hasSig) { alert('Please upload your scanned signature (use "Browse").'); return; }
+  if (!$('confirmSig').checked) { showError('confirmSig','Please confirm this is your valid signature.'); errors++; }
+
+  if (errors) {
+    result.className = 'alert-box error show';
+    result.style.display = 'block';
+    result.textContent = 'Please tick all confirmation checkboxes before continuing.';
+    return;
+  }
+
+  window.location.href = 'details.html';
+});
+</script>
+
+</body>
+</html>

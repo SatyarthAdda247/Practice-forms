@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Mobile &amp; Email OTP Verification — IBPS PO PRACTICE COPY by Adda247</title>
+
+<link rel="stylesheet" href="css/bootstrap_rwd.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bootstrap-icons.css">
+<link rel="stylesheet" href="css/jquery-ui.min.css">
+<link rel="stylesheet" href="css/inb.css">
+
+<style>
+  .practice-banner{
+    background:#b91c1c;color:#fff;text-align:center;font-weight:700;
+    padding:10px 12px;font-size:15px;letter-spacing:.3px;
+  }
+  .practice-banner small{display:block;font-weight:400;opacity:.95;font-size:12px;margin-top:3px;}
+  .practice-banner .brand{color:#ffe08a;}
+
+  .form-control.is-invalid{border-color:#dc3545 !important;background-color:#fff5f5 !important;}
+  .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
+  .invalid-feedback.show{display:block;}
+  .alert-box.error{background:#fdecea;border:1px solid #f5c2c0;color:#842029;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
+  .alert-box.success{background:#e6f6ea;border:1px solid #b7e4c3;color:#0f5132;padding:10px 14px;border-radius:6px;margin-bottom:12px;}
+  .header-reg-info{font-size:12px;color:#1e293b;text-align:right;line-height:1.4;}
+  .header-reg-info strong{color:#4c56c0;}
+
+  #captchaImg{
+    font-family:monospace;font-size:22px;letter-spacing:5px;
+    background:#eee repeating-linear-gradient(45deg,#eee,#eee 4px,#e2e2e2 4px,#e2e2e2 8px);
+    padding:6px 18px;border:1px solid #ccc;user-select:none;text-decoration:line-through;display:inline-block;
+  }
+
+  .otp-card{
+    border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:22px 24px;margin-bottom:22px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .otp-card.verified{border-color:#22c55e;background:#f0fdf4;}
+  .otp-card h5{font-weight:700;color:#1e293b;font-size:16px;margin-bottom:2px;display:flex;align-items:center;gap:8px;}
+  .otp-card .target{font-size:13.5px;color:#475569;margin-bottom:14px;}
+  .otp-card .target strong{color:#4c56c0;}
+
+  .otp-input{
+    max-width:220px;font-size:20px;letter-spacing:8px;text-align:center;font-weight:700;
+  }
+  .otp-hint{
+    background:#eff6ff;border:1px dashed #93c5fd;border-radius:6px;color:#1e40af;
+    font-size:12.5px;padding:8px 12px;margin-top:10px;display:none;
+  }
+  .otp-hint.show{display:block;}
+  .otp-hint b{font-size:15px;letter-spacing:2px;}
+
+  .verified-badge{
+    display:none;align-items:center;gap:6px;color:#15803d;font-weight:700;font-size:14px;margin-top:8px;
+  }
+  .verified-badge.show{display:inline-flex;}
+
+  .resend-row{font-size:12.5px;color:#64748b;margin-top:10px;}
+  .resend-row a{color:#4c56c0;font-weight:600;text-decoration:none;cursor:pointer;}
+  .resend-row a.disabled{color:#94a3b8;cursor:not-allowed;pointer-events:none;}
+
+  .btn-otp{border-radius:6px;font-weight:600;font-size:13.5px;padding:7px 18px;}
+</style>
+</head>
+
+<body class='bg-light' oncontextmenu="return false;">
+
+<!-- PAGE-WIDE COPY/PASTE BLOCK -->
+<script>
+(function(){
+  ['copy','paste','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); }, true);
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); }, true);
+})();
+</script>
+
+<div class="practice-banner">
+  PRACTICE FORM by <span class="brand">Adda247</span> — NOT THE OFFICIAL IBPS PORTAL
+  <small>Rehearsal copy for exam-prep only. No real OTP / SMS / email is sent — the code is shown on screen for practice.</small>
+</div>
+
+<header class="loginheader regheader" id="myHeader">
+  <nav class="navbar navbar-light shadow d-flex justify-content-between align-items-center">
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+    <div class="header-reg-info pr-3" id="headerRegInfo" style="display:none;">
+      <div>Name: <strong id="hdrName"></strong></div>
+      <div>Reg. No: <strong id="hdrRegNo"></strong></div>
+    </div>
+  </nav>
+</header>
+
+<div id="menu_container" class="p-3"></div>
+
+<div class="container mt-3 mb-5 logincontent">
+  <div class="pri_down_sec_div text-right"><ul></ul></div>
+
+  <div class="reg_container">
+    <div class="container-lg p-0" id="menu">
+      <ul class="progressbar mb-4">
+        <li class="completed"><a href="index.html"><div class="step-circle"><i class="bi bi-check"></i></div><span>Basic Info</span></a></li>
+        <li class="active"><a href="#"><div class="step-circle"><i class="bi bi-check"></i></div><span>OTP Verification</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Photo & Signature</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Details</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Preview</span></a></li>
+        <li><a href="javascript:void(0);"><div class="step-circle"><i class="bi bi-check"></i></div><span>Payment</span></a></li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="basic_details_form" id="otp_frm" name="otp_frm" autocomplete="off" novalidate>
+    <div class="border-bottom pb-2 mb-3">
+      <h1 class="m-0">Mobile &amp; Email Verification</h1>
+    </div>
+
+    <div class="mb-3 label text-note">
+      <span class="info_box_note_green">
+        <div class="blob blue"></div>
+        Both your registered mobile number and email ID must be verified using the OTP (One Time Password) before you can proceed. Verify in order — <strong>mobile number first, then email</strong>. Each time, enter the security code shown at the bottom before requesting the OTP; the code is refreshed after every successful verification.
+      </span>
+    </div>
+
+    <div id="result" class="alert-box error" style="display:none"></div>
+
+    <!-- ===================== MOBILE OTP ===================== -->
+    <div class="otp-card" id="mobileCard">
+      <h5><i class="bi bi-phone-fill" style="color:#3b82f6"></i> Mobile Number Verification</h5>
+      <div class="target">OTP will be sent to <strong id="mobileTarget">+91 XXXXXXXXXX</strong></div>
+
+      <button type="button" class="btn btn-primary btn-otp" id="btnSendMobile"><i class="bi bi-send"></i> Send OTP</button>
+
+      <div class="mt-3" id="mobileVerifyRow" style="display:none;">
+        <label for="otpMobile" class="d-block" style="font-size:13.5px;font-weight:600;color:#334155;">Enter OTP received on mobile</label>
+        <div class="d-flex align-items-center" style="gap:10px;flex-wrap:wrap;">
+          <input type="text" inputmode="numeric" class="form-control otp-input" id="otpMobile" maxlength="6" placeholder="••••••">
+          <button type="button" class="btn btn-success btn-otp" id="btnVerifyMobile">Verify OTP</button>
+        </div>
+        <div class="invalid-feedback" id="err_otpMobile"></div>
+        <div class="otp-hint" id="hintMobile"></div>
+        <div class="resend-row">Didn't receive it? <a id="resendMobile" class="disabled">Resend OTP</a> <span id="timerMobile"></span></div>
+      </div>
+
+      <div class="verified-badge" id="badgeMobile"><i class="bi bi-check-circle-fill"></i> Mobile number verified successfully</div>
+    </div>
+
+    <!-- ===================== EMAIL OTP ===================== -->
+    <div class="otp-card" id="emailCard">
+      <h5><i class="bi bi-envelope-fill" style="color:#8b5cf6"></i> Email ID Verification</h5>
+      <div class="target">OTP will be sent to <strong id="emailTarget">your-email@example.com</strong></div>
+
+      <div id="emailLock" class="resend-row" style="margin-top:0;margin-bottom:10px;color:#b45309;"><i class="bi bi-lock-fill"></i> Please verify your mobile number first.</div>
+      <button type="button" class="btn btn-primary btn-otp" id="btnSendEmail" disabled><i class="bi bi-send"></i> Send OTP</button>
+
+      <div class="mt-3" id="emailVerifyRow" style="display:none;">
+        <label for="otpEmail" class="d-block" style="font-size:13.5px;font-weight:600;color:#334155;">Enter OTP received on email</label>
+        <div class="d-flex align-items-center" style="gap:10px;flex-wrap:wrap;">
+          <input type="text" inputmode="numeric" class="form-control otp-input" id="otpEmail" maxlength="6" placeholder="••••••">
+          <button type="button" class="btn btn-success btn-otp" id="btnVerifyEmail">Verify OTP</button>
+        </div>
+        <div class="invalid-feedback" id="err_otpEmail"></div>
+        <div class="otp-hint" id="hintEmail"></div>
+        <div class="resend-row">Didn't receive it? <a id="resendEmail" class="disabled">Resend OTP</a> <span id="timerEmail"></span></div>
+      </div>
+
+      <div class="verified-badge" id="badgeEmail"><i class="bi bi-check-circle-fill"></i> Email ID verified successfully</div>
+    </div>
+
+    <!-- ===================== SECURITY CODE (CAPTCHA) ===================== -->
+    <div class="otp-card" id="captchaCard">
+      <h5><i class="bi bi-shield-fill-exclamation" style="color:#4c56c0"></i> Security Code</h5>
+      <div class="target">Enter the code shown in the image before requesting an OTP <sup class="error">*</sup></div>
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCode" type="text" id="txtCode" class="form-control" size="18" maxlength="6" placeholder="Enter code">
+          </div>
+          <div class="invalid-feedback" id="err_txtCode"></div>
+        </div>
+        <a href="javascript:void(0);" class="refresh-btn d-flex align-items-center mr-2" id="refreshCaptcha" title="Refresh code">
+          <svg class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" width="22px" height="22px" viewBox="0 0 322.447 322.447">
+            <path d="M321.832,230.327c-2.133-6.565-9.184-10.154-15.75-8.025l-16.254,5.281C299.785,206.991,305,184.347,305,161.224 c0-84.089-68.41-152.5-152.5-152.5C68.411,8.724,0,77.135,0,161.224s68.411,152.5,152.5,152.5c6.903,0,12.5-5.597,12.5-12.5 c0-6.902-5.597-12.5-12.5-12.5c-70.304,0-127.5-57.195-127.5-127.5c0-70.304,57.196-127.5,127.5-127.5 c70.305,0,127.5,57.196,127.5,127.5c0,19.372-4.371,38.337-12.723,55.568l-5.553-17.096c-2.133-6.564-9.186-10.156-15.75-8.025 c-6.566,2.134-10.16,9.186-8.027,15.751l14.74,45.368c1.715,5.283,6.615,8.642,11.885,8.642c1.279,0,2.582-0.198,3.865-0.614 l45.369-14.738C320.371,243.946,323.965,236.895,321.832,230.327z"/>
+          </svg>
+        </a>
+        <div class="col-auto d-flex align-items-center">
+          <span id="captchaImg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row justify-content-center mt-4 mb-5">
+      <a href="index.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn" type="button" id="btnContinue" value="Verify & Continue">
+    </div>
+  </form>
+</div>
+
+<footer class="footer">
+  <div class="container-fluid text-right">
+    <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---- Header + prefill targets from Basic Info page ----
+  var regName = sessionStorage.getItem('ibps_fullname');
+  var regNo   = sessionStorage.getItem('ibps_reg_no');
+  if(regName && regNo){
+    $('headerRegInfo').style.display = 'block';
+    $('hdrName').textContent = regName;
+    $('hdrRegNo').textContent = regNo;
+  }
+  var mobile = sessionStorage.getItem('ibps_mobile') || '9876543210';
+  var email  = sessionStorage.getItem('ibps_email')  || 'candidate@example.com';
+  // mask mobile: show last 3 digits
+  var maskedMobile = mobile.length === 10 ? ('+91 XXXXXXX' + mobile.slice(-3)) : ('+91 ' + mobile);
+  $('mobileTarget').textContent = maskedMobile;
+  $('emailTarget').textContent = email;
+
+  // ---- state ----
+  var state = {
+    mobileOtp: null, emailOtp: null,
+    mobileVerified: false, emailVerified: false
+  };
+
+  // ---- Captcha (security code) ----
+  var currentCaptcha = '';
+  function genCaptcha(){
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s='';
+    for(var i=0;i<6;i++){ s += chars.charAt(Math.floor(Math.random()*chars.length)); }
+    currentCaptcha = s;
+    $('captchaImg').textContent = s;
+  }
+  genCaptcha();
+  $('refreshCaptcha').addEventListener('click', function(){
+    genCaptcha(); $('txtCode').value=''; clearError('txtCode');
+  });
+
+  function showError(field,msg){
+    var el=$(field), err=$('err_'+field);
+    if(el) el.classList.add('is-invalid');
+    if(err){ err.textContent=msg; err.classList.add('show'); }
+  }
+  function clearError(field){
+    var el=$(field), err=$('err_'+field);
+    if(el) el.classList.remove('is-invalid');
+    if(err){ err.textContent=''; err.classList.remove('show'); }
+  }
+  function val(id){ return ($(id)&&$(id).value||'').trim(); }
+
+  // Generate a practice 6-digit OTP
+  function genOtp(){
+    var s = '' + (1 + Math.floor(Math.random()*9)); // first digit non-zero
+    for(var i=1;i<6;i++){ s += Math.floor(Math.random()*10); }
+    return s;
+  }
+
+  // Require a valid security code before any OTP can be sent
+  function captchaOk(){
+    var code = val('txtCode');
+    if(!code){ showError('txtCode','Please enter the security code first.'); return false; }
+    if(code.toUpperCase() !== currentCaptcha.toUpperCase()){
+      showError('txtCode','Security code does not match. Please try again.');
+      genCaptcha(); $('txtCode').value='';
+      return false;
+    }
+    clearError('txtCode');
+    return true;
+  }
+
+  // Numeric-only OTP inputs
+  ['otpMobile','otpEmail'].forEach(function(id){
+    $(id).addEventListener('input', function(){ this.value=this.value.replace(/[^0-9]/g,''); clearError(id); });
+  });
+
+  // ---- Resend countdown helper ----
+  function startCountdown(timerEl, resendEl, seconds){
+    resendEl.classList.add('disabled');
+    var left = seconds;
+    timerEl.textContent = '(' + left + 's)';
+    var iv = setInterval(function(){
+      left--;
+      if(left <= 0){
+        clearInterval(iv);
+        timerEl.textContent = '';
+        resendEl.classList.remove('disabled');
+      } else {
+        timerEl.textContent = '(' + left + 's)';
+      }
+    }, 1000);
+  }
+
+  // ---- Generic "send OTP" ----
+  function sendOtp(channel){
+    if(!captchaOk()){
+      var r=$('result'); r.className='alert-box error'; r.style.display='block';
+      r.textContent='Please enter the correct security code before requesting an OTP.';
+      $('txtCode').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    $('result').style.display='none';
+    var otp = genOtp();
+    if(channel==='mobile'){
+      state.mobileOtp = otp;
+      $('mobileVerifyRow').style.display='block';
+      $('hintMobile').classList.add('show');
+      $('hintMobile').innerHTML = '📩 Practice mode — no real SMS sent. Your OTP is: <b>'+otp+'</b>';
+      startCountdown($('timerMobile'), $('resendMobile'), 30);
+      $('otpMobile').focus();
+    } else {
+      state.emailOtp = otp;
+      $('emailVerifyRow').style.display='block';
+      $('hintEmail').classList.add('show');
+      $('hintEmail').innerHTML = '📩 Practice mode — no real email sent. Your OTP is: <b>'+otp+'</b>';
+      startCountdown($('timerEmail'), $('resendEmail'), 30);
+      $('otpEmail').focus();
+    }
+  }
+
+  $('btnSendMobile').addEventListener('click', function(){ sendOtp('mobile'); });
+  $('btnSendEmail').addEventListener('click', function(){ sendOtp('email'); });
+  $('resendMobile').addEventListener('click', function(){ if(!this.classList.contains('disabled')) sendOtp('mobile'); });
+  $('resendEmail').addEventListener('click', function(){ if(!this.classList.contains('disabled')) sendOtp('email'); });
+
+  // ---- Verify ----
+  function verify(channel){
+    if(channel==='mobile'){
+      var entered = val('otpMobile');
+      if(!entered){ showError('otpMobile','Please enter the OTP sent to your mobile.'); return; }
+      if(entered !== state.mobileOtp){ showError('otpMobile','Incorrect OTP. Please check and try again.'); return; }
+      clearError('otpMobile');
+      state.mobileVerified = true;
+      $('otpMobile').setAttribute('readonly','readonly');
+      $('btnVerifyMobile').disabled = true; $('btnVerifyMobile').textContent='Verified';
+      $('btnSendMobile').disabled = true;
+      $('badgeMobile').classList.add('show');
+      $('mobileCard').classList.add('verified');
+      $('resendMobile').classList.add('disabled');
+      // refresh the security code for the next step and unlock email verification
+      genCaptcha();
+      $('txtCode').value = '';
+      clearError('txtCode');
+      $('btnSendEmail').disabled = false;
+      $('emailLock').style.display = 'none';
+      var rMob = $('result');
+      rMob.className = 'alert-box success'; rMob.style.display = 'block';
+      rMob.innerHTML = '<i class="bi bi-check-circle-fill"></i> Mobile number verified. A new security code has been generated — enter it below to verify your email.';
+    } else {
+      var entered2 = val('otpEmail');
+      if(!entered2){ showError('otpEmail','Please enter the OTP sent to your email.'); return; }
+      if(entered2 !== state.emailOtp){ showError('otpEmail','Incorrect OTP. Please check and try again.'); return; }
+      clearError('otpEmail');
+      state.emailVerified = true;
+      $('otpEmail').setAttribute('readonly','readonly');
+      $('btnVerifyEmail').disabled = true; $('btnVerifyEmail').textContent='Verified';
+      $('btnSendEmail').disabled = true;
+      $('badgeEmail').classList.add('show');
+      $('emailCard').classList.add('verified');
+      $('resendEmail').classList.add('disabled');
+      // refresh the security code once more after the final verification
+      genCaptcha();
+      $('txtCode').value = '';
+      clearError('txtCode');
+      var rEmail = $('result');
+      rEmail.className = 'alert-box success'; rEmail.style.display = 'block';
+      rEmail.innerHTML = '<i class="bi bi-check-circle-fill"></i> Email ID verified. Both verifications complete — click "Verify & Continue".';
+    }
+  }
+  $('btnVerifyMobile').addEventListener('click', function(){ verify('mobile'); });
+  $('btnVerifyEmail').addEventListener('click', function(){ verify('email'); });
+
+  // ---- Continue ----
+  $('btnContinue').addEventListener('click', function(){
+    var r=$('result');
+    if(!state.mobileVerified || !state.emailVerified){
+      r.className='alert-box error'; r.style.display='block';
+      r.textContent='Please verify BOTH your mobile number and email ID before continuing.';
+      var pending = !state.mobileVerified ? $('mobileCard') : $('emailCard');
+      pending.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+    sessionStorage.setItem('ibps_mobile_verified','Y');
+    sessionStorage.setItem('ibps_email_verified','Y');
+    window.location.href = 'photo_signature.html';
+  });
+})();
+</script>
+
+</body>
+</html>
