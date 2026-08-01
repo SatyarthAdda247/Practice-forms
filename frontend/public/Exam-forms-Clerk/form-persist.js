@@ -114,6 +114,69 @@
     }, true);
   }
 
+  // ── Server sync (DynamoDB via the backend) ────────────────────────────────
+  // Best-effort: POSTs the accumulated snapshot to the backend, which holds the
+  // AWS credentials server-side and writes to DynamoDB. Failures are ignored so
+  // a storage outage never disrupts the practice run.
+  var API_BASE = (location.hostname === "localhost" || location.hostname === "127.0.0.1")
+    ? "/api"
+    : "https://tools-api.adda247.com/api";
+
+  function collectSnapshot() {
+    var out = {};
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(PREFIX) === 0) out[k.slice(PREFIX.length)] = localStorage.getItem(k);
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  function deriveIdentifier(snap) {
+    // Prefer a 10-digit mobile; fall back to a composed/entered email.
+    var mob = snap["id:txtmobile"] || snap["id:mobile"] || "";
+    if (/^\d{10}$/.test(mob)) return mob;
+    try {
+      var sm = sessionStorage.getItem("ibps_mobile");
+      if (/^\d{10}$/.test(sm || "")) return sm;
+    } catch (e) {}
+    var local = snap["id:txtemail"] || "";
+    var domain = snap["id:seldomain"] || "";
+    if (domain === "Others") domain = snap["id:txtothdomain"] || "";
+    if (local && domain) return (local + "@" + domain).toLowerCase();
+    try {
+      var se = sessionStorage.getItem("ibps_email");
+      if (se && se.indexOf("@") !== -1) return se.toLowerCase();
+    } catch (e) {}
+    return "";
+  }
+
+  var syncTimer = null;
+  function scheduleSync() {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1500);
+  }
+  function syncNow() {
+    var snap = collectSnapshot();
+    var identifier = deriveIdentifier(snap);
+    if (!identifier) return; // nothing to key on yet
+    try {
+      fetch(API_BASE + "/exam-forms/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // fire-and-forget; keepalive lets it survive a page navigation
+        keepalive: true,
+        body: JSON.stringify({
+          examId: NS,
+          identifier: identifier,
+          step: location.pathname.split("/").pop() || "index.html",
+          data: snap
+        })
+      }).catch(function () { /* best-effort — ignore */ });
+    } catch (e) { /* ignore */ }
+  }
+
   function init() {
     // Pass 1: restore simple fields and fire events so dependent selects
     // (state → district, state → exam-centre) get populated.
@@ -123,6 +186,17 @@
     setTimeout(function () { restoreAll(true); }, 60);
     setTimeout(function () { restoreAll(true); }, 300);
     bindAutosave();
+
+    // Sync to the backend on load and (debounced) whenever a field changes.
+    setTimeout(syncNow, 800);
+    document.addEventListener("input", function (e) {
+      if (e.target && e.target.matches("input, select, textarea")) scheduleSync();
+    }, true);
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.matches("input, select, textarea")) scheduleSync();
+    }, true);
+    // Flush once more as the page is being left.
+    window.addEventListener("pagehide", syncNow);
 
     // Expose a manual clear (used after final submission if desired).
     window.examFormPersist = {
@@ -134,7 +208,8 @@
           });
         } catch (e) {}
       },
-      saveAll: function () { allFields().forEach(save); }
+      saveAll: function () { allFields().forEach(save); },
+      sync: syncNow
     };
   }
 

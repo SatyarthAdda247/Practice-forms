@@ -87,6 +87,7 @@ from auth import (
     role_for_email,
     verify_google_token,
 )
+import exam_forms_store
 import face_check
 import omr_pipeline
 import tools_store
@@ -1126,6 +1127,54 @@ def tools_keycheck_result():
         return error("stats object is required")
 
     return _tools_save(tools_store.save_keycheck_result, data)
+
+
+@app.post("/api/exam-forms/save")
+def exam_forms_save():
+    """Store one candidate's practice exam-form snapshot to DynamoDB. Public.
+
+    The exam-form replicas are static/client-side; this is where their captured
+    data is persisted server-side. AWS credentials live only in the backend
+    environment — they are never sent to the browser. Called best-effort by the
+    form as the candidate progresses; the frontend ignores the response, so a
+    storage outage never blocks a practice run."""
+    if _rate_limited(f"examforms:{_client_ip()}"):
+        return error("too many requests; try again in a minute", 429)
+    data, err = _tools_payload()
+    if err:
+        return err
+
+    exam_id = str(data.get("examId") or "").strip()
+    identifier = str(data.get("identifier") or "").strip()
+    if not exam_id:
+        return error("examId is required")
+    if not identifier:
+        return error("identifier (mobile or email) is required")
+    payload = data.get("data")
+    if not isinstance(payload, dict):
+        return error("data object is required")
+
+    try:
+        key = exam_forms_store.save(
+            exam_id,
+            identifier,
+            payload,
+            step=data.get("step"),
+            user_agent=request.headers.get("User-Agent"),
+            referrer=request.headers.get("Referer"),
+        )
+    except ValueError as exc:
+        return error(str(exc))
+    except exam_forms_store.Unavailable as exc:
+        # 503, not 500: storage is optional to the candidate; the frontend
+        # treats any non-2xx as "carry on regardless".
+        app.logger.warning("exam-forms: DynamoDB write unavailable: %s", exc)
+        return error("could not store this submission", 503)
+    except Exception as exc:  # noqa: BLE001 — never leak internals publicly
+        app.logger.warning("exam-forms: save failed: %s", exc)
+        return error("could not store this submission", 503)
+
+    return jsonify({"status": "ok", "key": key}), 201
 
 
 # --------------------------------------------------------------------------- #
