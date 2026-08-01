@@ -177,7 +177,72 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ── Progress bar ──────────────────────────────────────────────────────────
+  // Rendered here (not in the page markup) so every page shows the same 7-step
+  // icon bar and the progression PERSISTS: the furthest step reached is stored,
+  // so navigating BACK keeps earlier steps green instead of un-completing them.
+  var STEPS = [
+    { file: "index.html",            label: "Basic Information", icon: "bi-ui-checks" },
+    { file: "otp_verification.html", label: "Verification",      icon: "bi-ui-checks" },
+    { file: "photo_signature.html",  label: "Photo & Signature", icon: "bi-images" },
+    { file: "details.html",          label: "Details",           icon: "bi-file-earmark-text-fill" },
+    { file: "preview.html",          label: "Preview",           icon: "bi-eye-fill" },
+    { file: "uploads.html",          label: "Uploads",           icon: "bi-file-earmark-arrow-up-fill" },
+    { file: "payment.html",          label: "Payment",           icon: "bi-currency-rupee" }
+  ];
+  var MAXSTEP_KEY = PREFIX + "__maxstep";
+
+  function injectProgressCSS() {
+    if (document.getElementById("examProgressCSS")) return;
+    var css = ""
+      + ".progressbar li .step-circle{width:46px!important;height:46px!important;border:2px solid #e2e8f0!important;background:#fff!important;color:#94a3b8!important;font-size:19px!important;box-shadow:0 1px 3px rgba(0,0,0,.08)!important;transition:all .25s ease!important;}"
+      + ".progressbar li:after{top:23px!important;height:3px!important;background:#e2e8f0!important;}"
+      + ".progressbar li span{font-size:13px!important;margin-top:2px;display:inline-block;}"
+      + ".progressbar li.completed{color:#43a047!important;}"
+      + ".progressbar li.completed .step-circle{background:linear-gradient(135deg,#9ccc65,#43a047)!important;border-color:#43a047!important;color:#fff!important;box-shadow:0 2px 6px rgba(67,160,71,.35)!important;}"
+      + ".progressbar li.completed:after{background:linear-gradient(90deg,#9ccc65,#43a047)!important;}"
+      + ".progressbar li.active{color:#4c56c0!important;font-weight:700!important;}"
+      + ".progressbar li.active .step-circle{background:linear-gradient(135deg,#5b6cf0,#3b46b5)!important;border-color:#4c56c0!important;color:#fff!important;box-shadow:0 0 0 5px rgba(76,86,192,.18),0 2px 8px rgba(76,86,192,.35)!important;}"
+      + ".progressbar li.active:after{background:linear-gradient(90deg,#9ccc65,#43a047)!important;}";
+    var st = document.createElement("style");
+    st.id = "examProgressCSS";
+    st.textContent = css;
+    document.head.appendChild(st);
+  }
+
+  function currentStepIndex() {
+    var file = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+    for (var i = 0; i < STEPS.length; i++) if (STEPS[i].file === file) return i;
+    return 0;
+  }
+
+  function renderProgress() {
+    var ul = document.querySelector("ul.progressbar");
+    if (!ul) return;
+    injectProgressCSS();
+
+    var cur = currentStepIndex();
+    var maxReached = parseInt(localStorage.getItem(MAXSTEP_KEY) || "0", 10);
+    if (isNaN(maxReached)) maxReached = 0;
+    if (cur > maxReached) { maxReached = cur; try { localStorage.setItem(MAXSTEP_KEY, String(maxReached)); } catch (e) {} }
+
+    var html = "";
+    for (var i = 0; i < STEPS.length; i++) {
+      var s = STEPS[i];
+      var cls, href;
+      if (i === cur) { cls = "active"; href = "#"; }
+      else if (i < cur || i <= maxReached) { cls = "completed"; href = s.file; } // reached — navigable back, stays green
+      else { cls = ""; href = "javascript:void(0);"; }
+      html += '<li class="' + cls + '"><a href="' + href + '">'
+            + '<div class="step-circle"><i class="bi ' + s.icon + '"></i></div>'
+            + '<span>' + s.label + '</span></a></li>';
+    }
+    ul.innerHTML = html;
+  }
+
   function init() {
+    renderProgress();
+
     // Pass 1: restore simple fields and fire events so dependent selects
     // (state → district, state → exam-centre) get populated.
     restoreAll(true);
