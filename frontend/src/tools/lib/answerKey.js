@@ -642,18 +642,44 @@ function pageLines(content, { colours, marks }) {
     .filter((row) => row.text);
 }
 
-// Text, colour and answer marks for every line of a PDF, in reading order.
-// `onProgress(page, pages)` is called as each page is read — these sheets run to
-// 60 pages, which is slow enough that the caller should be able to say so.
-export async function readPdfLines(file, onProgress) {
-  const pdfjs = await import("pdfjs-dist");
-  // Vite resolves this to a bundled asset URL at build time.
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).href;
+/* The pdf.js worker is a module script served from our own origin, and browsers
+ * refuse a module whose Content-Type is not a JavaScript type. A static host
+ * that has no ".mjs" in its MIME map therefore breaks *every* PDF upload — the
+ * worker is rejected, the fake-worker fallback re-imports the same file and is
+ * rejected too, and pdf.js throws "Setting up fake worker failed". That is
+ * exactly what production did, and from the page it read as though the file was
+ * at fault.
+ *
+ * frontend/server.js now sends the right type, but the tool should not be one
+ * proxy or CDN away from losing PDF support again. Fetching the script here and
+ * running it from a Blob takes Content-Type out of the picture: `fetch` does no
+ * MIME checking, and the Blob carries the type we give it. Kept as a fallback
+ * rather than the default so a correctly configured host still gets the plain,
+ * HTTP-cached worker.
+ */
+let blobWorkerPort = null;
+async function blobWorker(src) {
+  if (!blobWorkerPort) {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`pdf worker fetch failed: ${res.status}`);
+    // The object URL is deliberately not revoked: a Worker may still be reading
+    // it, and it is one blob held for the lifetime of the page.
+    const url = URL.createObjectURL(
+      new Blob([await res.text()], { type: "text/javascript" }),
+    );
+    blobWorkerPort = new Worker(url, { type: "module" });
+  }
+  return blobWorkerPort;
+}
 
+// Failures that mean "the worker never started", as opposed to a genuinely
+// unreadable PDF. Both messages pdf.js produces for this name the worker.
+const workerFailure = (e) => /worker/i.test(e?.message || "");
+
+async function readAllPages(pdfjs, file, onProgress) {
   // Keep the loading task: teardown lives on it, not on the document proxy.
+  // `data` is read per attempt because pdf.js transfers the buffer to the
+  // worker, leaving it detached and unusable for a retry.
   const task = pdfjs.getDocument({ data: await file.arrayBuffer() });
   const lines = [];
   try {
@@ -668,6 +694,28 @@ export async function readPdfLines(file, onProgress) {
     await task.destroy();
   }
   return lines;
+}
+
+// Text, colour and answer marks for every line of a PDF, in reading order.
+// `onProgress(page, pages)` is called as each page is read — these sheets run to
+// 60 pages, which is slow enough that the caller should be able to say so.
+export async function readPdfLines(file, onProgress) {
+  const pdfjs = await import("pdfjs-dist");
+  // Vite resolves this to a bundled asset URL at build time.
+  const workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).href;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
+  try {
+    return await readAllPages(pdfjs, file, onProgress);
+  } catch (e) {
+    if (!workerFailure(e) || blobWorkerPort) throw e;
+    console.warn("pdf.js worker was refused; retrying from a blob worker:", e);
+    pdfjs.GlobalWorkerOptions.workerPort = await blobWorker(workerSrc);
+    return await readAllPages(pdfjs, file, onProgress);
+  }
 }
 
 // "0.33" or "1/3" as a number — sheets word the penalty either way. Fractions
@@ -754,6 +802,34 @@ export function parseAnnotatedSheet(lines) {
   let label = null; // printed "Q.<n>", assembled from its (wrapped) parts
   let labelX = 0;
 
+  /* End the question block that has just closed.
+   *
+   * `chosen` is the candidate's own answer as printed, or null where the sheet
+   * states none. Commissions publish the *same* annotated layout twice: once
+   * per candidate with a "Chosen Option : N" row per question, and once as a
+   * plain answer key with those rows absent. The second kind closes on the next
+   * question heading instead, and records no response — leaving `responses`
+   * empty, which is what tells the caller it holds a key and nothing else.
+   * Setting "" would be far worse: every question would score as unattempted.
+   */
+  const closeQuestion = (chosen) => {
+    qno++;
+    if (chosen !== null) {
+      responses.set(qno, /^-+$/.test(chosen) ? "" : normalizeAnswer(chosen));
+    }
+    // Several green options means the commission accepted more than one answer;
+    // `isCorrect` already treats "A,C" as either being right.
+    const green = options.filter((o) => o.green).map((o) => o.n);
+    const ticked = green.length ? [] : [tickedOption(options)].filter(Boolean);
+    const right = green.length ? green : ticked;
+    if (right.length) key.set(qno, [...new Set(right)].sort().map((n) => "ABCDE"[n - 1]).join(","));
+
+    if (currentSection) sections[qno] = currentSection;
+    if (label !== null) labels[qno] = label;
+    options = [];
+    label = null;
+  };
+
   for (const { text, runs, marks } of lines) {
     // "Section" only, never "Subject": on these sheets the Subject row is the
     // paper's own title, which would land in every question as its section.
@@ -776,6 +852,17 @@ export function parseAnnotatedSheet(lines) {
     const first = runs[0];
     const start = first?.str.match(/^Q\.\s*(\d+)/);
     if (start) {
+      // Options still pending at a new heading mean the block before it was
+      // never closed by a "Chosen Option" row — close it on its own, so an
+      // answer key published without candidate answers still reads.
+      //
+      // Only once inside a question, though (`label` is set by a heading and
+      // cleared as each block closes). The header of these sheets numbers its
+      // own notes — "1. Options shown in green colour are correct." — and those
+      // lines read as option rows, so before the first heading anything pending
+      // is preamble. Counting it as a question shifted every answer by one.
+      if (label !== null && options.length) closeQuestion(null);
+      options = [];
       label = start[1];
       labelX = first.x;
     } else if (label !== null && labelX !== null && /^\d{1,2}$/.test(first?.str.trim())) {
@@ -797,23 +884,10 @@ export function parseAnnotatedSheet(lines) {
     }
 
     const chosen = text.match(/Chosen\s*Option\s*:?\s*(\d+|-{1,2})/i);
-    if (!chosen) continue;
-
-    qno++;
-    responses.set(qno, /^-+$/.test(chosen[1]) ? "" : normalizeAnswer(chosen[1]));
-
-    // Several green options means the commission accepted more than one answer;
-    // `isCorrect` already treats "A,C" as either being right.
-    const green = options.filter((o) => o.green).map((o) => o.n);
-    const ticked = green.length ? [] : [tickedOption(options)].filter(Boolean);
-    const right = green.length ? green : ticked;
-    if (right.length) key.set(qno, [...new Set(right)].sort().map((n) => "ABCDE"[n - 1]).join(","));
-
-    if (currentSection) sections[qno] = currentSection;
-    if (label !== null) labels[qno] = label;
-    options = [];
-    label = null;
+    if (chosen) closeQuestion(chosen[1]);
   }
+  // The last question has no heading after it to close it.
+  if (label !== null && options.length) closeQuestion(null);
 
   const scheme = parseMarkingNote(lines.map((l) => l.text).join("\n"));
   if (qno) scheme.total = qno;
@@ -1007,31 +1081,134 @@ export function parseAnnotatedHtmlSheet(html) {
   return { responses, key, sections, labels, scheme, meta };
 }
 
-const NOTHING = {
+/* -------------------------------------------------------------------------- *
+ * Question paper with the key printed in it
+ *
+ * Not a response sheet at all: the "previous year paper" PDFs coaching
+ * publishers hand out, where every question is reproduced with its options and
+ * the official answer underneath —
+ *
+ *     Q1. In the following question, select the related word …
+ *     A) Energy            B) Temperature
+ *     C) Pressure          D) Force
+ *     Correct Answer: C
+ *
+ * Candidates upload these constantly, because it is the file they have when
+ * they are told to bring "the answer key". There are no candidate responses in
+ * one, so it can only fill the official-key box — but that is most of the
+ * typing saved, and far better than turning the file away.
+ * -------------------------------------------------------------------------- */
+
+// "Q1." / "Q.1)" / "Q 12." at the head of a line.
+const PAPER_QUESTION = /^Q\s*\.?\s*(\d{1,3})\s*[.)]/i;
+// "Correct Answer: C", "Ans : A", "Answer - B,D". Anchored, so a sentence that
+// merely contains the words cannot be mistaken for the key line.
+const PAPER_ANSWER =
+  /^(?:correct\s+)?(?:answer|ans)\b[^:\-]{0,12}[:\-]\s*([A-E](?:\s*[,&/]\s*[A-E])*)\s*$/i;
+
+export function parseAnswerKeyPaper(lines) {
+  const found = []; // { printed, answer } in the order they appear
+  let printed = null;
+
+  for (const { text } of lines) {
+    const start = text.match(PAPER_QUESTION);
+    if (start) {
+      printed = start[1];
+      continue;
+    }
+    // Only an answer that follows a question heading counts, so a stray "Ans:"
+    // in a cover note or an explanation cannot invent a question.
+    if (printed === null) continue;
+    const answer = text.match(PAPER_ANSWER);
+    if (!answer) continue;
+    found.push({ printed, answer: normalizeAnswer(answer[1]) });
+    printed = null;
+  }
+
+  // Number by what is printed on the paper, because that is what the candidate's
+  // own answers will be numbered by. A file holding two papers restarts at Q.1,
+  // so where the printed numbers are not unique fall back to position and report
+  // the printed numbers as labels — the same rule the response-sheet readers use.
+  const key = new Map();
+  const labels = {};
+  const unique = new Set(found.map((f) => f.printed)).size === found.length;
+  found.forEach(({ printed: n, answer }, i) => {
+    const q = unique ? +n : i + 1;
+    key.set(q, answer);
+    if (!unique) labels[q] = n;
+  });
+  return { key, labels, total: key.size };
+}
+
+/* Whether a Map from parseAnswerList is plausibly a list of answers.
+ *
+ * Used only on the last-ditch "strip everything and read it as a list" paths.
+ * Any PDF has numbered lines in it, so that reader always returns *something*:
+ * a 31-page question paper came back as eleven "answers" including
+ * `12 -> "NOIDA, 201301"`, which the page then presented as the candidate's
+ * responses. Silently wrong beats nothing here, so hold the fallback to a bar.
+ */
+export function looksLikeAnswerList(map) {
+  if (map.size < 5) return false;
+  const filled = [...map.values()].filter(Boolean);
+  // Mostly-empty means a numbered list of something that is not answers.
+  if (filled.length < map.size / 2) return false;
+  const clean = filled.filter((v) => /^(?:\*|[A-E](?:,[A-E])*)$/.test(v)).length;
+  return clean >= filled.length * 0.9;
+}
+
+// A fresh empty result. A factory rather than a shared constant: callers put
+// these Maps straight into component state, so handing every parse the same
+// instance would let one upload's edits show up in the next.
+const blank = () => ({
   responses: new Map(),
   key: new Map(),
   sections: {},
   labels: {},
   scheme: {},
   meta: {},
-};
+});
 
 // Read a dropped/selected file into responses, the key and marking scheme it
-// carries, and any section labels.
+// carries, and any section labels. A file that yields neither responses nor a
+// key comes back empty rather than throwing — the caller says so in its own
+// words, and an empty result is not an error condition.
 export async function parseResponseFile(file, onProgress) {
   const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
   if (isPdf) {
     const lines = await readPdfLines(file, onProgress);
     const parsed = parseAnnotatedSheet(lines);
     if (parsed.responses.size) return { ...parsed, kind: "pdf" };
+
+    // The same annotated layout, published as a plain answer key with nobody's
+    // answers in it. Everything but the responses is still there — including the
+    // marking note, so the marks fill themselves in.
+    if (parsed.key.size >= 5) return { ...parsed, kind: "pdf-key" };
+
+    // No responses in it, but a question paper still carries the official key.
+    const paper = parseAnswerKeyPaper(lines);
+    if (paper.key.size >= 5) {
+      return {
+        ...blank(),
+        key: paper.key,
+        labels: paper.labels,
+        scheme: { total: paper.total },
+        kind: "pdf-key",
+      };
+    }
+
     // Not a layout we recognise — fall back to the generic list reader.
     const flat = lines.map((l) => l.text).join("\n");
-    return { ...NOTHING, responses: parseAnswerList(flat), kind: "pdf" };
+    const list = parseAnswerList(flat);
+    return { ...blank(), responses: looksLikeAnswerList(list) ? list : new Map(), kind: "pdf" };
   }
 
   const text = await file.text();
   const isHtml = /\.html?$/i.test(file.name) || /<html|<table/i.test(text.slice(0, 2000));
-  if (!isHtml) return { ...NOTHING, responses: parseAnswerList(text), kind: "text" };
+  // A pasted/typed list is the candidate's own doing, so it is taken at face
+  // value — unlike the salvage paths above, there is nothing else in the file
+  // for the reader to have picked up by mistake.
+  if (!isHtml) return { ...blank(), responses: parseAnswerList(text), kind: "text" };
 
   // An annotated sheet first: plenty of candidates save the page from the link
   // instead of pasting it, and that file must score the same as the link does.
@@ -1043,14 +1220,28 @@ export async function parseResponseFile(file, onProgress) {
   const parsed = parseResponseSheetHtml(text);
   if (parsed.responses.size) {
     const scheme = { ...parseMarkingNote(text.replace(/<[^>]+>/g, " ")), total: parsed.responses.size };
-    return { ...NOTHING, ...parsed, scheme, kind: "html" };
+    return { ...blank(), ...parsed, scheme, kind: "html" };
   }
-  // HTML we didn't recognise — strip tags and try the plain-text reader.
-  return {
-    ...NOTHING,
-    responses: parseAnswerList(text.replace(/<[^>]+>/g, "\n")),
-    kind: "html",
-  };
+
+  // A saved question paper rather than a response sheet — same salvage as the
+  // PDF branch, reading the flattened markup as lines.
+  const stripped = text.replace(/<[^>]+>/g, "\n").replace(/&nbsp;/gi, " ");
+  const paper = parseAnswerKeyPaper(
+    stripped.split(/\r?\n/).map((l) => ({ text: l.replace(/\s+/g, " ").trim() })),
+  );
+  if (paper.key.size >= 5) {
+    return {
+      ...blank(),
+      key: paper.key,
+      labels: paper.labels,
+      scheme: { total: paper.total },
+      kind: "html-key",
+    };
+  }
+
+  // HTML we didn't recognise — try the plain-text reader on the stripped markup.
+  const list = parseAnswerList(stripped);
+  return { ...blank(), responses: looksLikeAnswerList(list) ? list : new Map(), kind: "html" };
 }
 
 export function isCorrect(mine, key) {

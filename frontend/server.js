@@ -14,18 +14,39 @@ import { withPageMeta } from "./routeMeta.js";
 const DIST = join(fileURLToPath(new URL(".", import.meta.url)), "dist");
 const PORT = process.env.PORT || 8080;
 
+// Every extension Vite can emit into dist/ needs an entry here. Browsers refuse
+// a module script served as anything but a JavaScript type, so a missing entry
+// is not a cosmetic problem: ".mjs" falling through to application/octet-stream
+// is what stopped the pdf.js worker from loading and made every PDF upload in
+// the Answer Key Checker fail with "Could not read that file".
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".cjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".wasm": "application/wasm",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
   ".ico": "image/x-icon",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".otf": "font/otf",
+  ".eot": "application/vnd.ms-fontobject",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
+  ".pdf": "application/pdf",
+  // pdf.js character maps and standard fonts, if they are ever copied in.
+  ".bcmap": "application/octet-stream",
+  ".pfb": "application/octet-stream",
   ".map": "application/json; charset=utf-8",
 };
 

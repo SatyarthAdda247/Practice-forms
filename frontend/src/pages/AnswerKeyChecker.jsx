@@ -3,7 +3,7 @@
 // thing sent anywhere is the aggregate score summary below, which carries no
 // individual answers and nothing identifying the candidate.
 // Parsing and scoring live in ../tools/lib/answerKey.js.
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import { toolsApi } from "../api.js";
 import usePageMeta from "../pageMeta.js";
@@ -72,6 +72,24 @@ function detectedChips(detected) {
   return chips;
 }
 
+// Two very different things go wrong reading a file, and they need different
+// things from the candidate. One blanket sentence sent people off to retype a
+// hundred answers when the PDF reader had simply failed to start and a reload
+// would have fixed it.
+function fileErrorMessage(file, e) {
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+  if (isPdf && /worker|dynamically imported module|importScripts/i.test(e?.message || "")) {
+    return (
+      "The PDF reader could not start in this browser. Reload the page and try again, " +
+      "or paste your answers below."
+    );
+  }
+  return (
+    "Could not read that file. Upload the response sheet the commission gave you " +
+    "(PDF or saved HTML), or paste your answers below."
+  );
+}
+
 function StatCard({ label, value, className = "", accent = false }) {
   return (
     <div className="bg-tool-surface-lowest border border-tool-outline rounded-lg p-6 flex flex-col gap-1 relative overflow-hidden">
@@ -111,6 +129,12 @@ export default function AnswerKeyChecker() {
   // Cohort standing for the score just computed. null until it comes back, and
   // stays null when there is not enough data to say anything.
   const [rank, setRank] = useState(null);
+  /* The two answer boxes are the fallback route, not the main one — almost
+     everybody arrives with a link or a file — but at full height they pushed the
+     score and rank off the screen on a phone. So they collapse to a single row,
+     and open themselves whenever the candidate actually has to type: nothing was
+     parsed, only half of it was, or Analyze found something missing. */
+  const [manualOpen, setManualOpen] = useState(false);
 
   // Most exams pin no marking scheme — see the note above SCHEMES. For those the
   // marks inputs are left exactly as they are rather than reset to a guess, and
@@ -133,20 +157,27 @@ export default function AnswerKeyChecker() {
         setFileLabel({ name: file.name, hint: `Reading page ${page} of ${pages}…` });
       const { responses, key, sections: found, labels: printed, scheme: stated, meta, kind } =
         await parseResponseFile(file, onProgress);
-      if (!responses.size) {
+      const hasKey = key && key.size > 0;
+      if (!responses.size && !hasKey) {
         setFileLabel({ name: file.name, hint: "Could not find any answers — paste them manually below." });
-        return setError("No responses found in the uploaded file.");
+        setDetected(null);
+        setManualOpen(true);
+        return setError(
+          "No answers could be read from that file. Upload the response sheet the " +
+            "commission gave you, or paste your answers below.",
+        );
       }
       const asLines = (map) =>
         [...map.entries()].sort((a, b) => a[0] - b[0]).map(([q, a]) => `${q} ${a || "-"}`).join("\n");
 
       setSections(found);
       setLabels(printed || {});
-      setResponsesText(asLines(responses));
+      // A question paper carries the official key but no candidate responses,
+      // so it must not blank out answers already typed on the left.
+      if (responses.size) setResponsesText(asLines(responses));
 
       // Annotated sheets carry the key alongside the responses; use it rather
       // than making the candidate retype what the file already contains.
-      const hasKey = key && key.size > 0;
       if (hasKey) setKeyText(asLines(key));
 
       // The sheet's own header note beats the exam preset — it is what the
@@ -171,18 +202,29 @@ export default function AnswerKeyChecker() {
         meta: meta || {},
       });
 
-      setFileLabel({
-        name: file.name,
-        hint: hasKey
+      const hint = !responses.size
+        ? `${key.size} official answers read — now add your own responses on the left`
+        : hasKey
           ? `${responses.size} responses + the official key read from this file — click to replace`
-          : `${responses.size} responses parsed — paste the official key on the right`,
-      });
-      setError("");
+          : `${responses.size} responses parsed — paste the official key on the right`;
+      setFileLabel({ name: file.name, hint });
+      // Half a sheet means typing the other half, so put the boxes in reach.
+      // A complete one needs neither, so fold them away again.
+      setManualOpen(!responses.size || !hasKey);
+      // A key without responses is not an error, but nothing can be scored until
+      // the candidate supplies theirs, so say so where the errors are read.
+      setError(
+        responses.size
+          ? ""
+          : "That file holds the official answer key but not your own answers. Paste your " +
+              "responses on the left and press Analyze.",
+      );
     } catch (e) {
       console.warn("response sheet parse failed:", e);
-      setError("Could not read that file. Try the HTML response sheet, or paste your answers below.");
+      setError(fileErrorMessage(file, e));
       setFileLabel(null);
       setDetected(null);
+      setManualOpen(true);
     }
   };
 
@@ -197,8 +239,16 @@ export default function AnswerKeyChecker() {
     const useScheme = from?.scheme ?? scheme;
     const useDetected = from ? from.detected : detected;
     const inputSource = from?.inputSource ?? (fileLabel ? "upload" : "manual");
-    if (!responses.size) return setError("Add your responses — upload a response sheet or paste them above.");
-    if (!key.size) return setError("Paste the official answer key to compare against.");
+    // Both of these are fixed in the answer boxes, so open them along with the
+    // message rather than pointing at a row the candidate has to find first.
+    if (!responses.size) {
+      setManualOpen(true);
+      return setError("Add your responses — upload a response sheet or paste them above.");
+    }
+    if (!key.size) {
+      setManualOpen(true);
+      return setError("Paste the official answer key to compare against.");
+    }
 
     setError("");
     const marking = {
@@ -312,11 +362,13 @@ export default function AnswerKeyChecker() {
       if (shiftFromSheet) setShift(shiftFromSheet);
       setDetected(detectedFromUrl);
       setFileLabel(null);
+      setManualOpen(!hasKey);
       if (fileRef.current) fileRef.current.value = "";
 
       if (!hasKey) {
         // Responses without the key cannot be scored, and silently showing a
         // zero would be worse than saying so.
+        setManualOpen(true);
         return setError(
           "That sheet lists your answers but not the official ones, so it cannot be " +
             "scored on its own. Paste the official answer key below and press Analyze.",
@@ -352,6 +404,7 @@ export default function AnswerKeyChecker() {
     setError("");
     setKeyUrl("");
     setRank(null);
+    setManualOpen(false);
     const preset = schemeForExam(exam);
     if (preset) setScheme(preset);
     if (fileRef.current) fileRef.current.value = "";
@@ -366,6 +419,18 @@ export default function AnswerKeyChecker() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // What the collapsed answer boxes are holding, so the candidate can see the
+  // sheet landed without opening them. Re-parsed on each keystroke, which is
+  // nothing next to a hundred short lines.
+  const manualSummary = useMemo(() => {
+    const responses = parseAnswerList(responsesText).size;
+    const key = parseAnswerList(keyText).size;
+    if (!responses && !key) return "nothing entered yet";
+    return [responses && `${responses} responses`, key && `${key} in the key`]
+      .filter(Boolean)
+      .join(" · ");
+  }, [responsesText, keyText]);
 
   const shownRows = report?.rows.filter((r) => filter === "all" || r.status === filter) || [];
   // Worth a table only when the sheet actually named its subjects.
@@ -575,33 +640,57 @@ export default function AnswerKeyChecker() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-1">
-              <label className="text-label-md text-tool-on-surface-variant uppercase">Your Responses</label>
-              <textarea
-                rows={8}
-                value={responsesText}
-                onChange={(e) => setResponsesText(e.target.value)}
-                placeholder={"One per line:\n1 B\n2 C\n3 -\n\n…or a single run: BCAD-BA"}
-                className={`${inputClass} font-data-mono`}
-              />
-              <p className="text-body-md text-tool-secondary">
-                Auto-filled when you upload a response sheet. Use <span className="font-data-mono">-</span> for unattempted.
-              </p>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-label-md text-tool-on-surface-variant uppercase">Official Answer Key</label>
-              <textarea
-                rows={8}
-                value={keyText}
-                onChange={(e) => setKeyText(e.target.value)}
-                placeholder={"One per line:\n1 B\n2 A\n\n…or a single run: BACD"}
-                className={`${inputClass} font-data-mono`}
-              />
-              <p className="text-body-md text-tool-secondary">
-                Paste the official key. Multiple correct: <span className="font-data-mono">7 A,C</span>. Dropped question:{" "}
-                <span className="font-data-mono">9 *</span>.
-              </p>
+          {/* Folded away by default — see the note beside `manualOpen`. Hidden
+              rather than unmounted so the browser keeps scroll position and
+              cursor where they were when the panel is reopened. */}
+          <div className="border border-tool-outline rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setManualOpen((open) => !open)}
+              aria-expanded={manualOpen}
+              className="w-full flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 bg-tool-surface-low hover:bg-tool-surface-lowest transition-colors text-left"
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <Icon name="edit_note" size={20} className="text-tool-secondary shrink-0" />
+                <span className="text-body-md font-medium">Type or edit answers yourself</span>
+              </span>
+              <span className="flex items-center gap-2 shrink-0 ml-auto">
+                <span className="text-body-md text-tool-secondary">{manualSummary}</span>
+                <Icon
+                  name={manualOpen ? "expand_less" : "expand_more"}
+                  size={20}
+                  className="text-tool-secondary"
+                />
+              </span>
+            </button>
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 p-4 ${manualOpen ? "" : "hidden"}`}>
+              <div className="flex flex-col gap-1">
+                <label className="text-label-md text-tool-on-surface-variant uppercase">Your Responses</label>
+                <textarea
+                  rows={5}
+                  value={responsesText}
+                  onChange={(e) => setResponsesText(e.target.value)}
+                  placeholder={"1 B\n2 C\n3 -\n…or a single run: BCAD-BA"}
+                  className={`${inputClass} font-data-mono`}
+                />
+                <p className="text-body-md text-tool-secondary">
+                  Use <span className="font-data-mono">-</span> for unattempted.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-label-md text-tool-on-surface-variant uppercase">Official Answer Key</label>
+                <textarea
+                  rows={5}
+                  value={keyText}
+                  onChange={(e) => setKeyText(e.target.value)}
+                  placeholder={"1 B\n2 A\n…or a single run: BACD"}
+                  className={`${inputClass} font-data-mono`}
+                />
+                <p className="text-body-md text-tool-secondary">
+                  Two correct: <span className="font-data-mono">7 A,C</span> · dropped:{" "}
+                  <span className="font-data-mono">9 *</span>
+                </p>
+              </div>
             </div>
           </div>
 
