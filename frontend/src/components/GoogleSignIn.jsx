@@ -22,24 +22,31 @@ function loadGis() {
   });
 }
 
-export default function GoogleSignIn({ onLogin }) {
+export default function GoogleSignIn({ onCredential, onError }) {
   const gisRef = useRef(null);
+  const doneRef = useRef(false);
+
+  // GIS keeps only the LAST initialize() call, so re-initializing on every
+  // render (Login re-creates its handlers each time) both warns in the console
+  // and leaves stale callbacks wired up. Read the handlers through a ref so the
+  // effect can run exactly once — including across StrictMode's double-mount.
+  const cbRef = useRef({ onCredential, onError });
+  cbRef.current = { onCredential, onError };
 
   useEffect(() => {
     if (!CLIENT_ID) return;
 
     loadGis()
       .then(() => {
-        if (!gisRef.current) return;
+        if (doneRef.current || !gisRef.current) return;
+        doneRef.current = true;
         window.google.accounts.id.initialize({
           client_id: CLIENT_ID,
+          // resp.credential is the Google ID token (JWT); the backend verifies
+          // it at POST /api/auth/google and mints our own session token.
           callback: (resp) => {
-            // Decode simple payload or invoke onLogin
-            onLogin?.({
-              name: "Adda247 Aspirant",
-              email: "student@gmail.com",
-              picture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-            });
+            if (resp?.credential) cbRef.current.onCredential?.(resp.credential);
+            else cbRef.current.onError?.("Google did not return a credential. Please try again.");
           },
         });
         window.google.accounts.id.renderButton(gisRef.current, {
@@ -49,16 +56,8 @@ export default function GoogleSignIn({ onLogin }) {
           text: "signin_with",
         });
       })
-      .catch(() => {});
-  }, [onLogin]);
-
-  const handleSimulatedGoogleClick = () => {
-    onLogin?.({
-      name: "Amit Kumar",
-      email: "amit.kumar.student@gmail.com",
-      picture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
-    });
-  };
+      .catch((e) => cbRef.current.onError?.(e.message));
+  }, []);
 
   if (CLIENT_ID) {
     return <div ref={gisRef} className="flex justify-center min-h-[44px]" />;
@@ -66,7 +65,7 @@ export default function GoogleSignIn({ onLogin }) {
 
   return (
     <button
-      onClick={handleSimulatedGoogleClick}
+      onClick={() => onError?.("Google sign-in is not configured: VITE_GOOGLE_CLIENT_ID is unset.")}
       className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs border border-slate-300 shadow-sm hover:shadow transition-all duration-200"
     >
       <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
