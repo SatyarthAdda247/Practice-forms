@@ -888,6 +888,33 @@
 })();
 </script>
 
+<!-- After-completion look: once mobile/email are OTP-verified, show the green
+     "Verified" badge and lock those fields (mirrors the real IBPS form when you
+     navigate back to Basic Information after the Verification step). -->
+<style>
+  .verified-pill{
+    display:inline-flex;align-items:center;gap:4px;margin-left:8px;
+    background:#e6f6ea;border:1px solid #b7e4c3;color:#15803d;
+    font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;vertical-align:middle;
+  }
+  .form-control[readonly]{background:#f1f5f9;cursor:not-allowed;}
+</style>
+<script>
+(function(){
+  function pill(){ var s=document.createElement('span'); s.className='verified-pill'; s.innerHTML='<i class="bi bi-check-circle-fill"></i> Verified'; return s; }
+  function lock(ids){ ids.forEach(function(id){ var el=document.getElementById(id); if(el){ el.setAttribute('readonly','readonly'); el.setAttribute('tabindex','-1'); if(el.tagName==='SELECT'){ el.style.pointerEvents='none'; el.setAttribute('aria-disabled','true'); } } }); }
+  function badge(sel){ var l=document.querySelector(sel); if(l && !l.querySelector('.verified-pill')) l.appendChild(pill()); }
+  try{
+    if(sessionStorage.getItem('ibps_mobile_verified')==='Y'){
+      badge('label[for="txtmobile"]'); lock(['txtmobile','txtcmobile']);
+    }
+    if(sessionStorage.getItem('ibps_email_verified')==='Y'){
+      badge('label[for="txtemail"]'); lock(['txtemail','seldomain','txtcemail']);
+    }
+  }catch(e){}
+})();
+</script>
+
   <script src="form-persist.js"></script>
 </body>
 </html>
