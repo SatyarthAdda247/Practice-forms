@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Icon from "./Icon.jsx";
+import TestAsUser from "./TestAsUser.jsx";
 import { useAuth } from "../auth.jsx";
 
 const SUPPORT_EMAIL = "umesh.rao@adda247.com";
@@ -15,7 +16,7 @@ const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_set
 // Usage analytics is super-admin only, matching GET /api/admin/usage.
 const SUPER_ADMIN_NAV = { to: "/admin/usage", label: "Daily Usage", icon: "monitoring" };
 // Shown only to users a super admin has approved for candidate leads.
-const LEADS_NAV = { to: "/leads", label: "Leads", icon: "contacts" };
+const LEADS_NAV = { to: "/leads", label: "Resizer Leads", icon: "contacts" };
 
 function Item({ to, label, icon, end }) {
   return (
@@ -44,6 +45,10 @@ export default function SideNav() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showHelp, setShowHelp] = useState(false);
+  const [showTestAs, setShowTestAs] = useState(false);
+  const canTestAsUser = user?.role === "super_admin" && !user?.impersonator;
+  // Sit below the fixed impersonation banner (h-8) when one is showing.
+  const impersonating = Boolean(user?.impersonator);
 
   const handleLogout = async () => {
     await logout();
@@ -58,7 +63,11 @@ export default function SideNav() {
   ];
 
   return (
-    <nav className="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 py-md px-sm border-r border-outline-variant bg-surface-container-low z-40">
+    <nav
+      className={`hidden md:flex flex-col w-64 fixed left-0 py-md px-sm border-r border-outline-variant bg-surface-container-low z-40 ${
+        impersonating ? "top-8 h-[calc(100vh-2rem)]" : "top-0 h-screen"
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center gap-sm px-sm mb-xl">
         <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0 text-on-primary">
@@ -94,6 +103,7 @@ export default function SideNav() {
 
       {/* Footer nav */}
       <div className="space-y-xs border-t border-outline-variant pt-sm">
+        {canTestAsUser && showTestAs && <TestAsUser onClose={() => setShowTestAs(false)} />}
         {user && (
           <div className="flex items-center gap-sm px-md py-sm">
             {user.picture ? (
@@ -115,6 +125,16 @@ export default function SideNav() {
               </span>
             </div>
           </div>
+        )}
+        {canTestAsUser && (
+          <button
+            onClick={() => setShowTestAs((s) => !s)}
+            className="w-full flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-xl font-label-md text-label-md transition-all duration-200"
+            title="View the portal as another user"
+          >
+            <Icon name="switch_account" size={20} />
+            <span>Test as User</span>
+          </button>
         )}
         <button
           onClick={() => setShowHelp((s) => !s)}

@@ -65,5 +65,30 @@ export function AuthProvider({ children }) {
     clearSession();
   }, [clearSession]);
 
-  return <AuthCtx.Provider value={{ user, loading, login, logout }}>{children}</AuthCtx.Provider>;
+  // "Test as User". Both directions replace the session outright and drop the
+  // GET cache, so nothing the previous identity fetched can bleed into the new
+  // one's view. Errors propagate — the caller decides how to show them, and a
+  // failed switch must leave the current session untouched.
+  const impersonate = useCallback(
+    async (email) => {
+      const { token, user: u } = await api.impersonate(email);
+      login(token, u);
+      return u;
+    },
+    [login],
+  );
+
+  const stopImpersonating = useCallback(async () => {
+    const { token, user: u } = await api.stopImpersonating();
+    login(token, u);
+    return u;
+  }, [login]);
+
+  return (
+    <AuthCtx.Provider
+      value={{ user, loading, login, logout, impersonate, stopImpersonating }}
+    >
+      {children}
+    </AuthCtx.Provider>
+  );
 }

@@ -31,9 +31,11 @@ super-admin cannot be removed, and no one can demote/revoke their own account.
 | POST | `/api/auth/google` | Exchange a Google ID token for a session |
 | GET | `/api/auth/me` | Return the signed-in user |
 | POST | `/api/auth/logout` | Client-side logout (stateless) |
+| POST | `/api/auth/impersonate/stop` | End a Test-as-User session |
 | GET | `/api/admin/users` | List users + allowed domains (admin) |
 | PATCH | `/api/admin/users/{id}` | Set a user's role / access (admin) |
 | DELETE | `/api/admin/users/{id}` | Delete a user (admin) |
+| POST | `/api/admin/impersonate` | Start a Test-as-User session (super admin) |
 | GET | `/api/exams` | List exams |
 | POST | `/api/exams` | Create an exam + answer key |
 | GET | `/api/exams/{id}` | Get one exam |
@@ -73,8 +75,14 @@ Return the signed-in user for a valid `Authorization: Bearer <token>` header.
 Stateless — session tokens are self-contained, so the client just discards its
 token. → `200 { "status": "ok" }`.
 
+### `POST /api/auth/impersonate/stop`
+End a Test-as-User session and return to the admin's own identity. The actor is
+read from the impersonation token itself, so the client never has to retain the
+original session. → `200 { "token", "user" }` · `400` if not impersonating.
+
 The `user` object returned by sign-in / `me` includes `role` (`member` |
-`admin`) and `active` (bool).
+`admin` | `super_admin`), `active` (bool), and `impersonator` — `null`
+normally, or `{ "email", "name" }` when a super admin is acting as this user.
 
 ---
 
@@ -102,6 +110,27 @@ account, and the **last active super-admin** cannot be removed (`400`/`403`).
 Remove a user (revokes access immediately). Regular admins may only delete
 members; nobody can delete themselves or the last active super-admin.
 → `204` · `400`/`403` · `404`.
+
+### `POST /api/admin/impersonate`
+Start a "Test as User" session to view the portal as someone else.
+Body: `{ "email": "user@adda247.com" }`.
+→ `200 { "token", "user" }` — same shape as sign-in, so the client swaps its
+session wholesale. `404` if no such user; `403` if the target is inactive or a
+super-admin; `400` for a malformed email or targeting yourself.
+
+**Super-admins only, and never onto another super-admin** — impersonation
+exists to see the product through less-privileged eyes, and allowing a peer
+target would make it a way to act as another administrator knowing only their
+email. Further constraints, all enforced per request:
+
+- The resulting token carries an *actor* claim naming the admin who minted it.
+- The actor is re-read from the database on every request: demoting or
+  deactivating them immediately invalidates any session they left running.
+- Impersonated sessions are refused by super-admin-only routes, so the feature
+  cannot chain into itself or be used to escalate.
+- Tokens expire after `OMR_IMPERSONATION_MAX_AGE` (default 30 min) rather than
+  the normal session lifetime.
+- Start and stop are both logged at `WARNING` with the actor and target.
 
 ---
 

@@ -267,6 +267,10 @@ export const api = {
   loginLocal: (data) => request("/auth/login", json("POST", data)),
   me: () => request("/auth/me"),
   logout: () => request("/auth/logout", { method: "POST" }),
+  // "Test as User" — both return { token, user } like sign-in does, so the
+  // caller swaps the whole session rather than patching the current one.
+  impersonate: (email) => request("/admin/impersonate", json("POST", { email })),
+  stopImpersonating: () => request("/auth/impersonate/stop", { method: "POST" }),
 
   // Admin — manage access
   adminListUsers: () => request("/admin/users"),

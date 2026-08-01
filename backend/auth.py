@@ -30,6 +30,11 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 SECRET = os.environ.get("OMR_SECRET", "dev-insecure-secret-change-me")
 SESSION_MAX_AGE = int(os.environ.get("OMR_SESSION_MAX_AGE", 7 * 24 * 3600))
 
+# Impersonation ("Test as User") sessions expire far sooner than a normal one.
+# A borrowed identity should not outlive the debugging session it was minted
+# for, so an admin who walks away is not leaving a live member session behind.
+IMPERSONATION_MAX_AGE = int(os.environ.get("OMR_IMPERSONATION_MAX_AGE", 30 * 60))
+
 # Only these email domains may sign in (comma-separated env override).
 # Values are normalised to a bare host: any scheme (http://, https://), a
 # leading "www.", and path/whitespace are stripped — so a copy-pasted
@@ -122,31 +127,57 @@ def verify_google_token(credential):
     return info
 
 
-def issue_session(user):
-    """Return a signed, timed session token embedding the user identity."""
-    return _serializer.dumps({
+def issue_session(user, actor=None):
+    """Return a signed, timed session token embedding the user identity.
+
+    ``actor`` — when set, the token is an *impersonation* session: it acts as
+    ``user`` on behalf of ``actor`` (the super admin who started it). The actor
+    id is recorded in the token so every request can re-verify that the real
+    human behind it is still allowed to be doing this, and so the audit log
+    names them rather than the borrowed identity.
+    """
+    payload = {
         "uid": user["id"],
         "email": user["email"],
         "name": user["name"],
         "picture": user["picture"],
-    })
+    }
+    if actor is not None:
+        payload["act"] = {"uid": actor["id"], "email": actor["email"]}
+    return _serializer.dumps(payload)
 
 
 def read_session(token):
-    """Decode a session token, or return ``None`` if invalid/expired."""
+    """Decode a session token, or return ``None`` if invalid/expired.
+
+    Impersonation tokens are held to :data:`IMPERSONATION_MAX_AGE` instead of
+    the normal session lifetime. The age is re-checked after decoding rather
+    than guessed up front, because the lifetime that applies depends on a claim
+    inside the token itself.
+    """
     try:
-        return _serializer.loads(token, max_age=SESSION_MAX_AGE)
+        payload = _serializer.loads(token, max_age=SESSION_MAX_AGE)
     except (BadSignature, SignatureExpired):
         return None
+    if isinstance(payload, dict) and payload.get("act"):
+        try:
+            _serializer.loads(token, max_age=IMPERSONATION_MAX_AGE)
+        except (BadSignature, SignatureExpired):
+            return None
+    return payload
 
 
 def _current_user():
     """Resolve the request's user from its Bearer token, re-reading the live
     DB record so role changes and access revocations take effect immediately.
 
+    Also populates ``flask.g.impersonator`` — the super admin acting through
+    this session, or ``None`` for an ordinary sign-in.
+
     Returns ``(user_dict, None)`` on success or ``(None, (json, status))`` with
     an error response to return.
     """
+    g.impersonator = None
     header = request.headers.get("Authorization", "")
     token = header[7:] if header.startswith("Bearer ") else None
     session = read_session(token) if token else None
@@ -158,6 +189,20 @@ def _current_user():
         return None, (jsonify({"error": "account no longer exists"}), 401)
     if not user["active"]:
         return None, (jsonify({"error": "your access has been revoked"}), 403)
+
+    # An impersonation token is only as good as the admin who minted it. Re-read
+    # the actor on every request so demoting or deactivating them immediately
+    # kills any session they left running — the token alone must never be
+    # enough to keep a borrowed identity alive.
+    act = session.get("act") if isinstance(session, dict) else None
+    if act:
+        actor = db.get_user_by_id(act.get("uid"))
+        if actor is None or not actor["active"] or actor["role"] != "super_admin":
+            return None, (
+                jsonify({"error": "impersonation session is no longer valid"}),
+                403,
+            )
+        g.impersonator = actor
     return user, None
 
 
@@ -186,6 +231,29 @@ def admin_required(fn):
             return err
         if not is_admin_role(user["role"]):
             return jsonify({"error": "administrator access required"}), 403
+        g.user = user
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def super_admin_required(fn):
+    """Decorator: require an active ``super_admin``, and refuse impersonated
+    sessions outright.
+
+    Guarding on the borrowed role alone would be wrong: impersonation is meant
+    to *reduce* what a session can do, so a route this sensitive must be driven
+    by a genuine sign-in. It also stops impersonation from chaining into itself.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user, err = _current_user()
+        if err:
+            return err
+        if g.impersonator is not None:
+            return jsonify({"error": "not available while impersonating"}), 403
+        if user["role"] != "super_admin":
+            return jsonify({"error": "super administrator access required"}), 403
         g.user = user
         return fn(*args, **kwargs)
 
