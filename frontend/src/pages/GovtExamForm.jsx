@@ -3,12 +3,22 @@ import { useNavigate } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { practiceStore } from "../tools/lib/practiceStore.js";
 
-export default function GovtExamForm() {
+// Renders the static multi-step practice-form iframe for a given exam.
+// examId/iframeSrc/label are supplied per-route so the same component
+// serves every exam in the catalogue instead of hardcoding IBPS PO.
+export default function GovtExamForm({
+  examId = "IBPS-PO",
+  iframeSrc = "/Exam-forms/index.html",
+  label = "Adda247 Rehearsal Engine — IBPS PO (CRP PO/MT-XVI)",
+  iframeTitle = "IBPS PO Practice Form Replica",
+}) {
   const navigate = useNavigate();
   const iframeRef = useRef(null);
   const [duplicateLock, setDuplicateLock] = useState(false);
 
   useEffect(() => {
+    setDuplicateLock(false);
+
     // Monitor iframe window for sessionStorage / field changes to auto-save to practiceStore
     const interval = setInterval(() => {
       try {
@@ -20,13 +30,13 @@ export default function GovtExamForm() {
 
         if (identifier) {
           // Check for duplicate lock
-          const isDup = practiceStore.isDuplicate("IBPS-PO", identifier);
+          const isDup = practiceStore.isDuplicate(examId, identifier);
           if (isDup && !duplicateLock) {
             setDuplicateLock(true);
           }
 
           // Auto-save current progress
-          practiceStore.saveProgress("IBPS-PO", identifier, {
+          practiceStore.saveProgress(examId, identifier, {
             mobile,
             email,
             step: win.location?.pathname || "index.html",
@@ -38,7 +48,7 @@ export default function GovtExamForm() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [duplicateLock]);
+  }, [examId, duplicateLock]);
 
   return (
     <div className="w-screen h-screen flex flex-col fixed inset-0 z-[9999] bg-surface">
@@ -53,7 +63,7 @@ export default function GovtExamForm() {
             Back to Hub
           </button>
           <span className="text-xs font-bold text-primary border-l border-outline-variant pl-3">
-            Adda247 Rehearsal Engine — IBPS PO (CRP PO/MT-XVI)
+            {label}
           </span>
         </div>
 
@@ -66,9 +76,10 @@ export default function GovtExamForm() {
 
       {/* Main Form Iframe */}
       <iframe
+        key={examId}
         ref={iframeRef}
-        src="/Exam-forms/index.html"
-        title="IBPS PO Practice Form Replica"
+        src={iframeSrc}
+        title={iframeTitle}
         className="w-full flex-1 border-none bg-white"
       />
     </div>

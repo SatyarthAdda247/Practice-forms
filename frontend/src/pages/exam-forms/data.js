@@ -48,12 +48,12 @@ export const EXAMS = [
   {
     id: "IBPS-CLERK",
     title: "IBPS Clerk",
-    fullName: "IBPS Clerk XIV",
+    fullName: "IBPS Clerk (CRP CSA-XVI)",
     orgName: "Institute of Banking Personnel Selection",
     category: "Banking",
     LogoComponent: IBPSLogo,
-    isAvailable: false,
-    route: "#",
+    isAvailable: true,
+    route: "/exam-forms/IBPS-CLERK",
     officialSite: "https://ibps.in",
   },
   {

@@ -73,6 +73,28 @@ export default function App() {
         <Route path="/Exam-forms/" element={<ExamFormsLanding />} />
         <Route path="/exam-forms/IBPS-PO" element={<GovtExamForm />} />
         <Route path="/Exam-forms/IBPS-PO" element={<GovtExamForm />} />
+        <Route
+          path="/exam-forms/IBPS-CLERK"
+          element={
+            <GovtExamForm
+              examId="IBPS-CLERK"
+              iframeSrc="/Exam-forms-Clerk/index.html"
+              label="Adda247 Rehearsal Engine — IBPS Clerk (CRP CSA-XVI)"
+              iframeTitle="IBPS Clerk Practice Form Replica"
+            />
+          }
+        />
+        <Route
+          path="/Exam-forms/IBPS-CLERK"
+          element={
+            <GovtExamForm
+              examId="IBPS-CLERK"
+              iframeSrc="/Exam-forms-Clerk/index.html"
+              label="Adda247 Rehearsal Engine — IBPS Clerk (CRP CSA-XVI)"
+              iframeTitle="IBPS Clerk Practice Form Replica"
+            />
+          }
+        />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />
