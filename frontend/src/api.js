@@ -471,6 +471,11 @@ export const toolsApi = {
   logResizerLead: (payload) => toolLog("/tools/image-resizer/leads", payload),
   logKeyCheckResult: (payload) => toolLog("/tools/answerkey-checker/results", payload),
 
+  // Record a practice-forms user (name + phone) — used to gate/track everyone
+  // who enters the exam-forms portal. Best-effort: a logging failure never
+  // blocks the user. Backend writes it to DynamoDB (creds stay server-side).
+  logExamFormEntry: (payload) => toolLog("/exam-forms/save", payload),
+
   // Pull a response-sheet page down through the backend. It cannot be fetched
   // here: the exam CDNs send no CORS headers and reject a non-browser
   // User-Agent. Parsing still happens in the browser — see answerKey.js.

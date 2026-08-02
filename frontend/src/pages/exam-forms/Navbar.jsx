@@ -1,37 +1,18 @@
 // ─── src/pages/exam-forms/Navbar.jsx ─────────────────────────────────────────
 // Exam Forms portal navbar: Official Adda247 logo, divider, product name,
-// search bar, and Google Sign-In / user profile.
+// search bar, and user profile (Name + Phone practice user).
 
-import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
-import GoogleSignIn from "../../components/GoogleSignIn.jsx";
 import { Adda247Logo } from "../../components/GovtLogos.jsx";
-import { api } from "../../api.js";
-import { useAuth } from "../../auth.jsx";
+import { usePracticeUser, clearPracticeUser } from "../../practiceUser.js";
 
 /**
  * @param {{ searchQuery: string, onSearchChange: (q: string) => void }} props
  */
 export default function ExamFormsNavbar({ searchQuery, onSearchChange }) {
   const navigate = useNavigate();
-  const { user, login, logout } = useAuth();
-  const [signInError, setSignInError] = useState("");
-
-  // Same exchange as the /login page: the Google ID token is worthless to us
-  // until the backend verifies it and hands back our own session token.
-  const handleCredential = useCallback(
-    async (credential) => {
-      setSignInError("");
-      try {
-        const { token, user: u } = await api.googleLogin(credential);
-        login(token, u);
-      } catch (e) {
-        setSignInError(e.message);
-      }
-    },
-    [login],
-  );
+  const practiceUser = usePracticeUser();
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -80,34 +61,24 @@ export default function ExamFormsNavbar({ searchQuery, onSearchChange }) {
           />
         </div>
 
-        {/* ── Right: Auth ── */}
+        {/* ── Right: Practice user (Name + Phone identity) ── */}
         <div className="flex items-center gap-3 shrink-0">
-          {user ? (
-            <div className="flex items-center gap-2.5 bg-slate-100 border border-slate-200 pl-2.5 pr-2 py-1.5 rounded-full">
-              <img
-                src={user.picture}
-                alt={user.name}
-                className="w-6 h-6 rounded-full object-cover border border-slate-300"
-              />
-              <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[100px] truncate">
-                {user.name}
+          {practiceUser && (
+            <div className="flex items-center gap-2.5 bg-slate-100 border border-slate-200 pl-3 pr-2 py-1.5 rounded-full">
+              <span className="w-6 h-6 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center uppercase shrink-0">
+                {practiceUser.name.trim().charAt(0)}
               </span>
+              <div className="hidden sm:flex flex-col leading-tight max-w-[140px]">
+                <span className="text-xs font-bold text-slate-800 truncate">{practiceUser.name}</span>
+                <span className="text-[10px] text-slate-500">+91 {practiceUser.phone}</span>
+              </div>
               <button
-                onClick={logout}
-                title="Sign out"
+                onClick={clearPracticeUser}
+                title="Switch user"
                 className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
               >
                 <Icon name="logout" size={14} />
               </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-end gap-1">
-              <GoogleSignIn onCredential={handleCredential} onError={setSignInError} />
-              {signInError && (
-                <span className="text-[11px] text-red-600 max-w-[220px] text-right">
-                  {signInError}
-                </span>
-              )}
             </div>
           )}
         </div>

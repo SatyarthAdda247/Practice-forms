@@ -9,12 +9,15 @@ import { practiceStore } from "../tools/lib/practiceStore.js";
 import ExamFormsNavbar from "./exam-forms/Navbar.jsx";
 import CategorySidebar from "./exam-forms/CategorySidebar.jsx";
 import ExamCard from "./exam-forms/ExamCard.jsx";
+import PracticeGate from "./exam-forms/PracticeGate.jsx";
 import { EXAMS } from "./exam-forms/data.js";
+import { usePracticeUser } from "../practiceUser.js";
 
 export default function ExamFormsLanding() {
   const [activeCategory, setActiveCategory] = useState("Banking");
   const [searchQuery, setSearchQuery] = useState("");
   const [entryCount, setEntryCount] = useState(0);
+  const practiceUser = usePracticeUser();
 
   useEffect(() => {
     setEntryCount(practiceStore.getAllEntries().length);
@@ -34,6 +37,9 @@ export default function ExamFormsLanding() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased">
+
+      {/* Required Name + Phone gate — everyone who enters is recorded. */}
+      {!practiceUser && <PracticeGate />}
 
       {/* ── Announcement Banner ── */}
       <div
