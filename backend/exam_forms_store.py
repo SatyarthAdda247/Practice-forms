@@ -40,9 +40,23 @@ def _table():
     if _INIT_ERROR is not None:
         raise Unavailable(_INIT_ERROR)
 
-    table_name = os.environ.get("EXAM_FORMS_DDB_TABLE", "").strip()
+    # Credentials/config resolve from the backend config file first
+    # (exam_forms_config.py), then fall back to standard AWS env vars.
+    cfg = {}
+    try:
+        import exam_forms_config as _cfg  # server-side only; never reaches the browser
+        cfg = {
+            "table": (getattr(_cfg, "EXAM_FORMS_DDB_TABLE", "") or "").strip(),
+            "region": (getattr(_cfg, "AWS_REGION", "") or "").strip(),
+            "key": (getattr(_cfg, "AWS_ACCESS_KEY_ID", "") or "").strip(),
+            "secret": (getattr(_cfg, "AWS_SECRET_ACCESS_KEY", "") or "").strip(),
+        }
+    except Exception:  # noqa: BLE001 — config file optional
+        cfg = {}
+
+    table_name = cfg.get("table") or os.environ.get("EXAM_FORMS_DDB_TABLE", "").strip()
     if not table_name:
-        _INIT_ERROR = "EXAM_FORMS_DDB_TABLE is not set"
+        _INIT_ERROR = "EXAM_FORMS_DDB_TABLE is not set (backend config or env)"
         raise Unavailable(_INIT_ERROR)
 
     try:
@@ -52,12 +66,20 @@ def _table():
         raise Unavailable(_INIT_ERROR)
 
     region = (
-        os.environ.get("AWS_REGION")
+        cfg.get("region")
+        or os.environ.get("AWS_REGION")
         or os.environ.get("AWS_DEFAULT_REGION")
         or "ap-south-1"
     )
+    # Pass explicit keys only when the config file provides them; otherwise let
+    # boto3's default chain (env vars / shared profile / IAM role) supply them.
+    boto_kwargs = {"region_name": region}
+    if cfg.get("key") and cfg.get("secret"):
+        boto_kwargs["aws_access_key_id"] = cfg["key"]
+        boto_kwargs["aws_secret_access_key"] = cfg["secret"]
+
     try:
-        resource = boto3.resource("dynamodb", region_name=region)
+        resource = boto3.resource("dynamodb", **boto_kwargs)
         _TABLE = resource.Table(table_name)
     except Exception as exc:  # noqa: BLE001
         _INIT_ERROR = f"could not initialise DynamoDB: {exc}"
