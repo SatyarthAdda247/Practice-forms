@@ -20,3 +20,6 @@ credential/
 **/credential/
 *.sa.json
 service-account*.json
+
+# Real AWS creds for exam-forms — MUST stay local, never committed
+backend/exam_forms_config.py
