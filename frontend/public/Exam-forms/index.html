@@ -879,10 +879,77 @@
     if(e.target === this) this.classList.remove('show');
   });
 
-  // live-clear errors as user types/fixes
+  // ====== REAL-TIME, PER-FIELD VALIDATION ======
+  // Mirrors the official IBPS form: EVERY field is validated on blur, and
+  // re-validated as you type so its error clears the instant it becomes valid.
+  // (Previously a blanket "clear on input" wiped errors set on the same event,
+  //  and only the name fields had any real-time check.)
+  function dropValid(id){ var el=$(id); if(el) el.classList.remove('is-valid'); }
+  function liveConfirmMobile(){
+    var mob=val('txtmobile'), cmob=val('txtcmobile');
+    if(!cmob){ clearError('txtcmobile'); dropValid('txtcmobile'); return; }
+    if(mob!==cmob) showError('txtcmobile','Confirm Mobile Number does not match.');
+    else { clearError('txtcmobile'); markValid('txtcmobile'); }
+  }
+  function liveAltPhone(){
+    var alt=val('txtaltphone');
+    if(!alt){ clearError('txtaltphone'); dropValid('txtaltphone'); return; }
+    if(!/^[1-9][0-9]{9}$/.test(alt)) showError('txtaltphone','Enter a valid 10-digit number (no leading 0).');
+    else { clearError('txtaltphone'); markValid('txtaltphone'); }
+  }
+  function liveEmail(){
+    var lp=val('txtemail');
+    if(!lp){ clearError('txtemail'); dropValid('txtemail'); return; }
+    if(!/^[A-Za-z0-9._%+-]+$/.test(lp)) showError('txtemail','Email ID contains invalid characters.');
+    else { clearError('txtemail'); markValid('txtemail'); }
+  }
+  function liveDomain(){
+    var d=val('seldomain');
+    if(!d){ clearError('seldomain'); dropValid('seldomain'); return; }
+    if(d==='Others' && !val('txtothdomain')) showError('seldomain','Please enter the domain name.');
+    else { clearError('seldomain'); markValid('seldomain'); }
+  }
+  function liveConfirmEmail(){
+    var full=composedEmail(), ce=val('txtcemail');
+    if(!ce){ clearError('txtcemail'); dropValid('txtcemail'); return; }
+    if(full && ce.toLowerCase()!==full.toLowerCase()) showError('txtcemail','Confirm Email ID does not match Email ID.');
+    else if(full){ clearError('txtcemail'); markValid('txtcemail'); }
+  }
+  function liveCaptcha(){
+    var code=val('txtCode');
+    if(!code){ clearError('txtCode'); dropValid('txtCode'); return; }
+    if(code.toUpperCase()!==currentCaptcha.toUpperCase()) showError('txtCode','Security code does not match.');
+    else { clearError('txtCode'); markValid('txtCode'); }
+  }
+  function liveField(id){
+    switch(id){
+      case 'fullname': liveValidateName('fullname','First Name'); if(val('cfullname')) liveValidateConfirmPair('fullname','cfullname','First Name'); break;
+      case 'cfullname': liveValidateConfirmPair('fullname','cfullname','First Name'); break;
+      case 'middlename': liveValidateName('middlename','Middle Name'); if(val('cmiddlename')) liveValidateConfirmPair('middlename','cmiddlename','Middle Name'); break;
+      case 'cmiddlename': liveValidateConfirmPair('middlename','cmiddlename','Middle Name'); break;
+      case 'lastname': liveValidateName('lastname','Last Name'); if(val('clastname')) liveValidateConfirmPair('lastname','clastname','Last Name'); break;
+      case 'clastname': liveValidateConfirmPair('lastname','clastname','Last Name'); break;
+      case 'fullname_updated': liveValidateName('fullname_updated','Updated First Name'); if(val('cfullname_updated')) liveValidateConfirmPair('fullname_updated','cfullname_updated','Updated First Name'); break;
+      case 'cfullname_updated': liveValidateConfirmPair('fullname_updated','cfullname_updated','Updated First Name'); break;
+      case 'txtmobile': liveValidateMobile('txtmobile','Mobile Number'); liveConfirmMobile(); break;
+      case 'txtcmobile': liveConfirmMobile(); break;
+      case 'txtaltphone': liveAltPhone(); break;
+      case 'txtemail': liveEmail(); liveConfirmEmail(); break;
+      case 'seldomain': liveDomain(); liveConfirmEmail(); break;
+      case 'txtothdomain': liveDomain(); liveConfirmEmail(); break;
+      case 'txtcemail': liveConfirmEmail(); break;
+      case 'txtCode': liveCaptcha(); break;
+      default: break;
+    }
+  }
   document.querySelectorAll('#reg_frm input, #reg_frm select').forEach(function(el){
-    el.addEventListener('input', function(){ clearError(this.id); });
-    el.addEventListener('change', function(){ clearError(this.id); });
+    if(el.type==='radio' || el.type==='checkbox'){
+      el.addEventListener('change', function(){ clearError(this.name || this.id); });
+    } else {
+      el.addEventListener('input', function(){ liveField(this.id); });
+      el.addEventListener('blur',  function(){ liveField(this.id); });
+      el.addEventListener('change', function(){ liveField(this.id); });
+    }
   });
 })();
 </script>
