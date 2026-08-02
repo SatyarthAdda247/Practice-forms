@@ -89,16 +89,30 @@ def save(exam_id, identifier, data, step=None, user_agent=None, referrer=None):
 
     table = _table()
     now = int(time.time())
+    clean = _sanitize(data if isinstance(data, dict) else {})
     item = {
         "PK": f"STUDENT#{identifier}",
         "SK": f"EXAM#{exam_id}",
         "examId": exam_id,
         "identifier": identifier,
-        "data": _sanitize(data if isinstance(data, dict) else {}),
+        "data": clean,
         "updatedAt": now,
     }
     if step is not None:
         item["step"] = str(step)
+
+    # Promote the candidate's name/phone to top-level attributes so the table is
+    # directly readable (count users, list names) without parsing the data blob.
+    cand_name = clean.get("name") or clean.get("id:fullname") or ""
+    cand_phone = (
+        clean.get("phone")
+        or clean.get("id:txtmobile")
+        or (identifier if str(identifier).isdigit() else "")
+    )
+    if cand_name:
+        item["candidateName"] = str(cand_name)[:128]
+    if cand_phone:
+        item["candidatePhone"] = str(cand_phone)[:20]
     if user_agent:
         item["userAgent"] = str(user_agent)[:512]
     if referrer:
@@ -111,6 +125,8 @@ def save(exam_id, identifier, data, step=None, user_agent=None, referrer=None):
             UpdateExpression=(
                 "SET #d = :d, examId = :e, identifier = :i, updatedAt = :u"
                 + (", step = :s" if step is not None else "")
+                + (", candidateName = :cn" if "candidateName" in item else "")
+                + (", candidatePhone = :cp" if "candidatePhone" in item else "")
                 + (", userAgent = :ua" if user_agent else "")
                 + (", referrer = :r" if referrer else "")
                 + ", createdAt = if_not_exists(createdAt, :u)"
@@ -122,6 +138,8 @@ def save(exam_id, identifier, data, step=None, user_agent=None, referrer=None):
                 ":i": identifier,
                 ":u": now,
                 **({":s": item["step"]} if step is not None else {}),
+                **({":cn": item["candidateName"]} if "candidateName" in item else {}),
+                **({":cp": item["candidatePhone"]} if "candidatePhone" in item else {}),
                 **({":ua": item["userAgent"]} if user_agent else {}),
                 **({":r": item["referrer"]} if referrer else {}),
             },

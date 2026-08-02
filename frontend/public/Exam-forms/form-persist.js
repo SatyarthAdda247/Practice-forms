@@ -133,6 +133,17 @@
     return out;
   }
 
+  // The portal's Name + Phone gate (src/practiceUser.js) stores the visitor's
+  // identity here, shared across this same-origin iframe. Every form attempt is
+  // tracked under it, even before the form's own mobile field is filled.
+  function getPortalUser() {
+    try {
+      var u = JSON.parse(localStorage.getItem("adda_practice_user"));
+      if (u && u.name && u.phone) return u;
+    } catch (e) {}
+    return null;
+  }
+
   function deriveIdentifier(snap) {
     // Prefer a 10-digit mobile; fall back to a composed/entered email.
     var mob = snap["id:txtmobile"] || snap["id:mobile"] || "";
@@ -149,6 +160,9 @@
       var se = sessionStorage.getItem("ibps_email");
       if (se && se.indexOf("@") !== -1) return se.toLowerCase();
     } catch (e) {}
+    // Fall back to the portal gate phone so the attempt is still tracked.
+    var portal = getPortalUser();
+    if (portal) return portal.phone;
     return "";
   }
 
@@ -161,6 +175,12 @@
     var snap = collectSnapshot();
     var identifier = deriveIdentifier(snap);
     if (!identifier) return; // nothing to key on yet
+    // Stamp the portal identity (name + phone) onto the payload so the backend
+    // can store a directly-readable candidate name/phone per submission.
+    var portal = getPortalUser();
+    var data = {};
+    for (var k in snap) if (Object.prototype.hasOwnProperty.call(snap, k)) data[k] = snap[k];
+    if (portal) { data.name = portal.name; data.phone = portal.phone; }
     try {
       fetch(API_BASE + "/exam-forms/save", {
         method: "POST",
@@ -171,7 +191,7 @@
           examId: NS,
           identifier: identifier,
           step: location.pathname.split("/").pop() || "index.html",
-          data: snap
+          data: data
         })
       }).catch(function () { /* best-effort — ignore */ });
     } catch (e) { /* ignore */ }
