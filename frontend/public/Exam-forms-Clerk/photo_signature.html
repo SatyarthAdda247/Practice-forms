@@ -436,6 +436,7 @@ function handleFileSelect(file, imgId, placeholderId, storeKey) {
       img.src = dataUrl; img.style.display = 'block';
       $(placeholderId).style.display = 'none';
       sessionStorage.setItem(storeKey, dataUrl);
+      try { localStorage.setItem(storeKey, dataUrl); } catch(e){}
       saveImageToServer(imgId === 'photoImg' ? 'photo' : 'signature', dataUrl);
       clearFileErr(spec);
     };
@@ -539,6 +540,7 @@ $('camUse').addEventListener('click', function(){
   img.style.display = 'block';
   $('livePlaceholder').style.display = 'none';
   sessionStorage.setItem('ibps_liveImg', capturedDataUrl);
+  try { localStorage.setItem('ibps_liveImg', capturedDataUrl); } catch(e){}
   saveImageToServer('live', capturedDataUrl);
   closeCam();
 });
@@ -613,6 +615,26 @@ $('btnNext').addEventListener('click', function() {
   }
 
   window.location.href = 'details.html';
+});
+
+// Restore photo, live photo, and signature previews on page load when navigating between pages
+document.addEventListener('DOMContentLoaded', function(){
+  var pImg = sessionStorage.getItem('ibps_photoImg') || localStorage.getItem('ibps_photoImg');
+  var lImg = sessionStorage.getItem('ibps_liveImg') || localStorage.getItem('ibps_liveImg');
+  var sImg = sessionStorage.getItem('ibps_sigImg') || localStorage.getItem('ibps_sigImg');
+
+  if(pImg){
+    var el = $('photoImg'); if(el){ el.src = pImg; el.style.display = 'block'; }
+    var ph = $('photoPlaceholder'); if(ph) ph.style.display = 'none';
+  }
+  if(lImg){
+    var el = $('liveImg'); if(el){ el.src = lImg; el.style.display = 'block'; }
+    var ph = $('livePlaceholder'); if(ph) ph.style.display = 'none';
+  }
+  if(sImg){
+    var el = $('sigImg'); if(el){ el.src = sImg; el.style.display = 'block'; }
+    var ph = $('sigPlaceholder'); if(ph) ph.style.display = 'none';
+  }
 });
 </script>
 
