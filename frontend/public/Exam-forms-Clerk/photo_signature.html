@@ -280,7 +280,7 @@
     </div>
 
     <div class="row justify-content-center mt-4 mb-5">
-      <a href="otp_verification.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <a href="index.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
       <input class="btn sbtn" type="button" id="btnNext" value="Next">
     </div>
   </form>
@@ -359,19 +359,69 @@ $('sigFile').addEventListener('change', function(e) {
   handleFileSelect(file, 'sigImg', 'sigPlaceholder', 'ibps_sigImg');
 });
 
+// Real image validation: JPG/JPEG format, file size (KB) and pixel dimensions,
+// matching the specs advertised on this page.
+var IMG_SPECS = {
+  photoImg: { label:'Photograph', input:'photoFile', nameEl:'photoFileName', minKB:20, maxKB:50, minW:180, maxW:220, minH:210, maxH:250 },
+  sigImg:   { label:'Signature',  input:'sigFile',   nameEl:'sigFileName',   minKB:10, maxKB:20, minW:120, maxW:160, minH:50,  maxH:70  }
+};
+function fileErrEl(spec){
+  var id = 'err_' + spec.input;
+  var e = document.getElementById(id);
+  if(!e){
+    var input = $(spec.input);
+    var host = (input && input.closest && input.closest('.upload-card')) || (input && input.parentElement);
+    e = document.createElement('div');
+    e.id = id; e.className = 'invalid-feedback'; e.style.marginTop = '6px';
+    if(host) host.appendChild(e);
+  }
+  return e;
+}
+function showFileErr(spec, msg){
+  var e = fileErrEl(spec); e.textContent = msg; e.style.display = 'block';
+  $(spec.nameEl).textContent = 'Choose file';
+  if($(spec.input)) $(spec.input).value = '';
+}
+function clearFileErr(spec){ var e = document.getElementById('err_'+spec.input); if(e){ e.textContent=''; e.style.display='none'; } }
+
 function handleFileSelect(file, imgId, placeholderId, storeKey) {
   if (!file) return;
-  if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
-    alert('Please upload only JPG or JPEG files.');
+  var spec = IMG_SPECS[imgId];
+  if(!spec){ // unknown target — keep old lax behaviour
+    var r0 = new FileReader();
+    r0.onload = function(evt){ var i=$(imgId); i.src=evt.target.result; i.style.display='block'; $(placeholderId).style.display='none'; sessionStorage.setItem(storeKey, evt.target.result); };
+    r0.readAsDataURL(file); return;
+  }
+  clearFileErr(spec);
+
+  var name = file.name || '';
+  if(!/\.(jpe?g)$/i.test(name) || (file.type !== 'image/jpeg' && file.type !== 'image/jpg')){
+    showFileErr(spec, spec.label + ' must be a JPG or JPEG file.'); return;
+  }
+  var sizeKB = file.size / 1024;
+  if(sizeKB < spec.minKB || sizeKB > spec.maxKB){
+    showFileErr(spec, spec.label + ' file size is ' + sizeKB.toFixed(1) + ' KB. It must be between ' + spec.minKB + ' KB and ' + spec.maxKB + ' KB.');
     return;
   }
   var reader = new FileReader();
   reader.onload = function(evt) {
-    var img = $(imgId);
-    img.src = evt.target.result;
-    img.style.display = 'block';
-    $(placeholderId).style.display = 'none';
-    sessionStorage.setItem(storeKey, evt.target.result);
+    var dataUrl = evt.target.result;
+    var probe = new Image();
+    probe.onload = function(){
+      var w = probe.naturalWidth, h = probe.naturalHeight;
+      if(w < spec.minW || w > spec.maxW || h < spec.minH || h > spec.maxH){
+        showFileErr(spec, spec.label + ' dimensions are ' + w + '×' + h + ' px. They must be between ' +
+          spec.minW + '×' + spec.minH + ' and ' + spec.maxW + '×' + spec.maxH + ' px.');
+        return;
+      }
+      var img = $(imgId);
+      img.src = dataUrl; img.style.display = 'block';
+      $(placeholderId).style.display = 'none';
+      sessionStorage.setItem(storeKey, dataUrl);
+      clearFileErr(spec);
+    };
+    probe.onerror = function(){ showFileErr(spec, spec.label + ' could not be read as a valid image.'); };
+    probe.src = dataUrl;
   };
   reader.readAsDataURL(file);
 }

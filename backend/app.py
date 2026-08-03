@@ -186,7 +186,10 @@ def _ensure_cors(response):
 
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-db.init_db()
+try:
+    db.init_db()
+except Exception as exc:
+    print(f"[app] Warning: BigQuery initialization skipped ({exc})")
 # Provisions the two public-tool tables. Never raises — a problem there must
 # not stop the portal API from booting (see tools_store.init).
 tools_store.init()

@@ -1850,6 +1850,50 @@ $('btnNext').addEventListener('click', function() {
 });
 </script>
 
+<!-- ====== SAFETY: sensitive ID fields carry MOCK data only ======
+     Real Aadhaar / PAN / ID numbers are never entered or stored on this
+     practice form — these fields are pre-filled with clearly-fake, valid-format
+     values and locked read-only. -->
+<style>.mock-locked{background:#f1f5f9 !important;color:#334155;cursor:not-allowed;}
+.mock-hint{color:#0f766e;font-size:11px;margin-top:3px;}</style>
+<script>
+(function(){
+  var MOCK = {
+    PAN:'ABCPX1234K', PASSPORT:'M1234567', DL:'DL0120200012345',
+    VOTER:'ABC1234567', AADHAAR:'999912345678',
+    PHOTO_IDENTITY:'GAZ-DEMO-000123', DEFAULT:'DEMO0001234'
+  };
+  function lockMock(id, value){
+    var el=document.getElementById(id); if(!el) return;
+    el.value = value;
+    el.setAttribute('readonly','readonly');
+    el.setAttribute('tabindex','-1');
+    el.classList.add('mock-locked');
+    el.title = 'Auto-filled mock data — real IDs are never required or stored on this practice form.';
+    var err=document.getElementById('err_'+id);
+    if(err){ err.textContent=''; if(err.classList) err.classList.remove('show'); }
+  }
+  function hint(id){
+    var el=document.getElementById(id); if(!el) return;
+    var box=(el.closest && el.closest('.form-group')) || el.parentElement;
+    if(box && !box.querySelector('.mock-hint')){
+      var p=document.createElement('div'); p.className='mock-hint';
+      p.innerHTML='<i class="bi bi-shield-lock-fill"></i> Auto-filled mock data (real ID not required for practice).';
+      box.appendChild(p);
+    }
+  }
+  lockMock('txtAadhaar', MOCK.AADHAAR); hint('txtAadhaar');
+  lockMock('txtPan', MOCK.PAN); hint('txtPan');
+  function fillIdProofNo(){
+    var t=(document.getElementById('selIdProof')||{}).value||'';
+    lockMock('txtIdProofNo', MOCK[t] || MOCK.DEFAULT);
+  }
+  var sel=document.getElementById('selIdProof');
+  if(sel){ sel.addEventListener('change', fillIdProofNo); }
+  fillIdProofNo(); hint('txtIdProofNo');
+})();
+</script>
+
   <script src="form-persist.js"></script>
 </body>
 </html>

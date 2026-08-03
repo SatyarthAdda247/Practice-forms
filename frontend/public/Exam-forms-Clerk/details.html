@@ -1447,49 +1447,74 @@ document.getElementsByName('has_experience').forEach(function(r){
   });
 });
 
-// ====== EXAM CENTRE + STATE/DISTRICT DATA ======
-var STATES = ['ANDHRA PRADESH','BIHAR','DELHI','GUJARAT','HARYANA','KARNATAKA','MADHYA PRADESH','MAHARASHTRA','PUNJAB','RAJASTHAN','TAMIL NADU','UTTAR PRADESH','WEST BENGAL'];
-var DISTRICTS = {
-  'DELHI':['CENTRAL DELHI','NEW DELHI','NORTH DELHI','SOUTH DELHI','WEST DELHI'],
-  'UTTAR PRADESH':['LUCKNOW','NOIDA','GHAZIABAD','KANPUR','VARANASI','AGRA'],
-  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','THANE'],
-  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
-  'DEFAULT':['DISTRICT 1','DISTRICT 2','DISTRICT 3']
+// ====== EXAM CENTRE + STATE/DISTRICT DATA (all States & UTs) ======
+// One master table: each State/UT -> { code, cities }. The city list is used
+// both for the address District dropdown and for the Exam-Centre dropdowns.
+var STATES_DATA = {
+  'ANDHRA PRADESH': {code:'28', cities:['VISAKHAPATNAM','VIJAYAWADA','GUNTUR','TIRUPATI','KAKINADA','RAJAHMUNDRY','NELLORE','KURNOOL','ANANTAPUR','KADAPA','ELURU','ONGOLE']},
+  'ARUNACHAL PRADESH': {code:'12', cities:['ITANAGAR','NAHARLAGUN','PASIGHAT','TAWANG','ZIRO']},
+  'ASSAM': {code:'18', cities:['GUWAHATI','DIBRUGARH','SILCHAR','JORHAT','TEZPUR','NAGAON','TINSUKIA','BONGAIGAON']},
+  'BIHAR': {code:'10', cities:['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR','DARBHANGA','PURNEA','ARRAH','BEGUSARAI','CHAPRA','KATIHAR']},
+  'CHHATTISGARH': {code:'22', cities:['RAIPUR','BHILAI','BILASPUR','DURG','KORBA','RAIGARH','JAGDALPUR','AMBIKAPUR']},
+  'GOA': {code:'30', cities:['PANAJI','MARGAO','VASCO DA GAMA','MAPUSA','PONDA']},
+  'GUJARAT': {code:'24', cities:['AHMEDABAD','SURAT','VADODARA','RAJKOT','GANDHINAGAR','BHAVNAGAR','JAMNAGAR','ANAND','MEHSANA','JUNAGADH','NADIAD']},
+  'HARYANA': {code:'06', cities:['GURUGRAM','FARIDABAD','PANIPAT','AMBALA','HISAR','KARNAL','ROHTAK','YAMUNANAGAR','SONIPAT','PANCHKULA']},
+  'HIMACHAL PRADESH': {code:'02', cities:['SHIMLA','DHARAMSHALA','SOLAN','MANDI','HAMIRPUR','BILASPUR','KULLU','UNA','PALAMPUR']},
+  'JHARKHAND': {code:'20', cities:['RANCHI','JAMSHEDPUR','DHANBAD','BOKARO','HAZARIBAGH','DEOGHAR','GIRIDIH','RAMGARH']},
+  'KARNATAKA': {code:'29', cities:['BENGALURU','MYSURU','MANGALURU','HUBBALLI-DHARWAD','BELAGAVI','KALABURAGI','DAVANGERE','SHIVAMOGGA','TUMAKURU','BALLARI','UDUPI']},
+  'KERALA': {code:'32', cities:['THIRUVANANTHAPURAM','KOCHI','KOZHIKODE','THRISSUR','KOLLAM','KANNUR','KOTTAYAM','PALAKKAD','ALAPPUZHA','MALAPPURAM']},
+  'MADHYA PRADESH': {code:'23', cities:['BHOPAL','INDORE','JABALPUR','GWALIOR','UJJAIN','SAGAR','SATNA','REWA','RATLAM','DEWAS']},
+  'MAHARASHTRA': {code:'27', cities:['MUMBAI','PUNE','NAGPUR','NASHIK','THANE','CHHATRAPATI SAMBHAJINAGAR','SOLAPUR','KOLHAPUR','AMRAVATI','NAVI MUMBAI','NANDED','JALGAON']},
+  'MANIPUR': {code:'14', cities:['IMPHAL','THOUBAL','BISHNUPUR']},
+  'MEGHALAYA': {code:'17', cities:['SHILLONG','TURA','JOWAI']},
+  'MIZORAM': {code:'15', cities:['AIZAWL','LUNGLEI']},
+  'NAGALAND': {code:'13', cities:['KOHIMA','DIMAPUR','MOKOKCHUNG']},
+  'ODISHA': {code:'21', cities:['BHUBANESWAR','CUTTACK','ROURKELA','BERHAMPUR','SAMBALPUR','BALASORE','PURI','BHADRAK']},
+  'PUNJAB': {code:'03', cities:['LUDHIANA','AMRITSAR','JALANDHAR','PATIALA','BATHINDA','MOHALI','PATHANKOT','HOSHIARPUR','MOGA']},
+  'RAJASTHAN': {code:'08', cities:['JAIPUR','JODHPUR','UDAIPUR','KOTA','AJMER','BIKANER','ALWAR','BHILWARA','SIKAR','SRI GANGANAGAR']},
+  'SIKKIM': {code:'11', cities:['GANGTOK','NAMCHI','GYALSHING']},
+  'TAMIL NADU': {code:'33', cities:['CHENNAI','COIMBATORE','MADURAI','TIRUCHIRAPPALLI','SALEM','TIRUNELVELI','ERODE','VELLORE','THANJAVUR','TIRUPPUR','THOOTHUKUDI']},
+  'TELANGANA': {code:'36', cities:['HYDERABAD','WARANGAL','KARIMNAGAR','NIZAMABAD','KHAMMAM','MAHBUBNAGAR','NALGONDA']},
+  'TRIPURA': {code:'16', cities:['AGARTALA','UDAIPUR','DHARMANAGAR']},
+  'UTTAR PRADESH': {code:'09', cities:['LUCKNOW','KANPUR','VARANASI','AGRA','PRAYAGRAJ','GHAZIABAD','NOIDA','MEERUT','BAREILLY','GORAKHPUR','ALIGARH','MORADABAD','JHANSI','SAHARANPUR']},
+  'UTTARAKHAND': {code:'05', cities:['DEHRADUN','HARIDWAR','ROORKEE','HALDWANI','NAINITAL','RUDRAPUR','KASHIPUR']},
+  'WEST BENGAL': {code:'19', cities:['KOLKATA','HOWRAH','DURGAPUR','ASANSOL','SILIGURI','KHARAGPUR','BARDHAMAN','MALDA','KALYANI']},
+  'ANDAMAN & NICOBAR ISLANDS': {code:'35', cities:['PORT BLAIR']},
+  'CHANDIGARH': {code:'04', cities:['CHANDIGARH']},
+  'DADRA & NAGAR HAVELI AND DAMAN & DIU': {code:'26', cities:['SILVASSA','DAMAN','DIU']},
+  'DELHI / NCR': {code:'07', cities:['NEW DELHI','DELHI','GHAZIABAD','NOIDA','GURUGRAM','FARIDABAD','GREATER NOIDA']},
+  'JAMMU & KASHMIR': {code:'01', cities:['SRINAGAR','JAMMU','ANANTNAG','BARAMULLA','UDHAMPUR']},
+  'LADAKH': {code:'37', cities:['LEH','KARGIL']},
+  'LAKSHADWEEP': {code:'31', cities:['KAVARATTI']},
+  'PUDUCHERRY': {code:'34', cities:['PUDUCHERRY','KARAIKAL','MAHE','YANAM']}
 };
-var STATE_CODES = {'ANDHRA PRADESH':'28','BIHAR':'10','DELHI-NCR':'07','GUJARAT':'24','HARYANA':'06','KARNATAKA':'29','MADHYA PRADESH':'23','MAHARASHTRA':'27','PUNJAB':'03','RAJASTHAN':'08','TAMIL NADU':'33','UTTAR PRADESH':'09','WEST BENGAL':'19'};
-var EXAM_CENTRES = {
-  'DELHI-NCR':['NEW DELHI','GHAZIABAD','GURUGRAM','NOIDA','FARIDABAD'],
-  'UTTAR PRADESH':['LUCKNOW','KANPUR','VARANASI','AGRA','ALLAHABAD'],
-  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','AURANGABAD'],
-  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
-  'DEFAULT':['CENTRE 1','CENTRE 2','CENTRE 3','CENTRE 4']
-};
+var STATES = Object.keys(STATES_DATA);
 
-// Populate correspondence/permanent state selects
-document.querySelectorAll('.state-select').forEach(function(sel){
-  STATES.forEach(function(s){
-    var o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);
-  });
-});
+function fillOptions(sel, items, placeholder){
+  sel.innerHTML = '<option value="">' + (placeholder || 'Select') + '</option>';
+  items.forEach(function(it){ var o=document.createElement('option'); o.value=it; o.textContent=it; sel.appendChild(o); });
+}
+
+// Populate every state dropdown (correspondence, permanent, and exam centre)
+// from the same master list.
+document.querySelectorAll('.state-select').forEach(function(sel){ fillOptions(sel, STATES, 'Select'); });
+if($('selExamState')) fillOptions($('selExamState'), STATES, 'Select');
+
+function citiesFor(st){ return (STATES_DATA[st] && STATES_DATA[st].cities) || []; }
+
 function fillDistricts(stateSelId, distSelId){
   var st=$(stateSelId).value;
-  var dsel=$(distSelId);
-  dsel.innerHTML='<option value="">Select</option>';
-  var list=DISTRICTS[st]||DISTRICTS['DEFAULT'];
-  list.forEach(function(d){ var o=document.createElement('option'); o.value=d; o.textContent=d; dsel.appendChild(o); });
+  fillOptions($(distSelId), citiesFor(st), 'Select');
 }
 $('selCorrState').addEventListener('change', function(){ fillDistricts('selCorrState','selCorrDistrict'); });
 $('selPermState').addEventListener('change', function(){ fillDistricts('selPermState','selPermDistrict'); });
 
-// Exam state -> state code + centre lists
+// Exam state -> state code + centre lists (real cities of the chosen State/UT)
 $('selExamState').addEventListener('change', function(){
   var st=this.value;
-  $('txtStateCode').value = STATE_CODES[st] || '';
-  var centres = EXAM_CENTRES[st] || EXAM_CENTRES['DEFAULT'];
-  document.querySelectorAll('.exam-centre').forEach(function(sel){
-    sel.innerHTML='<option value="">Select</option>';
-    centres.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
+  $('txtStateCode').value = (STATES_DATA[st] && STATES_DATA[st].code) || '';
+  var centres = citiesFor(st);
+  document.querySelectorAll('.exam-centre').forEach(function(sel){ fillOptions(sel, centres, 'Select'); });
 });
 
 // ====== APPLICATION FEE (by category) ======
@@ -2012,6 +2037,93 @@ $('btnNext').addEventListener('click', function() {
   }, true);
 
   fillLanguages();
+})();
+</script>
+
+<!-- ====== SAFETY: sensitive ID fields carry MOCK data only ======
+     Real Aadhaar / PAN / ID numbers are never entered or stored on this
+     practice form — these fields are pre-filled with clearly-fake, valid-format
+     values and locked read-only. -->
+<style>.mock-locked{background:#f1f5f9 !important;color:#334155;cursor:not-allowed;}
+.mock-hint{color:#0f766e;font-size:11px;margin-top:3px;}</style>
+<script>
+(function(){
+  var MOCK = {
+    PAN:'ABCPX1234K', PASSPORT:'M1234567', DL:'DL0120200012345',
+    VOTER:'ABC1234567', AADHAAR:'999912345678',
+    PHOTO_IDENTITY:'GAZ-DEMO-000123', DEFAULT:'DEMO0001234'
+  };
+  function lockMock(id, value){
+    var el=document.getElementById(id); if(!el) return;
+    el.value = value;
+    el.setAttribute('readonly','readonly');
+    el.setAttribute('tabindex','-1');
+    el.classList.add('mock-locked');
+    el.title = 'Auto-filled mock data — real IDs are never required or stored on this practice form.';
+    var err=document.getElementById('err_'+id);
+    if(err){ err.textContent=''; if(err.classList) err.classList.remove('show'); }
+  }
+  function hint(id){
+    var el=document.getElementById(id); if(!el) return;
+    var box=(el.closest && el.closest('.form-group')) || el.parentElement;
+    if(box && !box.querySelector('.mock-hint')){
+      var p=document.createElement('div'); p.className='mock-hint';
+      p.innerHTML='<i class="bi bi-shield-lock-fill"></i> Auto-filled mock data (real ID not required for practice).';
+      box.appendChild(p);
+    }
+  }
+  lockMock('txtAadhaar', MOCK.AADHAAR); hint('txtAadhaar');
+  lockMock('txtPan', MOCK.PAN); hint('txtPan');
+  function fillIdProofNo(){
+    var t=(document.getElementById('selIdProof')||{}).value||'';
+    lockMock('txtIdProofNo', MOCK[t] || MOCK.DEFAULT);
+  }
+  var sel=document.getElementById('selIdProof');
+  if(sel){ sel.addEventListener('change', fillIdProofNo); }
+  fillIdProofNo(); hint('txtIdProofNo');
+})();
+</script>
+
+<!-- ====== Category instructions popup (shown when a category is selected) ====== -->
+<style>
+  .cat-modal-overlay{position:fixed;inset:0;z-index:9997;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.45);padding:16px;}
+  .cat-modal-overlay.show{display:flex;}
+  .cat-modal{background:#fff;border-radius:14px;max-width:520px;width:100%;padding:26px 26px 22px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center;}
+  .cat-modal-x{position:absolute;top:12px;right:14px;border:none;background:none;font-size:22px;line-height:1;color:#94a3b8;cursor:pointer;}
+  .cat-modal-x:hover{color:#475569;}
+  .cat-modal-icon{width:54px;height:54px;border-radius:50%;border:2px solid #6366f1;color:#6366f1;display:flex;align-items:center;justify-content:center;margin:4px auto 14px;font-size:26px;}
+  .cat-modal-title{font-weight:700;color:#1e293b;font-size:17px;margin-bottom:10px;}
+  .cat-modal-body{font-size:13px;color:#475569;line-height:1.6;text-align:left;max-height:52vh;overflow:auto;margin-bottom:18px;}
+  .cat-modal-ok{min-width:120px;}
+</style>
+<div id="categoryModal" class="cat-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
+  <div class="cat-modal">
+    <button type="button" class="cat-modal-x" id="catModalClose" aria-label="Close">&times;</button>
+    <div class="cat-modal-icon"><i class="bi bi-info-lg"></i></div>
+    <h5 class="cat-modal-title" id="catModalTitle">Category instructions</h5>
+    <p class="cat-modal-body">
+      Please indicate your category correctly in the online application form. No change in category will be permitted.
+      Candidates belonging to OBC category but coming under creamy layer and/or if their caste does not find place in the
+      Central List are not entitled to OBC reservation. They should indicate their category as General in the online
+      application form. The candidate should possess a valid OBC certificate with a Non-creamy layer clause as per the
+      Government of India guidelines, from time to time. Caste Name (for OBC (NCL) / ST / SC) mentioned in the certificate
+      should fully match — letter by letter — with the Central Government list / notification. The certificate should be
+      issued in accordance with the order mentioned in the official notification.
+    </p>
+    <button type="button" class="btn sbtn cat-modal-ok" id="catModalOk">OK</button>
+  </div>
+</div>
+<script>
+(function(){
+  var overlay=document.getElementById('categoryModal');
+  function open(){ overlay.classList.add('show'); }
+  function close(){ overlay.classList.remove('show'); }
+  document.querySelectorAll('input[name="category"]').forEach(function(r){
+    r.addEventListener('change', function(){ if(r.checked) open(); });
+  });
+  document.getElementById('catModalOk').addEventListener('click', close);
+  document.getElementById('catModalClose').addEventListener('click', close);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) close(); });
 })();
 </script>
 
