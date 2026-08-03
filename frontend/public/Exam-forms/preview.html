@@ -171,8 +171,14 @@ var $ = function(id){ return document.getElementById(id); };
 
 // Load details from sessionStorage and render the full application preview
 (function() {
-  $('prevPhoto').src = sessionStorage.getItem('ibps_photoImg') || '';
-  $('prevSig').src = sessionStorage.getItem('ibps_sigImg') || '';
+  var defaultPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23e2e8f0'/><circle cx='75' cy='70' r='30' fill='%2394a3b8'/><path d='M35,140 C35,110 115,110 115,140 L115,180 L35,180 Z' fill='%2394a3b8'/><text x='75' y='160' font-family='sans-serif' font-size='12' fill='%23475569' text-anchor='middle'>PASSPORT PHOTO</text></svg>";
+  var defaultSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80' viewBox='0 0 200 80'><rect width='200' height='80' fill='%23f1f5f9'/><path d='M20,40 Q40,10 60,40 T100,40 T140,40 T180,30' fill='none' stroke='%230f172a' stroke-width='2'/><text x='100' y='68' font-family='sans-serif' font-size='10' fill='%2364748b' text-anchor='middle'>Candidate Signature</text></svg>";
+
+  var photoSrc = sessionStorage.getItem('ibps_photoImg') || sessionStorage.getItem('ibps_liveImg') || localStorage.getItem('ibps_photoImg') || localStorage.getItem('ibps_liveImg') || defaultPhoto;
+  var sigSrc = sessionStorage.getItem('ibps_sigImg') || localStorage.getItem('ibps_sigImg') || defaultSig;
+
+  if($('prevPhoto')) $('prevPhoto').src = photoSrc;
+  if($('prevSig')) $('prevSig').src = sigSrc;
 
   // Header registration info
   var regName = sessionStorage.getItem('ibps_fullname');
