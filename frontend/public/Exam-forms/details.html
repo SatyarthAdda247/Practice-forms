@@ -1787,8 +1787,14 @@ function renderPrefList(){
   });
 }
 
+// Uppercase and sanitize name fields (allow A-Z, space, dot)
+['txtFather','txtMother','txtSpouse','txtConfirmFather','txtConfirmMother','txtConfirmSpouse'].forEach(function(id){
+  var el=$(id);
+  if(el) el.addEventListener('input', function(){ this.value=this.value.toUpperCase().replace(/[^A-Z\s\.]/g,''); });
+});
+
 // Uppercase text fields
-['txtFather','txtMother','txtSpouse','txtConfirmFather','txtConfirmMother','txtConfirmSpouse','txtCivilOrg','txtCorrAddr1','txtCorrAddr2','txtCorrAddr3','txtPermAddr1','txtPermAddr2','txtPermAddr3','txtPan','txtIdProofNo','txtHrms'].forEach(function(id){
+['txtCivilOrg','txtCorrAddr1','txtCorrAddr2','txtCorrAddr3','txtPermAddr1','txtPermAddr2','txtPermAddr3','txtPan','txtIdProofNo','txtHrms'].forEach(function(id){
   var el=$(id);
   if(el) el.addEventListener('input', function(){ this.value=this.value.toUpperCase(); });
 });
@@ -1797,6 +1803,56 @@ function renderPrefList(){
   var el=$(id);
   if(el) el.addEventListener('input', function(){ this.value=this.value.replace(/[^0-9]/g,''); });
 });
+
+// ====== LIVE NAME MATCHING VALIDATION ======
+function validatePair(primaryId, confirmId, primaryKey, confirmKey, labelName) {
+  var pEl = $(primaryId);
+  var cEl = $(confirmId);
+  if (!pEl || !cEl) return;
+
+  function doValidate() {
+    var pVal = (pEl.value || '').trim();
+    var cVal = (cEl.value || '').trim();
+
+    if (pVal !== '') {
+      pEl.classList.remove('is-invalid');
+      pEl.classList.add('is-valid');
+      var pErr = $('err_' + primaryKey);
+      if (pErr) { pErr.textContent = ''; pErr.classList.remove('show'); }
+    } else {
+      pEl.classList.remove('is-valid');
+    }
+
+    if (cVal !== '') {
+      var cErr = $('err_' + confirmKey);
+      if (pVal.toUpperCase() === cVal.toUpperCase()) {
+        cEl.classList.remove('is-invalid');
+        cEl.classList.add('is-valid');
+        if (cErr) { cErr.textContent = ''; cErr.classList.remove('show'); }
+      } else {
+        cEl.classList.add('is-invalid');
+        cEl.classList.remove('is-valid');
+        if (cErr) {
+          cErr.textContent = labelName + " and Confirm " + labelName + " do not match.";
+          cErr.classList.add('show');
+        }
+      }
+    } else {
+      cEl.classList.remove('is-valid');
+      var cErrClear = $('err_' + confirmKey);
+      if (cErrClear) { cErrClear.textContent = ''; cErrClear.classList.remove('show'); }
+    }
+  }
+
+  pEl.addEventListener('input', doValidate);
+  pEl.addEventListener('change', doValidate);
+  cEl.addEventListener('input', doValidate);
+  cEl.addEventListener('change', doValidate);
+}
+
+validatePair('txtFather', 'txtConfirmFather', 'father_name', 'confirm_father', "Father's Name");
+validatePair('txtMother', 'txtConfirmMother', 'mother_name', 'confirm_mother', "Mother's Name");
+validatePair('txtSpouse', 'txtConfirmSpouse', 'spouse_name', 'confirm_spouse', "Spouse's Name");
 
 // ====== "Definition"/"Guidelines" info pills ======
 [['btnDefDisability','Definition of Disabilities — refer to the categories defined under the RPwD Act, 2016 (VI, HI, OC/Locomotor, ID & Others, and Multiple Disabilities).'],
