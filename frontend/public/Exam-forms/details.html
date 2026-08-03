@@ -725,18 +725,41 @@
         <label for="selExamState">State/UT/NCR to which centre of examination belongs <sup class="error">*</sup></label>
         <select class="custom-select" name="exam_state" id="selExamState">
           <option value="" selected>Select</option>
+          <option value="ANDAMAN & NICOBAR ISLANDS">ANDAMAN &amp; NICOBAR ISLANDS</option>
           <option value="ANDHRA PRADESH">ANDHRA PRADESH</option>
+          <option value="ARUNACHAL PRADESH">ARUNACHAL PRADESH</option>
+          <option value="ASSAM">ASSAM</option>
           <option value="BIHAR">BIHAR</option>
-          <option value="DELHI-NCR">DELHI / NCR</option>
+          <option value="CHANDIGARH">CHANDIGARH</option>
+          <option value="CHHATTISGARH">CHHATTISGARH</option>
+          <option value="DADRA & NAGAR HAVELI AND DAMAN & DIU">DADRA &amp; NAGAR HAVELI AND DAMAN &amp; DIU</option>
+          <option value="DELHI-NCR">DELHI-NCR</option>
+          <option value="GOA">GOA</option>
           <option value="GUJARAT">GUJARAT</option>
           <option value="HARYANA">HARYANA</option>
+          <option value="HIMACHAL PRADESH">HIMACHAL PRADESH</option>
+          <option value="JAMMU & KASHMIR">JAMMU &amp; KASHMIR</option>
+          <option value="JHARKHAND">JHARKHAND</option>
           <option value="KARNATAKA">KARNATAKA</option>
+          <option value="KERALA">KERALA</option>
+          <option value="LADAKH">LADAKH</option>
+          <option value="LAKSHADWEEP">LAKSHADWEEP</option>
           <option value="MADHYA PRADESH">MADHYA PRADESH</option>
           <option value="MAHARASHTRA">MAHARASHTRA</option>
+          <option value="MANIPUR">MANIPUR</option>
+          <option value="MEGHALAYA">MEGHALAYA</option>
+          <option value="MIZORAM">MIZORAM</option>
+          <option value="NAGALAND">NAGALAND</option>
+          <option value="ODISHA">ODISHA</option>
+          <option value="PUDUCHERRY">PUDUCHERRY</option>
           <option value="PUNJAB">PUNJAB</option>
           <option value="RAJASTHAN">RAJASTHAN</option>
+          <option value="SIKKIM">SIKKIM</option>
           <option value="TAMIL NADU">TAMIL NADU</option>
+          <option value="TELANGANA">TELANGANA</option>
+          <option value="TRIPURA">TRIPURA</option>
           <option value="UTTAR PRADESH">UTTAR PRADESH</option>
+          <option value="UTTARAKHAND">UTTARAKHAND</option>
           <option value="WEST BENGAL">WEST BENGAL</option>
         </select>
         <div class="invalid-feedback" id="err_exam_state"></div>
@@ -1370,36 +1393,61 @@ document.getElementsByName('has_experience').forEach(function(r){
   });
 });
 
-// ====== EXAM CENTRE + STATE/DISTRICT DATA ======
-var STATES = ['ANDHRA PRADESH','BIHAR','DELHI','GUJARAT','HARYANA','KARNATAKA','MADHYA PRADESH','MAHARASHTRA','PUNJAB','RAJASTHAN','TAMIL NADU','UTTAR PRADESH','WEST BENGAL'];
-var DISTRICTS = {
-  'DELHI':['CENTRAL DELHI','NEW DELHI','NORTH DELHI','SOUTH DELHI','WEST DELHI'],
-  'UTTAR PRADESH':['LUCKNOW','NOIDA','GHAZIABAD','KANPUR','VARANASI','AGRA'],
-  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','THANE'],
-  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
-  'DEFAULT':['DISTRICT 1','DISTRICT 2','DISTRICT 3']
+// ====== EXAM CENTRE + STATE/DISTRICT DATA (all States & UTs) ======
+var STATES_DATA = {
+  'ANDHRA PRADESH': {code:'28', cities:['VISAKHAPATNAM','VIJAYAWADA','GUNTUR','TIRUPATI','KAKINADA','RAJAHMUNDRY','NELLORE','KURNOOL','ANANTAPUR','KADAPA','ELURU','ONGOLE']},
+  'ARUNACHAL PRADESH': {code:'12', cities:['ITANAGAR','NAHARLAGUN','PASIGHAT','TAWANG','ZIRO']},
+  'ASSAM': {code:'18', cities:['GUWAHATI','DIBRUGARH','SILCHAR','JORHAT','TEZPUR','NAGAON','TINSUKIA','BONGAIGAON']},
+  'BIHAR': {code:'10', cities:['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR','DARBHANGA','PURNEA','ARRAH','BEGUSARAI','CHAPRA','KATIHAR']},
+  'CHHATTISGARH': {code:'22', cities:['RAIPUR','BHILAI','BILASPUR','DURG','KORBA','RAIGARH','JAGDALPUR','AMBIKAPUR']},
+  'GOA': {code:'30', cities:['PANAJI','MARGAO','VASCO DA GAMA','MAPUSA','PONDA']},
+  'GUJARAT': {code:'24', cities:['AHMEDABAD','SURAT','VADODARA','RAJKOT','GANDHINAGAR','BHAVNAGAR','JAMNAGAR','ANAND','MEHSANA','JUNAGADH','NADIAD']},
+  'HARYANA': {code:'06', cities:['GURUGRAM','FARIDABAD','PANIPAT','AMBALA','HISAR','KARNAL','ROHTAK','YAMUNANAGAR','SONIPAT','PANCHKULA']},
+  'HIMACHAL PRADESH': {code:'02', cities:['SHIMLA','DHARAMSHALA','SOLAN','MANDI','HAMIRPUR','BILASPUR','KULLU','UNA','PALAMPUR']},
+  'JHARKHAND': {code:'20', cities:['RANCHI','JAMSHEDPUR','DHANBAD','BOKARO','HAZARIBAGH','DEOGHAR','GIRIDIH','RAMGARH']},
+  'KARNATAKA': {code:'29', cities:['BENGALURU','MYSURU','MANGALURU','HUBBALLI-DHARWAD','BELAGAVI','KALABURAGI','DAVANGERE','SHIVAMOGGA','TUMAKURU','BALLARI','UDUPI']},
+  'KERALA': {code:'32', cities:['THIRUVANANTHAPURAM','KOCHI','KOZHIKODE','THRISSUR','KOLLAM','KANNUR','KOTTAYAM','PALAKKAD','ALAPPUZHA','MALAPPURAM']},
+  'MADHYA PRADESH': {code:'23', cities:['BHOPAL','INDORE','JABALPUR','GWALIOR','UJJAIN','SAGAR','SATNA','REWA','RATLAM','DEWAS']},
+  'MAHARASHTRA': {code:'27', cities:['MUMBAI','PUNE','NAGPUR','NASHIK','THANE','CHHATRAPATI SAMBHAJINAGAR','SOLAPUR','KOLHAPUR','AMRAVATI','NAVI MUMBAI','NANDED','JALGAON']},
+  'MANIPUR': {code:'14', cities:['IMPHAL','THOUBAL','BISHNUPUR']},
+  'MEGHALAYA': {code:'17', cities:['SHILLONG','TURA','JOWAI']},
+  'MIZORAM': {code:'15', cities:['AIZAWL','LUNGLEI']},
+  'NAGALAND': {code:'13', cities:['KOHIMA','DIMAPUR','MOKOKCHUNG']},
+  'ODISHA': {code:'21', cities:['BHUBANESWAR','CUTTACK','ROURKELA','BERHAMPUR','SAMBALPUR','BALASORE','PURI','BHADRAK']},
+  'PUNJAB': {code:'03', cities:['LUDHIANA','AMRITSAR','JALANDHAR','PATIALA','BATHINDA','MOHALI','PATHANKOT','HOSHIARPUR','MOGA']},
+  'RAJASTHAN': {code:'08', cities:['JAIPUR','JODHPUR','UDAIPUR','KOTA','AJMER','BIKANER','ALWAR','BHILWARA','SIKAR','SRI GANGANAGAR']},
+  'SIKKIM': {code:'11', cities:['GANGTOK','NAMCHI','GYALSHING']},
+  'TAMIL NADU': {code:'33', cities:['CHENNAI','COIMBATORE','MADURAI','TIRUCHIRAPPALLI','SALEM','TIRUNELVELI','ERODE','VELLORE','THANJAVUR','TIRUPPUR','THOOTHUKUDI']},
+  'TELANGANA': {code:'36', cities:['HYDERABAD','WARANGAL','KARIMNAGAR','NIZAMABAD','KHAMMAM','MAHBUBNAGAR','NALGONDA']},
+  'TRIPURA': {code:'16', cities:['AGARTALA','UDAIPUR','DHARMANAGAR']},
+  'UTTAR PRADESH': {code:'09', cities:['LUCKNOW','KANPUR','VARANASI','AGRA','PRAYAGRAJ','GHAZIABAD','NOIDA','MEERUT','BAREILLY','GORAKHPUR','ALIGARH','MORADABAD','JHANSI','SAHARANPUR']},
+  'UTTARAKHAND': {code:'05', cities:['DEHRADUN','HARIDWAR','ROORKEE','HALDWANI','NAINITAL','RUDRAPUR','KASHIPUR']},
+  'WEST BENGAL': {code:'19', cities:['KOLKATA','HOWRAH','DURGAPUR','ASANSOL','SILIGURI','KHARAGPUR','BARDHAMAN','MALDA','KALYANI']},
+  'ANDAMAN & NICOBAR ISLANDS': {code:'35', cities:['PORT BLAIR']},
+  'CHANDIGARH': {code:'04', cities:['CHANDIGARH']},
+  'DADRA & NAGAR HAVELI AND DAMAN & DIU': {code:'26', cities:['SILVASSA','DAMAN','DIU']},
+  'DELHI-NCR': {code:'07', cities:['NEW DELHI','DELHI','GHAZIABAD','NOIDA','GURUGRAM','FARIDABAD','GREATER NOIDA']},
+  'JAMMU & KASHMIR': {code:'01', cities:['SRINAGAR','JAMMU','ANANTNAG','BARAMULLA','UDHAMPUR']},
+  'LADAKH': {code:'37', cities:['LEH','KARGIL']},
+  'LAKSHADWEEP': {code:'31', cities:['KAVARATTI']},
+  'PUDUCHERRY': {code:'34', cities:['PUDUCHERRY','KARAIKAL','MAHE','YANAM']}
 };
-var STATE_CODES = {'ANDHRA PRADESH':'28','BIHAR':'10','DELHI-NCR':'07','GUJARAT':'24','HARYANA':'06','KARNATAKA':'29','MADHYA PRADESH':'23','MAHARASHTRA':'27','PUNJAB':'03','RAJASTHAN':'08','TAMIL NADU':'33','UTTAR PRADESH':'09','WEST BENGAL':'19'};
-var EXAM_CENTRES = {
-  'DELHI-NCR':['NEW DELHI','GHAZIABAD','GURUGRAM','NOIDA','FARIDABAD'],
-  'UTTAR PRADESH':['LUCKNOW','KANPUR','VARANASI','AGRA','ALLAHABAD'],
-  'MAHARASHTRA':['MUMBAI','PUNE','NAGPUR','NASHIK','AURANGABAD'],
-  'BIHAR':['PATNA','GAYA','MUZAFFARPUR','BHAGALPUR'],
-  'DEFAULT':['CENTRE 1','CENTRE 2','CENTRE 3','CENTRE 4']
-};
+var STATES = Object.keys(STATES_DATA);
 
-// Populate correspondence/permanent state selects
-document.querySelectorAll('.state-select').forEach(function(sel){
-  STATES.forEach(function(s){
-    var o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);
-  });
-});
+function fillOptions(sel, items, placeholder){
+  if(!sel) return;
+  sel.innerHTML = '<option value="">' + (placeholder || 'Select') + '</option>';
+  items.forEach(function(it){ var o=document.createElement('option'); o.value=it; o.textContent=it; sel.appendChild(o); });
+}
+
+// Populate correspondence and permanent state selects
+document.querySelectorAll('.state-select').forEach(function(sel){ fillOptions(sel, STATES, 'Select'); });
+
+function citiesFor(st){ return (STATES_DATA[st] && STATES_DATA[st].cities) || []; }
+
 function fillDistricts(stateSelId, distSelId){
   var st=$(stateSelId).value;
-  var dsel=$(distSelId);
-  dsel.innerHTML='<option value="">Select</option>';
-  var list=DISTRICTS[st]||DISTRICTS['DEFAULT'];
-  list.forEach(function(d){ var o=document.createElement('option'); o.value=d; o.textContent=d; dsel.appendChild(o); });
+  fillOptions($(distSelId), citiesFor(st), 'Select');
 }
 $('selCorrState').addEventListener('change', function(){ fillDistricts('selCorrState','selCorrDistrict'); });
 $('selPermState').addEventListener('change', function(){ fillDistricts('selPermState','selPermDistrict'); });
@@ -1407,12 +1455,9 @@ $('selPermState').addEventListener('change', function(){ fillDistricts('selPermS
 // Exam state -> state code + centre lists
 $('selExamState').addEventListener('change', function(){
   var st=this.value;
-  $('txtStateCode').value = STATE_CODES[st] || '';
-  var centres = EXAM_CENTRES[st] || EXAM_CENTRES['DEFAULT'];
-  document.querySelectorAll('.exam-centre').forEach(function(sel){
-    sel.innerHTML='<option value="">Select</option>';
-    centres.forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
+  $('txtStateCode').value = (STATES_DATA[st] && STATES_DATA[st].code) || '';
+  var centres = citiesFor(st);
+  document.querySelectorAll('.exam-centre').forEach(function(sel){ fillOptions(sel, centres, 'Select'); });
 });
 
 // ====== APPLICATION FEE (by category) ======
