@@ -384,6 +384,22 @@
     background: #dbeafe;
   }
 
+  /* Captcha Box Styling */
+  .captcha-box {
+    font-family: 'Courier New', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    background: #f8fafc repeating-linear-gradient(45deg, #f8fafc, #f8fafc 4px, #e2e8f0 4px, #e2e8f0 8px);
+    padding: 6px 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    user-select: none;
+    text-decoration: line-through;
+    display: inline-block;
+    color: #1e293b;
+  }
+
   /* Conditional sub-blocks */
   .cond-field, .cond-subblock {
     display: block !important;
@@ -1340,11 +1356,24 @@
       <div class="invalid-feedback" id="err_gst_address"></div>
     </div>
 
-    <!-- ============ APPLICATION FEE ============ -->
-    <div class="section-header">Application Fee / Intimation charges</div>
-    <div class="form-group">
-      <label class="mb-0">Amount : <strong id="feeAmount">-</strong></label>
-      <div class="field-hint" id="feeHint">Fee is computed from your selected category.</div>
+    <!-- Security Captcha (Basic Details Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodeBasic" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodeBasic" type="text" id="txtCodeBasic" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodeBasic"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgBasic"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Basic"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+      </div>
     </div>
 
     </div><!-- end tab-basic -->
@@ -1653,6 +1682,23 @@
           <option value="URDU">URDU</option>
           <option value="OTHERS">OTHERS</option>
         </select>
+    <!-- Security Captcha (Qualification Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodeQual" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodeQual" type="text" id="txtCodeQual" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodeQual"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgQual"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Qual"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
       </div>
     </div>
 
@@ -1698,6 +1744,24 @@
             <p class="mb-2"><strong>3.</strong> On the Right Side box, with the populated Banks, just drag and drop to change the order of Bank as per your preference.</p>
             <p class="mb-0"><strong>4.</strong> All the banks under the box "Name of the Banks" should be given preferences</p>
           </div>
+        </div>
+      </div>
+    <!-- Security Captcha (Preference Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodePref" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodePref" type="text" id="txtCodePref" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodePref"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgPref"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Pref"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
         </div>
       </div>
     </div>
@@ -1869,6 +1933,33 @@ toggleOnYes('cwe_appeared', 'cweSub');
 toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
 toggleOnYes('prosecution', 'prosecutionSub');
+
+// ====== CAPTCHA GENERATOR LOGIC ======
+var CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+var captchaStore = { Basic: '', Qual: '', Pref: '' };
+
+function genCaptchaTab(tabName) {
+  var s = '';
+  for (var i = 0; i < 6; i++) {
+    s += CAPTCHA_CHARS.charAt(Math.floor(Math.random() * CAPTCHA_CHARS.length));
+  }
+  captchaStore[tabName] = s;
+  var el = $('captchaImg' + tabName);
+  if (el) el.textContent = s;
+}
+
+['Basic', 'Qual', 'Pref'].forEach(function(tName) {
+  genCaptchaTab(tName);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.btn-refresh-captcha').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = this.getAttribute('data-target');
+      if (target) genCaptchaTab(target);
+    });
+  });
+});
 
 // ====== EXPERIENCE TOGGLE (Qualification tab) ======
 function checkExp(){
@@ -2262,6 +2353,10 @@ $('btnDemoDetails').addEventListener('click', function() {
   if($('selLang1')) $('selLang1').value = "HINDI";
   if($('selLang2')) $('selLang2').value = "ENGLISH";
 
+  if($('txtCodeBasic')) $('txtCodeBasic').value = captchaStore.Basic;
+  if($('txtCodeQual')) $('txtCodeQual').value = captchaStore.Qual;
+  if($('txtCodePref')) $('txtCodePref').value = captchaStore.Pref;
+
   clearAllErrors();
 });
 
@@ -2284,7 +2379,7 @@ function clearError(field){
   if(err){ err.textContent = ''; err.classList.remove('show'); }
 }
 
-var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','prosecution','prosecution_details','lang1'];
+var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','prosecution','prosecution_details','lang1','txtCodeBasic','txtCodeQual','txtCodePref'];
 function clearAllErrors(){ ERROR_FIELDS.forEach(clearError); }
 
 // Map field key -> actual element id (where they differ)
@@ -2397,6 +2492,17 @@ function validateAll(){
     if(!val('txtProsecutionDetails')) setErr('prosecution_details','Please enter particulars of prosecution.', errors);
   }
   if(!val('selLang1')) setErr('lang1','At least one language is required.', errors);
+
+  // Captcha validations for all 3 tabs
+  if(!val('txtCodeBasic') || val('txtCodeBasic').toUpperCase() !== captchaStore.Basic.toUpperCase()){
+    setErr('txtCodeBasic', 'Security Code (Captcha) for Basic Details is invalid or missing.', errors);
+  }
+  if(!val('txtCodeQual') || val('txtCodeQual').toUpperCase() !== captchaStore.Qual.toUpperCase()){
+    setErr('txtCodeQual', 'Security Code (Captcha) for Qualification Details is invalid or missing.', errors);
+  }
+  if(!val('txtCodePref') || val('txtCodePref').toUpperCase() !== captchaStore.Pref.toUpperCase()){
+    setErr('txtCodePref', 'Security Code (Captcha) for Preference Details is invalid or missing.', errors);
+  }
 
   return errors;
 }
