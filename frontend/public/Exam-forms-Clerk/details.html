@@ -2061,8 +2061,20 @@ function validateAll(){
 }
 
 function focusFirstError(errors){
+  if(!errors || !errors.length) return;
   var el = fieldEl(errors[0]);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  if(!el) return;
+
+  var panel = el.closest('.tab-panel');
+  if(panel && panel.id){
+    var tabBtn = document.querySelector('.sub-tab-btn[data-tab="' + panel.id + '"]');
+    if(tabBtn) tabBtn.click();
+  }
+
+  setTimeout(function(){
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    if(typeof el.focus === 'function') el.focus();
+  }, 150);
 }
 
 // Build a complete, human-readable snapshot of the whole form for the preview page
@@ -2235,37 +2247,6 @@ $('btnNext').addEventListener('click', function() {
     else if(prof === 'N'){ err('lang_proficiency','You must be proficient in the official language of the State/UT to apply for it.'); bad.push('langProf1'); }
     else clr('lang_proficiency');
     return bad;
-  }
-
-  ['selOfficialLang'].forEach(function(id){ $(id).addEventListener('change', function(){ clr('official_lang'); }); });
-  ['langProf1','langProf2'].forEach(function(id){ $(id).addEventListener('change', function(){ clr('lang_proficiency'); }); });
-
-  // Capture-phase gate: run BEFORE the page's own Save & Next handler so a
-  // missing Clerk-specific field blocks navigation the same way other fields do.
-  $('btnNext').addEventListener('click', function(e){
-    var bad = validateClerk();
-    if(bad.length){
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      var result = $('result');
-      if(result){
-        result.className = 'alert-box error show';
-        result.style.display = 'block';
-        result.textContent = 'One or more error(s) found in page. Please complete the State/UT vacancy and language section before continuing.';
-      }
-      // Make sure the Preference tab is visible, then focus the first bad field.
-      var prefTabBtn = document.querySelector('.sub-tab-btn[data-tab="tab-pref"]');
-      if(prefTabBtn) prefTabBtn.click();
-      var first = $(bad[0]);
-      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
-      return;
-    }
-    // Valid — persist the Clerk fields for the preview before the main handler navigates.
-    sessionStorage.setItem('ibps_vacancy_state', $('selVacancyState').value);
-    sessionStorage.setItem('ibps_official_lang', $('selOfficialLang').value);
-    sessionStorage.setItem('ibps_lang_proficiency', radioVal('lang_proficiency'));
-  }, true);
-
   fillLanguages();
 })();
 </script>
