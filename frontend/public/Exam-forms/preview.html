@@ -63,6 +63,99 @@
   .form-control.is-invalid{border-color:#dc3545 !important;}
   .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
   .invalid-feedback.show{display:block;}
+
+  /* IBPS Registration Confirmation Modals */
+  .ibps-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .ibps-modal-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+    width: 90%;
+    max-width: 440px;
+    padding: 32px 28px;
+    text-align: center;
+    position: relative;
+    animation: ibpsModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes ibpsModalPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .ibps-modal-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    font-size: 24px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    background: none;
+    border: none;
+  }
+  .ibps-modal-close:hover { color: #475569; }
+  .ibps-modal-icon-orange {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 2px solid #f97316;
+    color: #f97316;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700;
+    margin: 0 auto 16px auto;
+  }
+  .ibps-modal-icon-gray {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 2px solid #475569;
+    color: #475569;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 700;
+    margin: 0 auto 16px auto;
+  }
+  .ibps-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 14px;
+  }
+  .ibps-modal-body {
+    font-size: 13.5px;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+  .ibps-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+  .btn-ibps-ok {
+    background-color: #5c67f2;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px 26px;
+    border-radius: 8px;
+    border: none;
+    transition: background 0.15s ease;
+  }
+  .btn-ibps-ok:hover { background-color: #4f46e5; color: #ffffff; }
+  .btn-ibps-cancel {
+    background-color: #dc2626;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px 26px;
+    border-radius: 8px;
+    border: none;
+    transition: background 0.15s ease;
+  }
+  .btn-ibps-cancel:hover { background-color: #b91c1c; color: #ffffff; }
 </style>
 </head>
 
@@ -465,10 +558,66 @@ $('btnNext').addEventListener('click', function() {
     return;
   }
 
-  // Go to Uploads Page
-  window.location.href = 'uploads.html';
+  // Open Popup 1: Confirm Registration
+  var modal1 = $('modalConfirmReg');
+  var modal2 = $('modalFinalConfirm');
+
+  modal1.style.display = 'flex';
+
+  function closePopup1() { modal1.style.display = 'none'; }
+  function closePopup2() { modal2.style.display = 'none'; }
+
+  $('btnClosePopup1').onclick = closePopup1;
+  $('btnPopup1Cancel').onclick = closePopup1;
+
+  $('btnPopup1Ok').onclick = function() {
+    closePopup1();
+    // Open Popup 2: Final Confirmation
+    modal2.style.display = 'flex';
+  };
+
+  $('btnClosePopup2').onclick = closePopup2;
+  $('btnPopup2Cancel').onclick = closePopup2;
+
+  $('btnPopup2Ok').onclick = function() {
+    closePopup2();
+    window.location.href = 'uploads.html';
+  };
 });
 </script>
+
+<!-- Popup 1: Confirm Registration Modal -->
+<div class="ibps-modal-backdrop" id="modalConfirmReg">
+  <div class="ibps-modal-card">
+    <button type="button" class="ibps-modal-close" id="btnClosePopup1">&times;</button>
+    <div class="ibps-modal-icon-orange">!</div>
+    <div class="ibps-modal-title">Confirm Registration</div>
+    <div class="ibps-modal-body">
+      <p class="mb-2">On completion of registration, no changes of details already entered will be permitted.</p>
+      <p class="mb-0">After completion of registration proceed for document upload and payment process.</p>
+    </div>
+    <div class="ibps-modal-actions">
+      <button type="button" class="btn btn-ibps-ok" id="btnPopup1Ok">OK</button>
+      <button type="button" class="btn btn-ibps-cancel" id="btnPopup1Cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popup 2: Final Confirmation Modal -->
+<div class="ibps-modal-backdrop" id="modalFinalConfirm">
+  <div class="ibps-modal-card">
+    <button type="button" class="ibps-modal-close" id="btnClosePopup2">&times;</button>
+    <div class="ibps-modal-icon-gray">?</div>
+    <div class="ibps-modal-title">Final Confirmation</div>
+    <div class="ibps-modal-body">
+      <p class="mb-0">Are you sure to continue?</p>
+    </div>
+    <div class="ibps-modal-actions">
+      <button type="button" class="btn btn-ibps-ok" id="btnPopup2Ok">OK</button>
+      <button type="button" class="btn btn-ibps-cancel" id="btnPopup2Cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 
   <script src="form-persist.js"></script>
 </body>
