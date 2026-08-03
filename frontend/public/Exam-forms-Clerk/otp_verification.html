@@ -249,6 +249,14 @@
 (function(){
   var $ = function(id){ return document.getElementById(id); };
 
+  // Already verified? Never show the Verification step again — go straight to
+  // Photo & Signature.
+  if(sessionStorage.getItem('ibps_mobile_verified')==='Y'
+     && sessionStorage.getItem('ibps_email_verified')==='Y'){
+    window.location.replace('photo_signature.html');
+    return;
+  }
+
   // ---- prefill mobile/email from Basic Info ----
   var mobile = sessionStorage.getItem('ibps_mobile') || '9876543210';
   var email  = sessionStorage.getItem('ibps_email')  || 'candidate@example.com';

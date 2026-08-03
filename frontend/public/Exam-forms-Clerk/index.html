@@ -225,7 +225,7 @@
 
       <div class="form-group col-sm-6 col-md-12">
         <div class="custom-control custom-checkbox">
-          <input class="custom-control-input" type="checkbox" id="same_first_middle_name" name="same_first_middle_name" value="Y">
+          <input class="custom-control-input" type="checkbox" id="same_first_middle_name" name="same_first_middle_name" value="Y" disabled>
           <label class="custom-control-label" for="same_first_middle_name">I confirm that my first and middle name are same as entered in the application form.</label>
         </div>
       </div>
@@ -257,6 +257,26 @@
         <label for="cfullname_updated">Confirm Updated First Name <sup class="error">*</sup></label>
         <input class="form-control" maxlength="35" name="cfullname_updated" id="cfullname_updated">
         <div class="invalid-feedback" id="err_cfullname_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_middlename_updated">
+        <label for="middlename_updated">Updated Middle Name</label>
+        <input class="form-control" maxlength="35" name="middlename_updated" id="middlename_updated">
+        <div class="invalid-feedback" id="err_middlename_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_cmiddlename_updated">
+        <label for="cmiddlename_updated">Confirm Updated Middle Name</label>
+        <input class="form-control" maxlength="35" name="cmiddlename_updated" id="cmiddlename_updated">
+        <div class="invalid-feedback" id="err_cmiddlename_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_lastname_updated">
+        <label for="lastname_updated">Updated Last Name</label>
+        <input class="form-control" maxlength="35" name="lastname_updated" id="lastname_updated">
+        <div class="invalid-feedback" id="err_lastname_updated"></div>
+      </div>
+      <div class="form-group col-sm-6 col-md-6 hide" id="div_clastname_updated">
+        <label for="clastname_updated">Confirm Updated Last Name</label>
+        <input class="form-control" maxlength="35" name="clastname_updated" id="clastname_updated">
+        <div class="invalid-feedback" id="err_clastname_updated"></div>
       </div>
       <div class="form-group col-sm-6 col-md-12 hide" id="div_namechange_confirmation">
         <div class="custom-control custom-checkbox">
@@ -507,15 +527,27 @@
     $(id).addEventListener('input', updateFullName);
   });
 
+  // The "first & middle name are same" checkbox stays DISABLED unless the two
+  // fields actually match — you can only confirm sameness when they truly match.
+  function refreshSameNameCheckbox(){
+    var cb = $('same_first_middle_name');
+    var f = val('fullname'), m = val('middlename');
+    var match = f !== '' && f.toUpperCase() === m.toUpperCase();
+    cb.disabled = !match;
+    if(!match && cb.checked) cb.checked = false;
+  }
+  ['fullname','middlename'].forEach(function(id){
+    $(id).addEventListener('input', refreshSameNameCheckbox);
+    $(id).addEventListener('blur', refreshSameNameCheckbox);
+  });
+  refreshSameNameCheckbox();
+
   $('same_first_middle_name').addEventListener('change', function(){
-    var checked = this.checked;
-    $('middlename').disabled = checked;
-    $('cmiddlename').disabled = checked;
-    if(checked){
-      $('middlename').value = val('fullname');
-      $('cmiddlename').value = val('fullname');
+    // Only meaningful when enabled (i.e. the names already match); it's a
+    // confirmation, so it no longer overwrites the middle-name fields.
+    if(this.checked){
+      $('cmiddlename').value = val('middlename');
       updateFullName();
-      // Run real-time validation on the auto-filled fields
       liveValidateConfirmPair('middlename','cmiddlename','Middle Name');
     }
   });
@@ -526,7 +558,7 @@
   Array.prototype.slice.call(namechangeRadios).forEach(function(r){
     r.addEventListener('change', function(){
       var show = radioVal('namechange') === 'Y';
-      ['div_fullname_updated','div_cfullname_updated','div_namechange_confirmation'].forEach(function(id){
+      ['div_fullname_updated','div_cfullname_updated','div_middlename_updated','div_cmiddlename_updated','div_lastname_updated','div_clastname_updated','div_namechange_confirmation'].forEach(function(id){
         $(id).classList.toggle('hide', !show);
       });
       clearError('namechange');
@@ -755,6 +787,22 @@
         showError('cfullname_updated','Confirm Updated First Name does not match.');
         errors.push('cfullname_updated');
       } else { clearError('cfullname_updated'); markValid('cfullname_updated'); }
+
+      // Updated Middle Name (optional, but must match its confirm + be alpha)
+      if(val('middlename_updated')){
+        if(!NAME_RE.test(val('middlename_updated'))){ showError('middlename_updated','Updated Middle Name can contain only letters, spaces and apostrophe.'); errors.push('middlename_updated'); }
+        else { clearError('middlename_updated'); markValid('middlename_updated'); }
+        if(val('cmiddlename_updated').toUpperCase() !== val('middlename_updated').toUpperCase()){ showError('cmiddlename_updated','Confirm Updated Middle Name does not match.'); errors.push('cmiddlename_updated'); }
+        else { clearError('cmiddlename_updated'); markValid('cmiddlename_updated'); }
+      }
+      // Updated Last Name (optional, but must match its confirm + be alpha)
+      if(val('lastname_updated')){
+        if(!NAME_RE.test(val('lastname_updated'))){ showError('lastname_updated','Updated Last Name can contain only letters, spaces and apostrophe.'); errors.push('lastname_updated'); }
+        else { clearError('lastname_updated'); markValid('lastname_updated'); }
+        if(val('clastname_updated').toUpperCase() !== val('lastname_updated').toUpperCase()){ showError('clastname_updated','Confirm Updated Last Name does not match.'); errors.push('clastname_updated'); }
+        else { clearError('clastname_updated'); markValid('clastname_updated'); }
+      }
+
       if(!$('namechange_confirmation').checked){
         showError('namechange_confirmation','Please confirm the declaration.');
         errors.push('namechange_confirmation');
@@ -832,7 +880,15 @@
   });
 
   // ====== SAVE & NEXT — SHOW CENTER MODAL ======
+  function isVerified(){
+    return sessionStorage.getItem('ibps_mobile_verified')==='Y'
+        && sessionStorage.getItem('ibps_email_verified')==='Y';
+  }
+
   $('FinalSubmit').addEventListener('click', function(){
+    // Already verified — Basic Information is locked; skip the Verification step
+    // entirely and go straight to Photo & Signature.
+    if(isVerified()){ window.location.href = 'photo_signature.html'; return; }
     var errors = validateAll();
     var result = $('result');
     if(errors.length){
@@ -955,9 +1011,10 @@
 })();
 </script>
 
-<!-- After-completion look: once mobile/email are OTP-verified, show the green
-     "Verified" badge and lock those fields (mirrors the real IBPS form when you
-     navigate back to Basic Information after the Verification step). -->
+<!-- After verification: the whole Basic Information page becomes read-only
+     (mirrors the real IBPS form — no edits allowed once you've verified). The
+     mobile/email labels show a green "Verified" badge; "Save & Next" then jumps
+     straight to Photo & Signature (the Verification step is not shown again). -->
 <style>
   .verified-pill{
     display:inline-flex;align-items:center;gap:4px;margin-left:8px;
@@ -965,18 +1022,49 @@
     font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;vertical-align:middle;
   }
   .form-control[readonly]{background:#f1f5f9;cursor:not-allowed;}
+  .locked-note{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:6px;
+    padding:8px 12px;font-size:12.5px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
 </style>
 <script>
 (function(){
   function pill(){ var s=document.createElement('span'); s.className='verified-pill'; s.innerHTML='<i class="bi bi-check-circle-fill"></i> Verified'; return s; }
-  function lock(ids){ ids.forEach(function(id){ var el=document.getElementById(id); if(el){ el.setAttribute('readonly','readonly'); el.setAttribute('tabindex','-1'); if(el.tagName==='SELECT'){ el.style.pointerEvents='none'; el.setAttribute('aria-disabled','true'); } } }); }
   function badge(sel){ var l=document.querySelector(sel); if(l && !l.querySelector('.verified-pill')) l.appendChild(pill()); }
-  try{
-    if(sessionStorage.getItem('ibps_mobile_verified')==='Y'){
-      badge('label[for="txtmobile"]'); lock(['txtmobile','txtcmobile']);
+
+  function lockEntireForm(){
+    // Every input/select/textarea in the Basic Information form becomes
+    // read-only / non-interactive — the page is a locked review after verifying.
+    document.querySelectorAll('#reg_frm input, #reg_frm select, #reg_frm textarea').forEach(function(el){
+      if(el.type === 'checkbox' || el.type === 'radio'){
+        el.disabled = true;
+      } else if(el.tagName === 'SELECT'){
+        el.style.pointerEvents = 'none';
+        el.setAttribute('aria-disabled','true');
+        el.tabIndex = -1;
+      } else {
+        el.setAttribute('readonly','readonly');
+        el.tabIndex = -1;
+      }
+    });
+    badge('label[for="txtmobile"]');
+    badge('label[for="txtemail"]');
+    // Banner explaining the locked state.
+    var form = document.getElementById('reg_frm');
+    if(form && !document.getElementById('lockedNote')){
+      var n=document.createElement('div'); n.id='lockedNote'; n.className='locked-note';
+      n.innerHTML='<i class="bi bi-lock-fill"></i> Your details are verified and locked. Click “Save &amp; Next” to continue to Photo &amp; Signature.';
+      form.insertBefore(n, form.firstChild);
     }
-    if(sessionStorage.getItem('ibps_email_verified')==='Y'){
-      badge('label[for="txtemail"]'); lock(['txtemail','seldomain','txtcemail']);
+  }
+
+  try{
+    var verified = sessionStorage.getItem('ibps_mobile_verified')==='Y'
+                && sessionStorage.getItem('ibps_email_verified')==='Y';
+    if(verified){
+      lockEntireForm();
+    } else {
+      // Partial (shouldn't normally happen) — still badge/lock what's verified.
+      if(sessionStorage.getItem('ibps_mobile_verified')==='Y'){ badge('label[for="txtmobile"]'); }
+      if(sessionStorage.getItem('ibps_email_verified')==='Y'){ badge('label[for="txtemail"]'); }
     }
   }catch(e){}
 })();
