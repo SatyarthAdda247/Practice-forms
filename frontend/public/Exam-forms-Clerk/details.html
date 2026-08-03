@@ -289,6 +289,22 @@
     background: #dbeafe;
   }
 
+  /* Captcha Box Styling */
+  .captcha-box {
+    font-family: 'Courier New', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    background: #f8fafc repeating-linear-gradient(45deg, #f8fafc, #f8fafc 4px, #e2e8f0 4px, #e2e8f0 8px);
+    padding: 6px 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    user-select: none;
+    text-decoration: line-through;
+    display: inline-block;
+    color: #1e293b;
+  }
+
   .pref-selected-panel {
     background: #f8fafc;
     border: 2px solid #2563eb;
@@ -1467,9 +1483,24 @@
 
     <!-- ============ APPLICATION FEE ============ -->
     <div class="section-header">Application Fee / Intimation charges</div>
-    <div class="form-group">
-      <label class="mb-0">Amount : <strong id="feeAmount">-</strong></label>
-      <div class="field-hint" id="feeHint">Fee is computed from your selected category.</div>
+    <!-- Security Captcha (Basic Details Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodeBasic" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodeBasic" type="text" id="txtCodeBasic" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodeBasic"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgBasic"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Basic"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+      </div>
     </div>
 
     </div><!-- end tab-basic -->
@@ -1723,61 +1754,98 @@
 
     <!-- 3d. Languages Known -->
     <div class="section-header">Languages Known</div>
-    <div class="form-row">
-      <div class="form-group col-md-4">
-        <label for="selLang1">Language 1 (Proficient) <sup class="error">*</sup></label>
-        <select class="custom-select" name="lang1" id="selLang1">
-          <option value="" selected>Select Language</option>
-          <option value="HINDI">HINDI</option>
-          <option value="ENGLISH">ENGLISH</option>
-          <option value="BENGALI">BENGALI</option>
-          <option value="TAMIL">TAMIL</option>
-          <option value="TELUGU">TELUGU</option>
-          <option value="MARATHI">MARATHI</option>
-          <option value="GUJARATI">GUJARATI</option>
-          <option value="KANNADA">KANNADA</option>
-          <option value="PUNJABI">PUNJABI</option>
-          <option value="MALAYALAM">MALAYALAM</option>
-          <option value="URDU">URDU</option>
-          <option value="OTHERS">OTHERS</option>
-        </select>
-        <div class="invalid-feedback" id="err_lang1"></div>
-      </div>
-      <div class="form-group col-md-4">
-        <label for="selLang2">Language 2 (Optional)</label>
-        <select class="custom-select" name="lang2" id="selLang2">
-          <option value="" selected>Select Language</option>
-          <option value="HINDI">HINDI</option>
-          <option value="ENGLISH">ENGLISH</option>
-          <option value="BENGALI">BENGALI</option>
-          <option value="TAMIL">TAMIL</option>
-          <option value="TELUGU">TELUGU</option>
-          <option value="MARATHI">MARATHI</option>
-          <option value="GUJARATI">GUJARATI</option>
-          <option value="KANNADA">KANNADA</option>
-          <option value="PUNJABI">PUNJABI</option>
-          <option value="MALAYALAM">MALAYALAM</option>
-          <option value="URDU">URDU</option>
-          <option value="OTHERS">OTHERS</option>
-        </select>
-      </div>
-      <div class="form-group col-md-4">
-        <label for="selLang3">Language 3 (Optional)</label>
-        <select class="custom-select" name="lang3" id="selLang3">
-          <option value="" selected>Select Language</option>
-          <option value="HINDI">HINDI</option>
-          <option value="ENGLISH">ENGLISH</option>
-          <option value="BENGALI">BENGALI</option>
-          <option value="TAMIL">TAMIL</option>
-          <option value="TELUGU">TELUGU</option>
-          <option value="MARATHI">MARATHI</option>
-          <option value="GUJARATI">GUJARATI</option>
-          <option value="KANNADA">KANNADA</option>
-          <option value="PUNJABI">PUNJABI</option>
-          <option value="MALAYALAM">MALAYALAM</option>
-          <option value="URDU">URDU</option>
-          <option value="OTHERS">OTHERS</option>
-        </select>
+    <style>
+      .lang-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:10px;}
+      .lang-table th{background:#5b6cf0;color:#fff;font-weight:700;font-size:14px;padding:12px 14px;text-align:center;}
+      .lang-table td{padding:12px 16px;border-top:1px solid #eef2f7;vertical-align:middle;background:#fff;}
+      .lang-table tbody tr:nth-child(even) td{background:#f8fafc;}
+      .lang-table td.lang-cell{width:52%;position:relative;}
+      .lang-table td.tog-cell{text-align:center;width:16%;white-space:nowrap;}
+      .lang-req-star{color:#dc3545;position:absolute;left:2px;top:16px;font-weight:700;}
+      .switch{position:relative;display:inline-block;width:44px;height:22px;vertical-align:middle;margin:0;}
+      .switch input{opacity:0;width:0;height:0;}
+      .switch .slider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s;}
+      .switch .slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+      .switch input:checked + .slider{background:#4c56c0;}
+      .switch input:checked + .slider:before{transform:translateX(22px);}
+      .tog-check{color:#16a34a;margin-left:7px;font-weight:700;display:none;vertical-align:middle;}
+      .tog-cell:has(input:checked) .tog-check{display:inline-block;}
+    </style>
+    <div style="overflow-x:auto;">
+    <table class="lang-table">
+      <thead>
+        <tr><th style="text-align:left;">Languages Known</th><th>Read</th><th>Write</th><th>Speak</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="lang-cell">
+            <span class="lang-req-star">*</span>
+            <select class="custom-select" name="lang1" id="selLang1" style="padding-left:22px;">
+              <option value="" selected>Select</option>
+              <option value="HINDI">HINDI</option><option value="ENGLISH">ENGLISH</option><option value="BENGALI">BENGALI</option>
+              <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option><option value="MARATHI">MARATHI</option>
+              <option value="GUJARATI">GUJARATI</option><option value="KANNADA">KANNADA</option><option value="PUNJABI">PUNJABI</option>
+              <option value="MALAYALAM">MALAYALAM</option><option value="URDU">URDU</option><option value="ASSAMESE">ASSAMESE</option>
+              <option value="ODIA">ODIA</option><option value="KONKANI">KONKANI</option><option value="MANIPURI">MANIPURI</option>
+              <option value="NEPALI">NEPALI</option><option value="OTHERS">OTHERS</option>
+            </select>
+            <div class="invalid-feedback" id="err_lang1"></div>
+          </td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang1_read" id="lang1_read" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang1_write" id="lang1_write" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang1_speak" id="lang1_speak" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+        </tr>
+        <tr>
+          <td class="lang-cell">
+            <select class="custom-select" name="lang2" id="selLang2">
+              <option value="" selected>Select</option>
+              <option value="HINDI">HINDI</option><option value="ENGLISH">ENGLISH</option><option value="BENGALI">BENGALI</option>
+              <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option><option value="MARATHI">MARATHI</option>
+              <option value="GUJARATI">GUJARATI</option><option value="KANNADA">KANNADA</option><option value="PUNJABI">PUNJABI</option>
+              <option value="MALAYALAM">MALAYALAM</option><option value="URDU">URDU</option><option value="ASSAMESE">ASSAMESE</option>
+              <option value="ODIA">ODIA</option><option value="KONKANI">KONKANI</option><option value="MANIPURI">MANIPURI</option>
+              <option value="NEPALI">NEPALI</option><option value="OTHERS">OTHERS</option>
+            </select>
+          </td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang2_read" id="lang2_read" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang2_write" id="lang2_write" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang2_speak" id="lang2_speak" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+        </tr>
+        <tr>
+          <td class="lang-cell">
+            <select class="custom-select" name="lang3" id="selLang3">
+              <option value="" selected>Select</option>
+              <option value="HINDI">HINDI</option><option value="ENGLISH">ENGLISH</option><option value="BENGALI">BENGALI</option>
+              <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option><option value="MARATHI">MARATHI</option>
+              <option value="GUJARATI">GUJARATI</option><option value="KANNADA">KANNADA</option><option value="PUNJABI">PUNJABI</option>
+              <option value="MALAYALAM">MALAYALAM</option><option value="URDU">URDU</option><option value="ASSAMESE">ASSAMESE</option>
+              <option value="ODIA">ODIA</option><option value="KONKANI">KONKANI</option><option value="MANIPURI">MANIPURI</option>
+              <option value="NEPALI">NEPALI</option><option value="OTHERS">OTHERS</option>
+            </select>
+          </td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang3_read" id="lang3_read" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang3_write" id="lang3_write" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+          <td class="tog-cell"><label class="switch"><input type="checkbox" name="lang3_speak" id="lang3_speak" value="Y"><span class="slider"></span></label><i class="bi bi-check-lg tog-check"></i></td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- Security Captcha (Qualification Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodeQual" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodeQual" type="text" id="txtCodeQual" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodeQual"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgQual"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Qual"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
       </div>
     </div>
 
@@ -1823,6 +1891,24 @@
             <p class="mb-2"><strong>3.</strong> On the Right Side box, with the populated Banks, just drag and drop to change the order of Bank as per your preference.</p>
             <p class="mb-0"><strong>4.</strong> All the banks under the box "Name of the Banks" should be given preferences</p>
           </div>
+        </div>
+      </div>
+    <!-- Security Captcha (Preference Tab) -->
+    <div class="form-group security col-md-12 border-top pt-4 mt-4">
+      <label for="txtCodePref" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
+      <div class="row align-items-center">
+        <div class="col-md-4 col-sm-6 mb-3 mb-sm-0">
+          <div class="input-group">
+            <div class="input-group-prepend"><span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span></div>
+            <input name="txtCodePref" type="text" id="txtCodePref" class="form-control" placeholder="ENTER CAPTCHA" style="text-transform: uppercase;">
+          </div>
+          <div class="invalid-feedback" id="err_txtCodePref"></div>
+        </div>
+        <div class="col-auto">
+          <span class="captcha-box" id="captchaImgPref"></span>
+        </div>
+        <div class="col-auto">
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Pref"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
         </div>
       </div>
     </div>
@@ -1994,6 +2080,33 @@ toggleOnYes('cwe_appeared', 'cweSub');
 toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
 toggleOnYes('prosecution', 'prosecutionSub');
+
+// ====== CAPTCHA GENERATOR LOGIC ======
+var CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+var captchaStore = { Basic: '', Qual: '', Pref: '' };
+
+function genCaptchaTab(tabName) {
+  var s = '';
+  for (var i = 0; i < 6; i++) {
+    s += CAPTCHA_CHARS.charAt(Math.floor(Math.random() * CAPTCHA_CHARS.length));
+  }
+  captchaStore[tabName] = s;
+  var el = $('captchaImg' + tabName);
+  if (el) el.textContent = s;
+}
+
+['Basic', 'Qual', 'Pref'].forEach(function(tName) {
+  genCaptchaTab(tName);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.btn-refresh-captcha').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = this.getAttribute('data-target');
+      if (target) genCaptchaTab(target);
+    });
+  });
+});
 
 // ====== EXPERIENCE TOGGLE (Qualification tab) ======
 function checkExp(){
@@ -2458,6 +2571,10 @@ $('btnDemoDetails').addEventListener('click', function() {
   if($('lang10_y')) $('lang10_y').checked = true;
   if($('selMedium')) $('selMedium').value = "ENGLISH & HINDI";
 
+  if($('txtCodeBasic')) $('txtCodeBasic').value = captchaStore.Basic;
+  if($('txtCodeQual')) $('txtCodeQual').value = captchaStore.Qual;
+  if($('txtCodePref')) $('txtCodePref').value = captchaStore.Pref;
+
   clearAllErrors();
 });
 
@@ -2486,7 +2603,7 @@ function clearError(field){
   if(err){ err.textContent = ''; err.classList.remove('show'); }
 }
 
-var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','prosecution','prosecution_details','lang1','opted_lang','lang_proficient_decl','lang_10th_cert','medium_exam'];
+var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','prosecution','prosecution_details','lang1','opted_lang','lang_proficient_decl','lang_10th_cert','medium_exam','txtCodeBasic','txtCodeQual','txtCodePref'];
 function clearAllErrors(){ ERROR_FIELDS.forEach(clearError); }
 
 // Map field key -> actual element id (where they differ)
@@ -2645,6 +2762,17 @@ function validateAll(){
     if(!val('txtProsecutionDetails')) setErr('prosecution_details','Please enter particulars of prosecution.', errors);
   }
   if(!val('selLang1')) setErr('lang1','At least one language is required.', errors);
+
+  // Captcha validations for all 3 tabs
+  if(!val('txtCodeBasic') || val('txtCodeBasic').toUpperCase() !== captchaStore.Basic.toUpperCase()){
+    setErr('txtCodeBasic', 'Security Code (Captcha) for Basic Details is invalid or missing.', errors);
+  }
+  if(!val('txtCodeQual') || val('txtCodeQual').toUpperCase() !== captchaStore.Qual.toUpperCase()){
+    setErr('txtCodeQual', 'Security Code (Captcha) for Qualification Details is invalid or missing.', errors);
+  }
+  if(!val('txtCodePref') || val('txtCodePref').toUpperCase() !== captchaStore.Pref.toUpperCase()){
+    setErr('txtCodePref', 'Security Code (Captcha) for Preference Details is invalid or missing.', errors);
+  }
 
   return errors;
 }
