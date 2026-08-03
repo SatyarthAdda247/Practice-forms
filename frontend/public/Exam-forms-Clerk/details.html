@@ -2165,9 +2165,9 @@ $('chkSameAddr').addEventListener('change', function(){
   }
 });
 
-// Populate graduation passing years
+// Populate graduation passing years (if select exists)
 var yearSelect = $('txtDegreeYear');
-fillYears(yearSelect, curYear, curYear-15);
+if(yearSelect) fillYears(yearSelect, curYear, curYear-15);
 
 // ====== PARTICIPATING BANKS (Preference tab 3-Column UI) ======
 var ALL_BANKS = [
@@ -2493,7 +2493,7 @@ function fieldEl(key){
     'father_name':'txtFather','mother_name':'txtMother','confirm_father':'txtConfirmFather','confirm_mother':'txtConfirmMother','confirm_spouse':'txtConfirmSpouse',
     'corr_addr1':'txtCorrAddr1','corr_state':'selCorrState','corr_district':'selCorrDistrict','corr_pincode':'txtCorrPincode',
     'perm_addr1':'txtPermAddr1','perm_state':'selPermState','perm_district':'selPermDistrict','perm_pincode':'txtPermPincode',
-    'gst_address':'selGst','bank_bfsi':'selBankBFSI','degree':'selDegree','passing_year':'txtDegreeYear','percentage':'txtPercentage','lang1':'selLang1',
+    'gst_address':'selGst','bank_bfsi':'selBankBFSI','degree':'selDegree','passing_year':($('txtPassingDate')?'txtPassingDate':'txtDegreeYear'),'percentage':'txtPercentage','lang1':'selLang1',
     'opted_lang':'selOptedLang','medium_exam':'selMedium',
     'lang_proficient_decl':'langProficientDecl','lang_10th_cert':'lang10_y',
     'category':'cat_general','disability':'dis_n','serving_govt':'serving_n','exserviceman':'exsvc_n',
@@ -2630,7 +2630,8 @@ function validateAll(){
 
   // Qualification tab
   if(!val('selDegree')) setErr('degree','Degree is required.', errors);
-  if(!val('txtDegreeYear')) setErr('passing_year','Passing year is required.', errors);
+  var passDate = val('txtPassingDate') || val('txtDegreeYear');
+  if(!passDate) setErr('passing_year','Date/Year of Passing is required.', errors);
   var pct=val('txtPercentage');
   if(!pct || isNaN(pct) || pct<0 || pct>100) setErr('percentage','Enter a valid graduation percentage between 0 and 100.', errors);
   if(!radioVal('has_experience')) setErr('has_experience','Please select an option.', errors);
