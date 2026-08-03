@@ -1891,8 +1891,9 @@
             <p class="mb-2"><strong>3.</strong> On the Right Side box, with the populated Banks, just drag and drop to change the order of Bank as per your preference.</p>
             <p class="mb-0"><strong>4.</strong> All the banks under the box "Name of the Banks" should be given preferences</p>
           </div>
-        </div>
       </div>
+    </div><!-- end row -->
+
     <!-- Security Captcha (Preference Tab) -->
     <div class="form-group security col-md-12 border-top pt-4 mt-4">
       <label for="txtCodePref" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
@@ -1921,6 +1922,36 @@
       <input class="btn sbtn" type="button" id="btnNext" value="Save & Next">
     </div>
   </form>
+</div>
+
+<!-- IBPS Save & Next Confirmation Modal -->
+<div class="modal fade" id="confirmSaveModal" tabindex="-1" role="dialog" aria-labelledby="confirmSaveModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, #4f46e5, #3b82f6); border-top-left-radius: 12px; border-top-right-radius: 12px;">
+        <h5 class="modal-title font-weight-bold" id="confirmSaveModalLabel"><i class="bi bi-patch-check-fill mr-2"></i> Confirmation</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" id="btnCloseConfirmModal">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-4" style="font-size: 14px; color: #334155; line-height: 1.6;">
+        <div class="d-flex align-items-center mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-warning mr-3" style="font-size: 32px; flex-shrink: 0;"></i>
+          <div>
+            <strong style="color: #1e293b; font-size: 15px;">Please confirm that all details entered are correct!</strong>
+            <div class="text-muted small mt-1">No change in details will be permitted after complete registration of your application.</div>
+          </div>
+        </div>
+        <div class="alert alert-warning mb-0" style="font-size: 13px; border-radius: 8px;">
+          Are you sure you want to save these details and proceed to the <strong>Photo &amp; Signature Upload</strong> page?
+        </div>
+      </div>
+      <div class="modal-footer bg-light" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+        <button type="button" class="btn btn-secondary px-4 font-weight-bold" data-dismiss="modal" id="btnCancelConfirmModal">Cancel</button>
+        <button type="button" class="btn btn-primary px-4 font-weight-bold" id="btnConfirmProceed" style="background-color: #4f46e5; border-color: #4f46e5;">OK / Save &amp; Next</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer class="footer">
@@ -2828,6 +2859,44 @@ function buildSnapshot(){
   });
   return snap;
 }
+function openConfirmModal(onConfirm) {
+  var modalEl = $('confirmSaveModal');
+  if(!modalEl){ onConfirm(); return; }
+
+  if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
+    window.jQuery(modalEl).modal('show');
+    $('btnConfirmProceed').onclick = function() {
+      window.jQuery(modalEl).modal('hide');
+      onConfirm();
+    };
+  } else {
+    modalEl.style.display = 'block';
+    modalEl.classList.add('show');
+    document.body.classList.add('modal-open');
+    var backdrop = $('modalBackdropTemp');
+    if(!backdrop){
+      backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop fade show';
+      backdrop.id = 'modalBackdropTemp';
+      document.body.appendChild(backdrop);
+    }
+
+    function closeModal() {
+      modalEl.style.display = 'none';
+      modalEl.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      var b = $('modalBackdropTemp');
+      if (b) b.remove();
+    }
+
+    if($('btnCloseConfirmModal')) $('btnCloseConfirmModal').onclick = closeModal;
+    if($('btnCancelConfirmModal')) $('btnCancelConfirmModal').onclick = closeModal;
+    $('btnConfirmProceed').onclick = function() {
+      closeModal();
+      onConfirm();
+    };
+  }
+}
 
 $('btnValidateDetails').addEventListener('click', function(){
   var errors = validateAll();
@@ -2842,6 +2911,7 @@ $('btnValidateDetails').addEventListener('click', function(){
     result.style.display = 'block';
     result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
     window.scrollTo({top:0, behavior:'smooth'});
+    alert("All fields are valid! You can now click Save & Next to proceed.");
   }
 });
 
@@ -2856,58 +2926,70 @@ $('btnNext').addEventListener('click', function() {
     return;
   }
 
-  var dobStr = val('dob_yyyy') + '-' + val('dob_mm') + '-' + val('dob_dd');
+  openConfirmModal(function() {
+    var dobStr = val('dob_yyyy') + '-' + val('dob_mm') + '-' + val('dob_dd');
 
-  sessionStorage.setItem('ibps_category', radioVal('category'));
-  sessionStorage.setItem('ibps_disability', radioVal('disability'));
-  if(radioVal('disability') === 'Y'){
-    sessionStorage.setItem('ibps_disability_type', val('selDisabilityType'));
-  }
-  sessionStorage.setItem('ibps_serving_govt', radioVal('serving_govt'));
-  sessionStorage.setItem('ibps_exserviceman', radioVal('exserviceman'));
-  sessionStorage.setItem('ibps_minority', radioVal('minority'));
-  sessionStorage.setItem('ibps_religion', val('selReligion'));
-  sessionStorage.setItem('ibps_cwe_appeared', radioVal('cwe_appeared'));
-  sessionStorage.setItem('ibps_apprentice', radioVal('apprentice'));
-  sessionStorage.setItem('ibps_nationality', val('selNationality'));
-  sessionStorage.setItem('ibps_exam_state', val('selExamState'));
-  sessionStorage.setItem('ibps_prelim_i', val('selPrelimI'));
-  sessionStorage.setItem('ibps_prelim_ii', val('selPrelimII'));
-  sessionStorage.setItem('ibps_main_i', val('selMainI'));
-  sessionStorage.setItem('ibps_main_ii', val('selMainII'));
-  sessionStorage.setItem('ibps_id_proof', val('selIdProof'));
-  sessionStorage.setItem('ibps_id_proof_no', val('txtIdProofNo'));
-  sessionStorage.setItem('ibps_dob', dobStr);
-  sessionStorage.setItem('ibps_gender', radioVal('gender'));
-  sessionStorage.setItem('ibps_marital', radioVal('marital'));
-  sessionStorage.setItem('ibps_aadhaar', val('txtAadhaar'));
-  sessionStorage.setItem('ibps_pan', val('txtPan'));
-  sessionStorage.setItem('ibps_father', val('txtFather'));
-  sessionStorage.setItem('ibps_mother', val('txtMother'));
-  sessionStorage.setItem('ibps_spouse', val('txtSpouse'));
-  sessionStorage.setItem('ibps_corr_addr', [val('txtCorrAddr1'),val('txtCorrAddr2'),val('txtCorrAddr3')].filter(Boolean).join(', '));
-  sessionStorage.setItem('ibps_corr_state', val('selCorrState'));
-  sessionStorage.setItem('ibps_corr_district', val('selCorrDistrict'));
-  sessionStorage.setItem('ibps_corr_pincode', val('txtCorrPincode'));
-  sessionStorage.setItem('ibps_perm_addr', [val('txtPermAddr1'),val('txtPermAddr2'),val('txtPermAddr3')].filter(Boolean).join(', '));
-  sessionStorage.setItem('ibps_perm_state', val('selPermState'));
-  sessionStorage.setItem('ibps_perm_pincode', val('txtPermPincode'));
-  sessionStorage.setItem('ibps_gst_address', val('selGst'));
-  // legacy keys kept for preview compatibility
-  sessionStorage.setItem('ibps_state', val('selCorrState'));
-  sessionStorage.setItem('ibps_address', [val('txtCorrAddr1'),val('txtCorrAddr2'),val('txtCorrAddr3')].filter(Boolean).join(', '));
-  sessionStorage.setItem('ibps_degree', val('selDegree'));
-  sessionStorage.setItem('ibps_year', val('txtDegreeYear'));
-  sessionStorage.setItem('ibps_percentage', val('txtPercentage'));
-  sessionStorage.setItem('ibps_lang1', val('selLang1'));
-  sessionStorage.setItem('ibps_lang2', val('selLang2'));
-  sessionStorage.setItem('ibps_lang3', val('selLang3'));
-  sessionStorage.setItem('ibps_banks', JSON.stringify(selectedBankOrder));
+    sessionStorage.setItem('ibps_category', radioVal('category'));
+    sessionStorage.setItem('ibps_disability', radioVal('disability'));
+    if(radioVal('disability') === 'Y'){
+      sessionStorage.setItem('ibps_disability_type', val('selDisabilityType'));
+    }
+    sessionStorage.setItem('ibps_serving_govt', radioVal('serving_govt'));
+    sessionStorage.setItem('ibps_exserviceman', radioVal('exserviceman'));
+    sessionStorage.setItem('ibps_minority', radioVal('minority'));
+    sessionStorage.setItem('ibps_religion', val('selReligion'));
 
-  // Full snapshot of every field for a complete preview
-  sessionStorage.setItem('ibps_snapshot', JSON.stringify(buildSnapshot()));
+    sessionStorage.setItem('ibps_cwe_appeared', radioVal('cwe_appeared'));
+    sessionStorage.setItem('ibps_apprentice', radioVal('apprentice'));
+    sessionStorage.setItem('ibps_nationality', val('selNationality'));
 
-  window.location.href = 'preview.html';
+    sessionStorage.setItem('ibps_exam_state', val('selExamState'));
+    sessionStorage.setItem('ibps_prelim_i', val('selPrelimI'));
+    sessionStorage.setItem('ibps_prelim_ii', val('selPrelimII'));
+    sessionStorage.setItem('ibps_main_i', val('selMainI'));
+    sessionStorage.setItem('ibps_main_ii', val('selMainII'));
+
+    sessionStorage.setItem('ibps_id_proof', val('selIdProof'));
+    sessionStorage.setItem('ibps_id_proof_no', val('txtIdProofNo'));
+
+    sessionStorage.setItem('ibps_dob', dobStr);
+    sessionStorage.setItem('ibps_gender', radioVal('gender'));
+    sessionStorage.setItem('ibps_marital', radioVal('marital'));
+    sessionStorage.setItem('ibps_aadhaar', val('txtAadhaar'));
+    sessionStorage.setItem('ibps_pan', val('txtPan'));
+    sessionStorage.setItem('ibps_twin', radioVal('twin'));
+    sessionStorage.setItem('ibps_father', val('txtFather'));
+    sessionStorage.setItem('ibps_mother', val('txtMother'));
+    sessionStorage.setItem('ibps_spouse', val('txtSpouse'));
+
+    sessionStorage.setItem('ibps_corr_addr1', val('txtCorrAddr1'));
+    sessionStorage.setItem('ibps_corr_addr2', val('txtCorrAddr2'));
+    sessionStorage.setItem('ibps_corr_addr3', val('txtCorrAddr3'));
+    sessionStorage.setItem('ibps_corr_state', val('selCorrState'));
+    sessionStorage.setItem('ibps_corr_district', val('selCorrDistrict'));
+    sessionStorage.setItem('ibps_corr_pincode', val('txtCorrPincode'));
+
+    sessionStorage.setItem('ibps_perm_addr1', val('txtPermAddr1'));
+    sessionStorage.setItem('ibps_perm_addr2', val('txtPermAddr2'));
+    sessionStorage.setItem('ibps_perm_addr3', val('txtPermAddr3'));
+    sessionStorage.setItem('ibps_perm_state', val('selPermState'));
+    sessionStorage.setItem('ibps_perm_district', val('selPermDistrict'));
+    sessionStorage.setItem('ibps_perm_pincode', val('txtPermPincode'));
+
+    sessionStorage.setItem('ibps_gst', val('selGst'));
+    sessionStorage.setItem('ibps_degree', val('selDegree'));
+    sessionStorage.setItem('ibps_year', val('txtDegreeYear'));
+    sessionStorage.setItem('ibps_percentage', val('txtPercentage'));
+    sessionStorage.setItem('ibps_lang1', val('selLang1'));
+    sessionStorage.setItem('ibps_lang2', val('selLang2'));
+    sessionStorage.setItem('ibps_lang3', val('selLang3'));
+    sessionStorage.setItem('ibps_banks', JSON.stringify(selectedBankOrder));
+
+    // Full snapshot of every field for a complete preview
+    sessionStorage.setItem('ibps_snapshot', JSON.stringify(buildSnapshot()));
+
+    window.location.href = 'preview.html';
+  });
 });
 </script>
 
