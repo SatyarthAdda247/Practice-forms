@@ -1838,8 +1838,20 @@ function validateAll(){
 }
 
 function focusFirstError(errors){
+  if(!errors || !errors.length) return;
   var el = fieldEl(errors[0]);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  if(!el) return;
+
+  var panel = el.closest('.tab-panel');
+  if(panel && panel.id){
+    var tabBtn = document.querySelector('.sub-tab-btn[data-tab="' + panel.id + '"]');
+    if(tabBtn) tabBtn.click();
+  }
+
+  setTimeout(function(){
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    if(typeof el.focus === 'function') el.focus();
+  }, 150);
 }
 
 // Build a complete, human-readable snapshot of the whole form for the preview page
