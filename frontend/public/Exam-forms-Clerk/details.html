@@ -23,15 +23,31 @@
   .invalid-feedback{display:none;color:#dc3545;font-size:12.5px;margin-top:2px;}
   .invalid-feedback.show{display:block;}
 
+  /* Plain section heading — matches the official form (bold title with a light
+     rule beneath), instead of a filled bar. */
   .section-header {
-    background-color: #f1f5f9;
-    padding: 0.75rem 1rem;
-    border-left: 4px solid #4c56c0;
+    background: transparent;
+    padding: 0 0 0.5rem 0;
+    border-bottom: 1px solid #e2e8f0;
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: #1e293b;
     margin-top: 2rem;
     margin-bottom: 1.25rem;
+  }
+  /* Wrap each major block in a bordered white card like the official page. */
+  .reg-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  .reg-card .section-header:first-child { margin-top: 0; }
+  .age-note {
+    background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:6px;
+    padding:8px 12px;font-size:12.5px;font-weight:600;margin:8px 0 4px;display:inline-block;
   }
 
   /* Sub-tab navigation for Details page */
