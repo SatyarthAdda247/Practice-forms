@@ -537,6 +537,60 @@
         <input class="form-control" name="civil_org" id="txtCivilOrg" maxlength="20" placeholder="ENTER ORGANIZATION NAME">
         <div class="field-hint">(Maximum 20 Characters)</div>
       </div>
+
+      <div class="form-group">
+        <label>Are you a Disabled Ex-Serviceman ? <sup class="error">*</sup></label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="disabled_exsvc" id="disexsvc_y" class="custom-control-input">
+          <label class="custom-control-label" for="disexsvc_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="disabled_exsvc" id="disexsvc_n" class="custom-control-input">
+          <label class="custom-control-label" for="disexsvc_n">No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="sub-label">Are you a matriculate Ex-Serviceman who has obtained the Army Special Certificate of Education or corresponding certificate in the Navy or Air Force after having completed not less than 15 years of service in the Armed Forces of the Union as on 21.08.2026 ? <sup class="error">*</sup></label>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="Y" name="matric_exsvc" id="matric_y" class="custom-control-input">
+          <label class="custom-control-label" for="matric_y">Yes</label>
+        </div>
+        <div class="custom-control custom-radio custom-control-inline">
+          <input type="radio" value="N" name="matric_exsvc" id="matric_n" class="custom-control-input">
+          <label class="custom-control-label" for="matric_n">No</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="txtExsvcPct">Percentage of Marks :</label>
+        <input type="text" inputmode="decimal" class="form-control" name="exsvc_pct" id="txtExsvcPct" maxlength="6" placeholder="e.g. 62.5">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Are you a Dependent of Serviceman killed in Action ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="Y" name="dependent_killed" id="depkill_y" class="custom-control-input">
+        <label class="custom-control-label" for="depkill_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="dependent_killed" id="depkill_n" class="custom-control-input">
+        <label class="custom-control-label" for="depkill_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_dependent_killed"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Are you seeking relaxation under widow / divorced women / women judicially separated from their husbands and who are not re-married ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="Y" name="widow_relax" id="widow_y" class="custom-control-input">
+        <label class="custom-control-label" for="widow_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="widow_relax" id="widow_n" class="custom-control-input">
+        <label class="custom-control-label" for="widow_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_widow_relax"></div>
     </div>
 
     <!-- ============ RELIGIOUS MINORITY ============ -->
@@ -771,6 +825,76 @@
         <select class="custom-select exam-centre" name="main_ii" id="selMainII"><option value="" selected>Select</option></select>
         <div class="invalid-feedback" id="err_main_ii"></div>
       </div>
+    </div>
+
+    <div class="note-box">NOTE: Since recruitment in clerical/CSA cadre in Public Sector Banks is done on State/UT-wise basis, candidates can apply for vacancies in any one State/UT only. Consequently, a candidate would be required to appear for CRP in any one of the centres in that particular State/UT. As far as practicable, candidates will be allotted to a centre of his/her choice; however IBPS also reserves the right to allot the candidate to any centre other than the one he/she has opted for.</div>
+
+    <!-- ============ LOCAL LANGUAGE PROFICIENCY ============ -->
+    <div class="section-header">Local Language Proficiency</div>
+    <div class="form-group">
+      <label for="selOptedLang">Opted Language for Local Language Proficiency <sup class="error">*</sup></label>
+      <select class="custom-select" name="opted_lang" id="selOptedLang">
+        <option value="" selected>Select</option>
+        <option value="ASSAMESE">ASSAMESE</option><option value="BENGALI">BENGALI</option>
+        <option value="BODO">BODO</option><option value="DOGRI">DOGRI</option>
+        <option value="ENGLISH">ENGLISH</option><option value="GUJARATI">GUJARATI</option>
+        <option value="HINDI">HINDI</option><option value="KANNADA">KANNADA</option>
+        <option value="KASHMIRI">KASHMIRI</option><option value="KONKANI">KONKANI</option>
+        <option value="MALAYALAM">MALAYALAM</option><option value="MANIPURI">MANIPURI</option>
+        <option value="MARATHI">MARATHI</option><option value="NEPALI">NEPALI</option>
+        <option value="ODIA">ODIA</option><option value="PUNJABI">PUNJABI</option>
+        <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option>
+        <option value="URDU">URDU</option>
+      </select>
+      <div class="invalid-feedback" id="err_opted_lang"></div>
+    </div>
+    <div class="form-group">
+      <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="langProficientDecl" name="lang_proficient_decl" value="Y">
+        <label class="custom-control-label" for="langProficientDecl" style="font-size:12.5px;">I hereby declare that I am proficient in (reading, writing, speaking and understanding) the above opted specified local language of the State/UT applied for. <sup class="error">*</sup></label>
+      </div>
+      <div class="invalid-feedback" id="err_lang_proficient_decl"></div>
+    </div>
+    <div class="form-group">
+      <label>Do you have 10th standard or above mark sheet / certificate evidencing having studied the above opted specified local language ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="Y" name="lang_10th_cert" id="lang10_y" class="custom-control-input">
+        <label class="custom-control-label" for="lang10_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="lang_10th_cert" id="lang10_n" class="custom-control-input">
+        <label class="custom-control-label" for="lang10_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_lang_10th_cert"></div>
+    </div>
+    <div class="form-group">
+      <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="langSubmitDecl" name="lang_submit_decl" value="Y">
+        <label class="custom-control-label" for="langSubmitDecl" style="font-size:12.5px;">I will submit 10th or above standard mark sheet / certificate evidencing having studied the above opted specified local language at the time of document verification.</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="langTestDecl" name="lang_test_decl" value="Y">
+        <label class="custom-control-label" for="langTestDecl" style="font-size:12.5px;">I understand that I will be required to undergo a Local Language Proficiency Test (after Main Exam / Provisional Allotment) which will be qualifying in nature. In case of failure to qualify the test, I will not be offered appointment and will be disqualified from the process.</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="selMedium">Kindly indicate Medium of Examination — how you would like the paper to be presented to you ? <sup class="error">*</sup></label>
+      <select class="custom-select" name="medium_exam" id="selMedium">
+        <option value="" selected>Select</option>
+        <option value="ENGLISH">English</option>
+        <option value="HINDI">Hindi</option>
+        <option value="ASSAMESE">Assamese</option><option value="BENGALI">Bengali</option>
+        <option value="GUJARATI">Gujarati</option><option value="KANNADA">Kannada</option>
+        <option value="KONKANI">Konkani</option><option value="MALAYALAM">Malayalam</option>
+        <option value="MANIPURI">Manipuri</option><option value="MARATHI">Marathi</option>
+        <option value="ODIA">Odia</option><option value="PUNJABI">Punjabi</option>
+        <option value="TAMIL">Tamil</option><option value="TELUGU">Telugu</option>
+        <option value="URDU">Urdu</option>
+      </select>
+      <div class="field-hint">Note: Candidates should be careful in exercising this option of Medium of Examination.</div>
+      <div class="invalid-feedback" id="err_medium_exam"></div>
     </div>
 
     <!-- ============ ID PROOF DETAILS ============ -->
@@ -1764,6 +1888,12 @@ function validateAll(){
 
   if(!radioVal('serving_govt')) setErr('serving_govt','Please select an option.', errors);
   if(!radioVal('exserviceman')) setErr('exserviceman','Please select an option.', errors);
+  if(radioVal('exserviceman')==='Y'){
+    if(!radioVal('disabled_exsvc')) setErr('disabled_exsvc','Please select an option.', errors);
+    if(!radioVal('matric_exsvc')) setErr('matric_exsvc','Please select an option.', errors);
+  }
+  if(!radioVal('dependent_killed')) setErr('dependent_killed','Please select an option.', errors);
+  if(!radioVal('widow_relax')) setErr('widow_relax','Please select an option.', errors);
   if(!radioVal('minority')) setErr('minority','Please choose Do you belong to Religious Minority Community ?', errors);
   if(!val('selReligion')) setErr('religion','Please select Religion of the applicant.', errors);
 
@@ -1783,6 +1913,11 @@ function validateAll(){
   if(!val('selPrelimII')) setErr('prelim_ii','Please select Preliminary centre (Preference II).', errors);
   if(!val('selMainI')) setErr('main_i','Please select Main centre (Preference I).', errors);
   if(!val('selMainII')) setErr('main_ii','Please select Main centre (Preference II).', errors);
+
+  if(!val('selOptedLang')) setErr('opted_lang','Please select the opted local language.', errors);
+  if(!$('langProficientDecl').checked) setErr('lang_proficient_decl','Please confirm your language proficiency declaration.', errors);
+  if(!radioVal('lang_10th_cert')) setErr('lang_10th_cert','Please select an option.', errors);
+  if(!val('selMedium')) setErr('medium_exam','Please select the Medium of Examination.', errors);
 
   if(!$('confirmID').checked) setErr('confirm_id','Please confirm your ID declaration.', errors);
   if(!val('selIdProof')) setErr('id_proof','Please select ID Proof.', errors);
