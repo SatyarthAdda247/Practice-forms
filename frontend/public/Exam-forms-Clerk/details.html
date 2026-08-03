@@ -789,11 +789,12 @@
       <div class="invalid-feedback" id="err_nationality"></div>
     </div>
 
-    <!-- ============ EXAM CENTRE DETAILS ============ -->
-    <div class="section-header">Exam Centre Details</div>
+    <!-- ============ DETAILS OF APPLYING STATE/UT & EXAM CENTER ============ -->
+    <div class="section-header">Details of Applying State/UT &amp; Exam Center:</div>
+    
     <div class="form-row">
-      <div class="form-group col-md-8">
-        <label for="selExamState">State/UT/NCR to which centre of examination belongs <sup class="error">*</sup></label>
+      <div class="form-group col-md-6">
+        <label for="selExamState">Vacancies of State/UT you are applying for : <sup class="error">*</sup></label>
         <select class="custom-select" name="exam_state" id="selExamState">
           <option value="" selected>Select</option>
           <option value="ANDAMAN & NICOBAR ISLANDS">ANDAMAN &amp; NICOBAR ISLANDS</option>
@@ -833,91 +834,94 @@
           <option value="UTTARAKHAND">UTTARAKHAND</option>
           <option value="WEST BENGAL">WEST BENGAL</option>
         </select>
-        <div class="invalid-feedback" id="err_exam_state"></div>
+        <div class="invalid-feedback" id="err_exam_state">Please select the State/UT you are applying for.</div>
       </div>
-      <div class="form-group col-md-4">
-        <label for="txtStateCode">State code</label>
+      <div class="form-group col-md-6">
+        <label for="txtStateCode">State code :</label>
         <input class="form-control" name="state_code" id="txtStateCode" readonly placeholder="Auto">
       </div>
     </div>
 
     <div class="form-row">
-      <div class="form-group col-md-6">
-        <label for="selPrelimI">Centre of Preliminary Examination (Preference I) : <sup class="error">*</sup></label>
-        <select class="custom-select exam-centre" name="prelim_i" id="selPrelimI"><option value="" selected>Select</option></select>
-        <div class="invalid-feedback" id="err_prelim_i"></div>
+      <div class="form-group col-md-4">
+        <label for="selOptedLang">Opted Language for Local Language Proficiency</label>
+        <select class="custom-select" name="opted_lang" id="selOptedLang">
+          <option value="" selected>Select</option>
+          <option value="ASSAMESE">ASSAMESE</option><option value="BENGALI">BENGALI</option>
+          <option value="BODO">BODO</option><option value="DOGRI">DOGRI</option>
+          <option value="ENGLISH">ENGLISH</option><option value="GUJARATI">GUJARATI</option>
+          <option value="HINDI">HINDI</option><option value="KANNADA">KANNADA</option>
+          <option value="KASHMIRI">KASHMIRI</option><option value="KONKANI">KONKANI</option>
+          <option value="MALAYALAM">MALAYALAM</option><option value="MANIPURI">MANIPURI</option>
+          <option value="MARATHI">MARATHI</option><option value="NEPALI">NEPALI</option>
+          <option value="ODIA">ODIA</option><option value="PUNJABI">PUNJABI</option>
+          <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option>
+          <option value="URDU">URDU</option>
+        </select>
+        <div class="invalid-feedback" id="err_opted_lang"></div>
       </div>
-      <div class="form-group col-md-6">
-        <label for="selPrelimII">Centre of Preliminary Examination (Preference II) : <sup class="error">*</sup></label>
-        <select class="custom-select exam-centre" name="prelim_ii" id="selPrelimII"><option value="" selected>Select</option></select>
-        <div class="invalid-feedback" id="err_prelim_ii"></div>
+      <div class="form-group col-md-4">
+        <div class="custom-control custom-checkbox" style="margin-top:28px;">
+          <input type="checkbox" class="custom-control-input" id="langProficientDecl" name="lang_proficient_decl" value="Y">
+          <label class="custom-control-label" for="langProficientDecl" style="font-size:12px;">I hereby declare that I am proficient in (reading, writing, speaking and understanding) the above opted specified local language of the State/ UT applied for <sup class="error">*</sup></label>
+        </div>
+        <div class="invalid-feedback" id="err_lang_proficient_decl"></div>
+      </div>
+      <div class="form-group col-md-4">
+        <label style="font-size:12px;">Do you have 10th standard or above mark sheet/ certificate evidencing having studied above opted specified local language ? <sup class="error">*</sup></label>
+        <div class="mt-1">
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="Y" name="lang_10th_cert" id="lang10_y" class="custom-control-input">
+            <label class="custom-control-label" for="lang10_y">Yes</label>
+          </div>
+          <div class="custom-control custom-radio custom-control-inline">
+            <input type="radio" value="N" name="lang_10th_cert" id="lang10_n" class="custom-control-input">
+            <label class="custom-control-label" for="lang10_n">No</label>
+          </div>
+        </div>
+        <div class="invalid-feedback" id="err_lang_10th_cert"></div>
       </div>
     </div>
+
     <div class="form-row">
-      <div class="form-group col-md-6">
-        <label for="selMainI">Centre of Main Examination (Preference I) : <sup class="error">*</sup></label>
+      <div class="form-group col-md-4">
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="langSubmitDecl" name="lang_submit_decl" value="Y">
+          <label class="custom-control-label" for="langSubmitDecl" style="font-size:12px;">I will submit 10th or above standard mark sheet/ certificate evidencing having studied above opted specified local language at the time of document verification.</label>
+        </div>
+      </div>
+      <div class="form-group col-md-4">
+        <div class="custom-control custom-checkbox">
+          <input type="checkbox" class="custom-control-input" id="langTestDecl" name="lang_test_decl" value="Y">
+          <label class="custom-control-label" for="langTestDecl" style="font-size:12px;">I understand that I will be required to undergo Local Language Proficiency Test (after Main Exam/ Provisional Allotment) which will be qualifying in nature. In case of failure to qualify the test, I will not be offered appointment and will be disqualified from the process.</label>
+        </div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selPrelimI">Centre of Preliminary Examination Preference I : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="prelim_i" id="selPrelimI"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_prelim_i">Please select Centre of Preliminary Examination Preference I</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-4">
+        <label for="selPrelimII">Centre of Preliminary Examination Preference II : <sup class="error">*</sup></label>
+        <select class="custom-select exam-centre" name="prelim_ii" id="selPrelimII"><option value="" selected>Select</option></select>
+        <div class="invalid-feedback" id="err_prelim_ii">Please select Centre of Preliminary Examination Preference II</div>
+      </div>
+      <div class="form-group col-md-4">
+        <label for="selMainI">Centre of Main Examination Preference I : <sup class="error">*</sup></label>
         <select class="custom-select exam-centre" name="main_i" id="selMainI"><option value="" selected>Select</option></select>
-        <div class="invalid-feedback" id="err_main_i"></div>
+        <div class="invalid-feedback" id="err_main_i">Please select Centre of Main Examination Preference I</div>
       </div>
-      <div class="form-group col-md-6">
-        <label for="selMainII">Centre of Main Examination (Preference II) : <sup class="error">*</sup></label>
+      <div class="form-group col-md-4">
+        <label for="selMainII">Centre of Main Examination Preference II : <sup class="error">*</sup></label>
         <select class="custom-select exam-centre" name="main_ii" id="selMainII"><option value="" selected>Select</option></select>
-        <div class="invalid-feedback" id="err_main_ii"></div>
+        <div class="invalid-feedback" id="err_main_ii">Please select Centre of Main Examination Preference II</div>
       </div>
     </div>
 
-    <div class="note-box">NOTE: Since recruitment in clerical/CSA cadre in Public Sector Banks is done on State/UT-wise basis, candidates can apply for vacancies in any one State/UT only. Consequently, a candidate would be required to appear for CRP in any one of the centres in that particular State/UT. As far as practicable, candidates will be allotted to a centre of his/her choice; however IBPS also reserves the right to allot the candidate to any centre other than the one he/she has opted for.</div>
-
-    <!-- ============ LOCAL LANGUAGE PROFICIENCY ============ -->
-    <div class="section-header">Local Language Proficiency</div>
-    <div class="form-group">
-      <label for="selOptedLang">Opted Language for Local Language Proficiency <sup class="error">*</sup></label>
-      <select class="custom-select" name="opted_lang" id="selOptedLang">
-        <option value="" selected>Select</option>
-        <option value="ASSAMESE">ASSAMESE</option><option value="BENGALI">BENGALI</option>
-        <option value="BODO">BODO</option><option value="DOGRI">DOGRI</option>
-        <option value="ENGLISH">ENGLISH</option><option value="GUJARATI">GUJARATI</option>
-        <option value="HINDI">HINDI</option><option value="KANNADA">KANNADA</option>
-        <option value="KASHMIRI">KASHMIRI</option><option value="KONKANI">KONKANI</option>
-        <option value="MALAYALAM">MALAYALAM</option><option value="MANIPURI">MANIPURI</option>
-        <option value="MARATHI">MARATHI</option><option value="NEPALI">NEPALI</option>
-        <option value="ODIA">ODIA</option><option value="PUNJABI">PUNJABI</option>
-        <option value="TAMIL">TAMIL</option><option value="TELUGU">TELUGU</option>
-        <option value="URDU">URDU</option>
-      </select>
-      <div class="invalid-feedback" id="err_opted_lang"></div>
-    </div>
-    <div class="form-group">
-      <div class="custom-control custom-checkbox">
-        <input type="checkbox" class="custom-control-input" id="langProficientDecl" name="lang_proficient_decl" value="Y">
-        <label class="custom-control-label" for="langProficientDecl" style="font-size:12.5px;">I hereby declare that I am proficient in (reading, writing, speaking and understanding) the above opted specified local language of the State/UT applied for. <sup class="error">*</sup></label>
-      </div>
-      <div class="invalid-feedback" id="err_lang_proficient_decl"></div>
-    </div>
-    <div class="form-group">
-      <label>Do you have 10th standard or above mark sheet / certificate evidencing having studied the above opted specified local language ? <sup class="error">*</sup></label>
-      <div class="custom-control custom-radio custom-control-inline">
-        <input type="radio" value="Y" name="lang_10th_cert" id="lang10_y" class="custom-control-input">
-        <label class="custom-control-label" for="lang10_y">Yes</label>
-      </div>
-      <div class="custom-control custom-radio custom-control-inline">
-        <input type="radio" value="N" name="lang_10th_cert" id="lang10_n" class="custom-control-input">
-        <label class="custom-control-label" for="lang10_n">No</label>
-      </div>
-      <div class="invalid-feedback" id="err_lang_10th_cert"></div>
-    </div>
-    <div class="form-group">
-      <div class="custom-control custom-checkbox">
-        <input type="checkbox" class="custom-control-input" id="langSubmitDecl" name="lang_submit_decl" value="Y">
-        <label class="custom-control-label" for="langSubmitDecl" style="font-size:12.5px;">I will submit 10th or above standard mark sheet / certificate evidencing having studied the above opted specified local language at the time of document verification.</label>
-      </div>
-    </div>
-    <div class="form-group">
-      <div class="custom-control custom-checkbox">
-        <input type="checkbox" class="custom-control-input" id="langTestDecl" name="lang_test_decl" value="Y">
-        <label class="custom-control-label" for="langTestDecl" style="font-size:12.5px;">I understand that I will be required to undergo a Local Language Proficiency Test (after Main Exam / Provisional Allotment) which will be qualifying in nature. In case of failure to qualify the test, I will not be offered appointment and will be disqualified from the process.</label>
-      </div>
-    </div>
+    <div class="note-box"><span style="color:#f97316;font-size:14px;">&#9679;</span> NOTE: Since recruitment in clerical/CSA cadre in Public Sector Banks is done on State/UT-wise basis, candidates can apply for vacancies in any one State/ UT only. Consequently, a candidate would be required to appear for CRP in any one of the centres in that particular State/UT. As far as practicable, candidates will be allotted to a centre of his/her choice however IBPS also reserves the right to allot the candidate to any centre other than the one he/she has opted for. Please note this reallocation is only for the conduct of examination and the candidate will be considered for vacancies in the State/UT applied for.</div>
     <div class="form-group">
       <label for="selMedium">Kindly indicate Medium of Examination — how you would like the paper to be presented to you ? <sup class="error">*</sup></label>
       <select class="custom-select" name="medium_exam" id="selMedium">
