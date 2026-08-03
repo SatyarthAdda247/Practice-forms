@@ -449,7 +449,11 @@ export default function AnswerKeyChecker() {
           (the resizer is locked to the viewport, so its bar never moves), and the
           bar should stay put the same way while the report scrolls under it. */}
       <header className="w-full shrink-0 sticky top-0 z-20 bg-tool-surface-lowest border-b border-tool-outline/70">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* On a phone the title and blurb wrap, so the row breaks and the badge
+            would sit alone against the left edge. Centre the whole stack below
+            sm — badge over centred text — and restore the left-aligned row from
+            sm up, matching the resizer. */}
+        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center justify-center text-center gap-x-4 gap-y-2 sm:justify-start sm:text-left">
           <span className="rounded-[999px] grid place-items-center w-10 h-10 bg-tool-primary text-tool-on-primary shrink-0">
             <Icon name="fact_check" size={22} />
           </span>
