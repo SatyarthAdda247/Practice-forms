@@ -12,6 +12,7 @@ A machine-readable summary of every route is served at ``GET /api`` and the
 full human-readable reference lives in ``API.md``.
 """
 
+import base64
 import io
 import json
 import os
@@ -1263,6 +1264,63 @@ def exam_forms_save():
         return error("could not store this submission", 503)
 
     return jsonify({"status": "ok", "key": key}), 201
+
+
+# Uploaded photo/signature images are saved to the same on-disk store the OMR
+# uploads use (UPLOAD_DIR), under an exam-forms/ subfolder. They are only ever
+# written — never deleted — one file per (candidate, exam, kind), overwritten if
+# re-uploaded.
+EXAM_FORMS_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "exam-forms")
+EXAM_FORMS_IMG_MAX_BYTES = 1024 * 1024  # 1 MB — well above any photo/sig spec
+
+
+@app.post("/api/exam-forms/upload-image")
+def exam_forms_upload_image():
+    """Persist a candidate's uploaded photo or signature to disk. Public.
+
+    Stored under UPLOAD_DIR/exam-forms/<examId>/<identifier>_<kind>.jpg and never
+    removed. Best-effort from the form's point of view (the frontend ignores the
+    response), so a storage hiccup never blocks the practice run."""
+    if _rate_limited(f"examimg:{_client_ip()}"):
+        return error("too many requests; try again in a minute", 429)
+    data, err = _tools_payload()
+    if err:
+        return err
+
+    exam_id = str(data.get("examId") or "").strip()
+    identifier = str(data.get("identifier") or "").strip()
+    kind = str(data.get("kind") or "").strip().lower()
+    image = data.get("image") or ""
+    if not exam_id or not identifier:
+        return error("examId and identifier are required")
+    if kind not in ("photo", "signature", "live"):
+        return error("kind must be 'photo', 'signature' or 'live'")
+
+    # Accept a data URL or bare base64.
+    m = re.match(r"^data:image/[\w.+-]+;base64,(.*)$", image, re.DOTALL)
+    b64 = m.group(1) if m else image
+    try:
+        raw = base64.b64decode(b64, validate=False)
+    except Exception:  # noqa: BLE001
+        return error("invalid image data")
+    if not raw:
+        return error("image is required")
+    if len(raw) > EXAM_FORMS_IMG_MAX_BYTES:
+        return error("image too large", 413)
+
+    safe_exam = re.sub(r"[^A-Za-z0-9._-]", "_", exam_id)[:40] or "exam"
+    safe_id = re.sub(r"[^A-Za-z0-9._@-]", "_", identifier)[:64] or "user"
+    folder = os.path.join(EXAM_FORMS_UPLOAD_DIR, safe_exam)
+    try:
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f"{safe_id}_{kind}.jpg")
+        with open(path, "wb") as f:
+            f.write(raw)
+    except Exception as exc:  # noqa: BLE001
+        app.logger.warning("exam-forms: image save failed: %s", exc)
+        return error("could not store the image", 503)
+
+    return jsonify({"status": "ok", "path": os.path.relpath(path, UPLOAD_DIR)}), 201
 
 
 # --------------------------------------------------------------------------- #

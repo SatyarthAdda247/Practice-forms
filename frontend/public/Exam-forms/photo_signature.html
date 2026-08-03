@@ -364,6 +364,24 @@ var IMG_SPECS = {
   photoImg: { label:'Photograph', input:'photoFile', nameEl:'photoFileName', minKB:20, maxKB:50, minW:180, maxW:220, minH:210, maxH:250 },
   sigImg:   { label:'Signature',  input:'sigFile',   nameEl:'sigFileName',   minKB:10, maxKB:20, minW:120, maxW:160, minH:50,  maxH:70  }
 };
+// Persist uploaded images to the backend disk store (never removed), keyed by
+// the portal Name+Phone identity. Best-effort — never blocks the upload.
+var IMG_API_BASE = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? '/api' : 'https://tools-api.adda247.com/api';
+function examNS(){ return /Exam-forms-Clerk/i.test(location.pathname) ? 'IBPS-CLERK' : 'IBPS-PO'; }
+function portalIdentifier(){
+  try{ var u=JSON.parse(localStorage.getItem('adda_practice_user')); if(u && u.phone) return u.phone; }catch(e){}
+  return sessionStorage.getItem('ibps_mobile') || sessionStorage.getItem('ibps_email') || '';
+}
+function saveImageToServer(kind, dataUrl){
+  var id = portalIdentifier();
+  if(!id || !dataUrl) return;
+  try{
+    fetch(IMG_API_BASE + '/exam-forms/upload-image', {
+      method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+      body: JSON.stringify({ examId: examNS(), identifier: id, kind: kind, image: dataUrl })
+    }).catch(function(){});
+  }catch(e){}
+}
 function fileErrEl(spec){
   var id = 'err_' + spec.input;
   var e = document.getElementById(id);
@@ -417,6 +435,7 @@ function handleFileSelect(file, imgId, placeholderId, storeKey) {
       img.src = dataUrl; img.style.display = 'block';
       $(placeholderId).style.display = 'none';
       sessionStorage.setItem(storeKey, dataUrl);
+      saveImageToServer(imgId === 'photoImg' ? 'photo' : 'signature', dataUrl);
       clearFileErr(spec);
     };
     probe.onerror = function(){ showFileErr(spec, spec.label + ' could not be read as a valid image.'); };
@@ -519,6 +538,7 @@ $('camUse').addEventListener('click', function(){
   img.style.display = 'block';
   $('livePlaceholder').style.display = 'none';
   sessionStorage.setItem('ibps_liveImg', capturedDataUrl);
+  saveImageToServer('live', capturedDataUrl);
   closeCam();
 });
 
@@ -535,13 +555,16 @@ $('btnDemoData').addEventListener('click', function() {
   $('photoImg').src = demoPhoto; $('photoImg').style.display='block'; $('photoPlaceholder').style.display='none';
   $('photoFileName').textContent = 'demo_photo.jpg';
   sessionStorage.setItem('ibps_photoImg', demoPhoto);
+  saveImageToServer('photo', demoPhoto);
 
   $('liveImg').src = demoLive; $('liveImg').style.display='block'; $('livePlaceholder').style.display='none';
   sessionStorage.setItem('ibps_liveImg', demoLive);
+  saveImageToServer('live', demoLive);
 
   $('sigImg').src = demoSig; $('sigImg').style.display='block'; $('sigPlaceholder').style.display='none';
   $('sigFileName').textContent = 'demo_sig.jpg';
   sessionStorage.setItem('ibps_sigImg', demoSig);
+  saveImageToServer('signature', demoSig);
 
   $('confirmRecent').checked = true;
   $('confirmCaptured').checked = true;
