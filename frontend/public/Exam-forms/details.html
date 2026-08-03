@@ -290,6 +290,36 @@
     font-weight: 600 !important;
   }
 
+  /* Qualification & Experience Table Styles matching reference UI */
+  .qual-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border-color: #cbd5e1 !important;
+  }
+  .qual-table th {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+    font-size: 12.5px;
+    font-weight: 600;
+    vertical-align: middle !important;
+    padding: 10px 8px !important;
+    border-color: #4338ca !important;
+  }
+  .qual-table td {
+    vertical-align: middle !important;
+    padding: 8px !important;
+    font-size: 13px;
+    background-color: #ffffff;
+    border-color: #e2e8f0 !important;
+  }
+  .qual-table td.cell-disabled {
+    background-color: #f1f5f9 !important;
+    color: #94a3b8;
+    font-weight: 600;
+    text-align: center;
+  }
+
   /* Conditional sub-blocks */
   .cond-field, .cond-subblock {
     display: block !important;
@@ -1258,95 +1288,202 @@
     <!-- ===================== TAB 2: QUALIFICATION / EXPERIENCE / LANGUAGES ===================== -->
     <div class="tab-panel" id="tab-qual">
 
-    <!-- 3. Educational Qualifications -->
-    <div class="section-header">Educational Qualifications (Graduation)</div>
+    <!-- 3. Educational Qualification (as on 21.08.2026) -->
+    <div class="section-header">Educational Qualification (as on 21.08.2026):</div>
 
-    <div class="form-row">
-      <div class="form-group col-md-4">
-        <label for="selDegree">Degree / Subject / Stream <sup class="error">*</sup></label>
-        <select class="custom-select" name="degree" id="selDegree">
-          <option value="" selected>Select Degree</option>
-          <option value="ARTS">ARTS (B.A.)</option>
-          <option value="SCIENCE">SCIENCE (B.Sc.)</option>
-          <option value="COMMERCE">COMMERCE (B.Com.)</option>
-          <option value="ENGINEERING">ENGINEERING (B.E. / B.Tech.)</option>
-          <option value="MANAGEMENT">MANAGEMENT (B.B.A. / B.M.S.)</option>
-          <option value="COMPUTERS">COMPUTERS (B.C.A. / B.Sc. IT)</option>
-          <option value="OTHERS">OTHERS</option>
-        </select>
-        <div class="invalid-feedback" id="err_degree"></div>
-      </div>
-
-      <div class="form-group col-md-4">
-        <label for="txtDegreeYear">Year of Passing <sup class="error">*</sup></label>
-        <select class="custom-select" name="passing_year" id="txtDegreeYear">
-          <option value="" selected>Select Year</option>
-        </select>
-        <div class="invalid-feedback" id="err_passing_year"></div>
-      </div>
-
-      <div class="form-group col-md-4">
-        <label for="txtPercentage">Percentage of Marks (%) <sup class="error">*</sup></label>
-        <input type="number" step="0.01" min="0" max="100" class="form-control" name="percentage" id="txtPercentage" placeholder="e.g. 74.50">
-        <div class="invalid-feedback" id="err_percentage"></div>
-      </div>
+    <div class="note-box" style="flex-direction:column; align-items:flex-start; gap:6px; font-size:12px; border-radius:12px; padding:12px 18px; line-height:1.5;">
+      <div><strong>NOTE:</strong> The date of passing the eligibility examination will be the date appearing on the mark sheet or provisional certificate issued by University/ Institute. In case the result of a particular examination is posted on the website of the University/ Institute and web based certificate is issued then proper document/certificate in original issued and signed by the appropriate authority of the University/ Institute indicating the date of passing properly mentioned thereon will be restored for verification and further process.</div>
+      <div>• The percentage marks shall be arrived at by dividing the total marks obtained by the candidate in all the subjects in all semester(s)/year(s) by aggregate maximum marks in all the subjects irrespective of honours / optional / additional optional subject, if any. The fraction of percentage so arrived will be ignored i.e. 59.99% will be treated as less than 60% and 54.99% will be treated as less than 55%. In case Grade point system (CGPA/OGPA) is adopted, the candidates are required to convert their CGPA /OGPA into percentage as per criteria adopted by the University/Institute. The candidates must produce documentary proof of the criteria for conversion into percentage adopted by the University/Institute at the time of Document verification.</div>
     </div>
 
-    <!-- 3b. Experience Section -->
-    <div class="section-header">Experience Details</div>
-    <div class="form-row">
-      <div class="form-group col-md-4">
-        <label>Do you have work experience? <sup class="error">*</sup></label>
-        <div>
-          <div class="custom-control custom-radio custom-control-inline">
-            <input type="radio" value="Y" name="has_experience" id="exp_y" class="custom-control-input">
-            <label class="custom-control-label" for="exp_y">Yes</label>
-          </div>
-          <div class="custom-control custom-radio custom-control-inline">
-            <input type="radio" value="N" name="has_experience" id="exp_n" class="custom-control-input">
-            <label class="custom-control-label" for="exp_n">No</label>
-          </div>
-        </div>
-        <div class="invalid-feedback" id="err_has_experience"></div>
-      </div>
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered align-middle text-center qual-table">
+        <thead style="background-color: #4f46e5; color: #ffffff;">
+          <tr>
+            <th style="width:20%;">Exam Passed</th>
+            <th style="width:22%;">Name of the Board / University / Institute</th>
+            <th style="width:20%;">Degree</th>
+            <th style="width:18%;">Specialization/Subject</th>
+            <th style="width:12%;">Date of Passing</th>
+            <th style="width:8%;">% of Marks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="font-weight-bold text-left">SSC/SSLC/10th Standard/Equivalent <sup class="error">*</sup></td>
+            <td><input type="text" class="form-control form-control-sm" name="ssc_board" id="txtSscBoard" placeholder="e.g. CBSE"></td>
+            <td class="cell-disabled">-</td>
+            <td class="cell-disabled">-</td>
+            <td><input type="text" class="form-control form-control-sm" name="ssc_date" id="txtSscDate" placeholder="DD/MM/YYYY"></td>
+            <td><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" name="ssc_pct" id="txtSscPct" placeholder="80.00"></td>
+          </tr>
+          <tr>
+            <td class="font-weight-bold text-left">Graduation / Equivalent <sup class="error">*</sup></td>
+            <td><input type="text" class="form-control form-control-sm" name="grad_board" id="txtGradBoard" placeholder="e.g. BTECH / DELHI UNIV"></td>
+            <td>
+              <select class="custom-select custom-select-sm" name="degree" id="selDegree">
+                <option value="" selected>Select</option>
+                <option value="Bachelor of Science (B.Sc.)">Bachelor of Science (B.Sc.)</option>
+                <option value="Bachelor of Arts (B.A.)">Bachelor of Arts (B.A.)</option>
+                <option value="Bachelor of Commerce (B.Com.)">Bachelor of Commerce (B.Com.)</option>
+                <option value="Engineering (B.E./B.Tech.)">Engineering (B.E./B.Tech.)</option>
+                <option value="Management (B.B.A.)">Management (B.B.A.)</option>
+                <option value="Computer Applications (B.C.A.)">Computer Applications (B.C.A.)</option>
+                <option value="Others">Others</option>
+              </select>
+              <div class="invalid-feedback" id="err_degree"></div>
+            </td>
+            <td>
+              <select class="custom-select custom-select-sm" name="grad_stream" id="selGradStream">
+                <option value="" selected>Select</option>
+                <option value="Agriculture">Agriculture</option>
+                <option value="Science">Science</option>
+                <option value="Arts">Arts</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Engineering">Engineering</option>
+                <option value="IT / Computers">IT / Computers</option>
+                <option value="Management">Management</option>
+                <option value="Others">Others</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="form-control form-control-sm" name="passing_date" id="txtPassingDate" placeholder="DD/MM/YYYY">
+              <div class="invalid-feedback" id="err_passing_year"></div>
+            </td>
+            <td>
+              <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" name="percentage" id="txtPercentage" placeholder="80.00">
+              <div class="invalid-feedback" id="err_percentage"></div>
+            </td>
+          </tr>
+          <tr>
+            <td class="font-weight-bold text-left">Post Graduation :</td>
+            <td><input type="text" class="form-control form-control-sm" name="pg_board" id="txtPgBoard"></td>
+            <td>
+              <select class="custom-select custom-select-sm" name="pg_degree" id="selPgDegree">
+                <option value="" selected>Select</option>
+                <option value="Master of Science (M.Sc.)">Master of Science (M.Sc.)</option>
+                <option value="Master of Arts (M.A.)">Master of Arts (M.A.)</option>
+                <option value="Master of Commerce (M.Com.)">Master of Commerce (M.Com.)</option>
+                <option value="Engineering (M.E./M.Tech.)">Engineering (M.E./M.Tech.)</option>
+                <option value="Management (M.B.A.)">Management (M.B.A.)</option>
+                <option value="Computer Applications (M.C.A.)">Computer Applications (M.C.A.)</option>
+                <option value="Others">Others</option>
+              </select>
+            </td>
+            <td>
+              <select class="custom-select custom-select-sm" name="pg_stream" id="selPgStream">
+                <option value="" selected>Select</option>
+                <option value="Agriculture">Agriculture</option>
+                <option value="Science">Science</option>
+                <option value="Arts">Arts</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Engineering">Engineering</option>
+                <option value="IT / Computers">IT / Computers</option>
+                <option value="Management">Management</option>
+                <option value="Others">Others</option>
+              </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" name="pg_date" id="txtPgDate" placeholder="DD/MM/YYYY"></td>
+            <td><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" name="pg_pct" id="txtPgPct"></td>
+          </tr>
+          <tr>
+            <td class="font-weight-bold text-left">Professional Qualification</td>
+            <td><input type="text" class="form-control form-control-sm" name="prof_board" id="txtProfBoard"></td>
+            <td><input type="text" class="form-control form-control-sm" name="prof_degree" id="txtProfDegree"></td>
+            <td><input type="text" class="form-control form-control-sm" name="prof_stream" id="txtProfStream"></td>
+            <td><input type="text" class="form-control form-control-sm" name="prof_date" id="txtProfDate" placeholder="DD/MM/YYYY"></td>
+            <td><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" name="prof_pct" id="txtProfPct"></td>
+          </tr>
+          <tr>
+            <td class="font-weight-bold text-left">Others</td>
+            <td><input type="text" class="form-control form-control-sm" name="oth_board" id="txtOthBoard"></td>
+            <td><input type="text" class="form-control form-control-sm" name="oth_degree" id="txtOthDegree"></td>
+            <td><input type="text" class="form-control form-control-sm" name="oth_stream" id="txtOthStream"></td>
+            <td><input type="text" class="form-control form-control-sm" name="oth_date" id="txtOthDate" placeholder="DD/MM/YYYY"></td>
+            <td><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" name="oth_pct" id="txtOthPct"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div id="experienceFields" style="display:none;">
-      <div class="form-row">
-        <div class="form-group col-md-4">
-          <label for="txtOrgName">Organisation / Company Name</label>
-          <input class="form-control" name="org_name" id="txtOrgName" placeholder="ENTER ORGANISATION NAME">
-        </div>
-        <div class="form-group col-md-4">
-          <label for="txtDesignation">Designation</label>
-          <input class="form-control" name="designation" id="txtDesignation" placeholder="ENTER DESIGNATION">
-        </div>
-        <div class="form-group col-md-4">
-          <label for="txtExpYears">Total Experience (in Years)</label>
-          <input type="number" min="0" max="40" class="form-control" name="exp_years" id="txtExpYears" placeholder="e.g. 3">
-        </div>
+
+    <!-- Computer Knowledge Section -->
+    <div class="form-group my-3">
+      <label>Do you have Operating and working knowledge in computer systems ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline ml-3">
+        <input type="radio" value="Y" name="computer_knowledge" id="comp_y" class="custom-control-input">
+        <label class="custom-control-label" for="comp_y">Yes</label>
       </div>
-      <div class="form-row">
-        <div class="form-group col-md-4">
-          <label for="txtExpFrom">Experience From</label>
-          <input type="date" class="form-control" name="exp_from" id="txtExpFrom">
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="computer_knowledge" id="comp_n" class="custom-control-input">
+        <label class="custom-control-label" for="comp_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_computer_knowledge"></div>
+    </div>
+
+    <div class="cond-field active-field mb-4" id="computerSub">
+      <div class="form-row align-items-center">
+        <label class="col-md-3 font-weight-bold mb-0">Details of Computer Knowledge :</label>
+        <div class="col-md-4">
+          <select class="custom-select multi-select-box" name="comp_details_type" id="selCompType" multiple size="4" style="height:120px !important;">
+            <option value="Certificate in">Certificate in</option>
+            <option value="Diploma in">Diploma in</option>
+            <option value="Degree in">Degree in</option>
+            <option value="Studied in High School/College/Institute">Studied in High School/College/Institute</option>
+          </select>
         </div>
-        <div class="form-group col-md-4">
-          <label for="txtExpTo">Experience To</label>
-          <input type="date" class="form-control" name="exp_to" id="txtExpTo">
-        </div>
-        <div class="form-group col-md-4">
-          <label for="selExpType">Type of Experience</label>
-          <select class="custom-select" name="exp_type" id="selExpType">
-            <option value="" selected>Select Type</option>
-            <option value="BANKING">Banking</option>
-            <option value="FINANCE">Finance</option>
-            <option value="IT">IT / Software</option>
-            <option value="GOVERNMENT">Government</option>
-            <option value="PRIVATE">Private Sector</option>
-            <option value="OTHERS">Others</option>
+        <div class="col-md-4">
+          <select class="custom-select multi-select-box" name="comp_details_subject" id="selCompSubj" multiple size="2" style="height:80px !important;">
+            <option value="Computer Operations">Computer Operations</option>
+            <option value="Computer Language">Computer Language</option>
           </select>
         </div>
       </div>
+    </div>
+
+    <!-- 3b. Work Experience Section -->
+    <div class="section-header">Post Qualification Work experience details [Start from present Employer]:</div>
+
+    <div class="form-group mb-3">
+      <label>Presently working ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline ml-3">
+        <input type="radio" value="Y" name="has_experience" id="exp_y" class="custom-control-input">
+        <label class="custom-control-label" for="exp_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="has_experience" id="exp_n" class="custom-control-input">
+        <label class="custom-control-label" for="exp_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_has_experience"></div>
+    </div>
+
+    <div class="table-responsive mb-4" id="experienceFields">
+      <table class="table table-bordered align-middle text-center qual-table">
+        <thead style="background-color: #4f46e5; color: #ffffff;">
+          <tr>
+            <th>Name of the Employer</th>
+            <th>Designation</th>
+            <th>Total Period of Service</th>
+            <th>Nature of Duties</th>
+            <th>Reason of leaving</th>
+            <th>Years of Experience (YY/MM/DD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" class="form-control form-control-sm" name="org_name" id="txtOrgName" placeholder="Employer Name"></td>
+            <td><input type="text" class="form-control form-control-sm" name="designation" id="txtDesignation" placeholder="Designation"></td>
+            <td>
+              <div class="d-flex flex-column gap-1">
+                <input type="date" class="form-control form-control-sm mb-1" name="exp_from" id="txtExpFrom">
+                <input type="date" class="form-control form-control-sm" name="exp_to" id="txtExpTo">
+              </div>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" name="nature_duties" id="txtDuties" placeholder="Duties"></td>
+            <td><input type="text" class="form-control form-control-sm" name="reason_leaving" id="txtReason" placeholder="Reason"></td>
+            <td><input type="text" class="form-control form-control-sm" name="exp_years" id="txtExpYears" placeholder="02/06/00"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- 3c. Languages Known -->
@@ -1919,12 +2056,18 @@ $('btnDemoDetails').addEventListener('click', function() {
   $('selGst').value = "CORRESPONDENCE";
 
   // Qualification tab demo
-  $('selDegree').value = "ENGINEERING";
-  $('txtDegreeYear').value = "2023";
-  $('txtPercentage').value = "78.45";
-  $('exp_n').checked = true;
-  $('selLang1').value = "HINDI";
-  $('selLang2').value = "ENGLISH";
+  if($('txtSscBoard')) $('txtSscBoard').value = "CBSE";
+  if($('txtSscDate')) $('txtSscDate').value = "01/06/2018";
+  if($('txtSscPct')) $('txtSscPct').value = "85.00";
+  if($('txtGradBoard')) $('txtGradBoard').value = "DELHI UNIVERSITY";
+  if($('selDegree')) $('selDegree').value = "Engineering (B.E./B.Tech.)";
+  if($('selGradStream')) $('selGradStream').value = "Engineering";
+  if($('txtPassingDate')) $('txtPassingDate').value = "15/06/2023";
+  if($('txtPercentage')) $('txtPercentage').value = "78.45";
+  if($('comp_y')) $('comp_y').checked = true;
+  if($('exp_n')) $('exp_n').checked = true;
+  if($('selLang1')) $('selLang1').value = "HINDI";
+  if($('selLang2')) $('selLang2').value = "ENGLISH";
 
   clearAllErrors();
 });
