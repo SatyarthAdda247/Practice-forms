@@ -320,6 +320,70 @@
     text-align: center;
   }
 
+  /* Bank Preference 3-Column Box Styles matching official reference UI */
+  .bank-box-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+  .bank-box-header {
+    background: #ebeef5;
+    color: #1e293b;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 12px 16px;
+    border-bottom: 1px solid #cbd5e1;
+    text-align: left;
+  }
+  .bank-box-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 440px;
+  }
+  .bank-chk-item {
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #334155;
+    transition: background 0.15s ease;
+    cursor: pointer;
+  }
+  .bank-chk-item:hover {
+    background: #f8fafc;
+  }
+  .bank-chk-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2563eb;
+  }
+  .pref-order-item {
+    padding: 11px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #1e293b;
+    background: #ffffff;
+    cursor: grab;
+    transition: background 0.15s ease;
+  }
+  .pref-order-item:hover {
+    background: #eff6ff;
+  }
+  .pref-order-item.dragging {
+    opacity: 0.5;
+    background: #dbeafe;
+  }
+
   /* Conditional sub-blocks */
   .cond-field, .cond-subblock {
     display: block !important;
@@ -1554,23 +1618,42 @@
     <div class="tab-panel" id="tab-pref">
 
     <!-- 4. Bank Preferences -->
-    <div class="section-header">Participating Bank Preferences</div>
-    <p class="small text-muted mb-3"><i class="bi bi-info-circle-fill"></i> Click a bank on the left to add it to your preference list on the right. Drag items on the right to reorder your priority.</p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="section-header border-0 mb-0 p-0">Participating Bank Preferences</div>
+      <span class="text-danger font-weight-bold" style="font-size:13px;">* Mandatory Field</span>
+    </div>
 
     <div class="row">
-      <div class="col-md-6">
-        <h6 class="font-weight-bold mb-2" style="font-size:13px;color:#475569;">Available Banks (click to select)</h6>
-        <div id="bankList">
-          <!-- Populated dynamically -->
+      <!-- Column 1: Name of the Banks with Checkboxes -->
+      <div class="col-md-4 mb-3">
+        <div class="bank-box-card">
+          <div class="bank-box-header">Name of the Banks</div>
+          <div class="bank-box-body" id="bankCheckboxList">
+            <!-- Populated dynamically with checkboxes -->
+          </div>
         </div>
       </div>
-      <div class="col-md-6">
-        <div class="pref-selected-panel" id="prefPanel">
-          <h6><i class="bi bi-list-ol"></i> Your Preference Order</h6>
-          <div id="prefList">
-            <!-- Populated dynamically when user selects banks -->
+
+      <!-- Column 2: Banks in order of Preferences -->
+      <div class="col-md-4 mb-3">
+        <div class="bank-box-card" style="border-color: #3b82f6;">
+          <div class="bank-box-header">Banks in order of Preferences</div>
+          <div class="bank-box-body" id="prefList">
+            <!-- Populated dynamically when checkboxes are selected -->
           </div>
-          <p class="text-muted small mt-2 mb-0" id="prefEmptyMsg">No banks selected yet. Click banks on the left to add them.</p>
+        </div>
+      </div>
+
+      <!-- Column 3: Instructions Card -->
+      <div class="col-md-4 mb-3">
+        <div class="bank-box-card">
+          <div class="bank-box-header text-white" style="background-color: #4f46e5; text-align: center;">Instructions</div>
+          <div class="bank-box-body p-3" style="font-size: 12.5px; color: #334155; line-height: 1.6;">
+            <p class="mb-2"><strong>1.</strong> Select the Banks from the box meant for "Name of the Banks" by selecting the Check Boxes.</p>
+            <p class="mb-2"><strong>2.</strong> Selected Banks will be populated on the box on the right side for further ordering based on your preference.</p>
+            <p class="mb-2"><strong>3.</strong> On the Right Side box, with the populated Banks, just drag and drop to change the order of Bank as per your preference.</p>
+            <p class="mb-0"><strong>4.</strong> All the banks under the box "Name of the Banks" should be given preferences</p>
+          </div>
         </div>
       </div>
     </div>
@@ -1853,78 +1936,91 @@ $('chkSameAddr').addEventListener('change', function(){
 var yearSelect = $('txtDegreeYear');
 fillYears(yearSelect, curYear, curYear-15);
 
-// ====== PARTICIPATING BANKS (Preference tab) ======
-var banks = [
-  "BANK OF BARODA", "BANK OF INDIA", "BANK OF MAHARASHTRA", "CANARA BANK",
-  "CENTRAL BANK OF INDIA", "INDIAN BANK", "INDIAN OVERSEAS BANK",
-  "PUNJAB NATIONAL BANK", "PUNJAB & SIND BANK", "UCO BANK", "UNION BANK OF INDIA"
+// ====== PARTICIPATING BANKS (Preference tab 3-Column UI) ======
+var ALL_BANKS = [
+  "Bank of Baroda", "Bank of India", "Bank of Maharashtra", "Canara Bank",
+  "Central Bank of India", "Indian Bank", "Indian Overseas Bank",
+  "Punjab National Bank", "Punjab & Sind Bank", "UCO Bank", "Union Bank of India"
 ];
-var selectedBankOrder = [];
-var bankList = $('bankList');
-banks.forEach(function(bank, idx) {
-  var div = document.createElement('div');
-  div.className = 'bank-item shadow-sm';
-  div.setAttribute('data-bank', bank);
-  div.innerHTML = '<span>' + (idx + 1) + '. ' + bank + '</span> <button type="button" class="btn btn-sm btn-outline-primary bank-add-btn" data-bank="' + bank + '"><i class="bi bi-plus-circle"></i> Add</button>';
-  bankList.appendChild(div);
-});
-bankList.addEventListener('click', function(e){
-  var btn = e.target.closest('.bank-add-btn');
-  if(!btn) return;
-  var bankName = btn.getAttribute('data-bank');
-  if(selectedBankOrder.indexOf(bankName) !== -1) return;
-  selectedBankOrder.push(bankName);
-  btn.disabled = true;
-  btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Added';
-  btn.classList.remove('btn-outline-primary');
-  btn.classList.add('btn-success');
-  renderPrefList();
-});
-function renderPrefList(){
-  var prefList = $('prefList');
-  var emptyMsg = $('prefEmptyMsg');
-  prefList.innerHTML = '';
-  if(selectedBankOrder.length === 0){ emptyMsg.style.display = 'block'; return; }
-  emptyMsg.style.display = 'none';
-  selectedBankOrder.forEach(function(bank, idx){
-    var div = document.createElement('div');
-    div.className = 'pref-item';
-    div.setAttribute('draggable', 'true');
-    div.setAttribute('data-idx', idx);
-    div.innerHTML = '<div class="d-flex align-items-center"><span class="pref-rank">' + (idx+1) + '</span> <span>' + bank + '</span></div> <span class="pref-remove" data-bank="' + bank + '" title="Remove">&times;</span>';
-    prefList.appendChild(div);
+
+var selectedBankOrder = ALL_BANKS.slice(); // All checked by default matching official IBPS behavior
+
+function renderBankCheckboxes() {
+  var container = $('bankCheckboxList');
+  if(!container) return;
+  container.innerHTML = '';
+  
+  ALL_BANKS.forEach(function(bankName) {
+    var label = document.createElement('label');
+    label.className = 'bank-chk-item';
+    var isChecked = selectedBankOrder.indexOf(bankName) !== -1;
+    label.innerHTML = '<input type="checkbox" class="bank-chk" data-bank="' + bankName + '" ' + (isChecked ? 'checked' : '') + '> <span>' + bankName + '</span>';
+    container.appendChild(label);
   });
-  var items = prefList.querySelectorAll('.pref-item');
-  var dragIdx = null;
-  items.forEach(function(item){
-    item.addEventListener('dragstart', function(e){ dragIdx = parseInt(this.getAttribute('data-idx')); this.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
-    item.addEventListener('dragend', function(){ this.classList.remove('dragging'); });
-    item.addEventListener('dragover', function(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
-    item.addEventListener('drop', function(e){
-      e.preventDefault();
-      var dropIdx = parseInt(this.getAttribute('data-idx'));
-      if(dragIdx === null || dragIdx === dropIdx) return;
-      var moved = selectedBankOrder.splice(dragIdx, 1)[0];
-      selectedBankOrder.splice(dropIdx, 0, moved);
-      renderPrefList();
-    });
-  });
-  prefList.querySelectorAll('.pref-remove').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var bankName = this.getAttribute('data-bank');
-      selectedBankOrder = selectedBankOrder.filter(function(b){ return b !== bankName; });
-      bankList.querySelectorAll('.bank-add-btn').forEach(function(ab){
-        if(ab.getAttribute('data-bank') === bankName){
-          ab.disabled = false;
-          ab.innerHTML = '<i class="bi bi-plus-circle"></i> Add';
-          ab.classList.remove('btn-success');
-          ab.classList.add('btn-outline-primary');
+
+  container.querySelectorAll('.bank-chk').forEach(function(chk) {
+    chk.addEventListener('change', function() {
+      var bName = this.getAttribute('data-bank');
+      if (this.checked) {
+        if (selectedBankOrder.indexOf(bName) === -1) {
+          selectedBankOrder.push(bName);
         }
-      });
+      } else {
+        selectedBankOrder = selectedBankOrder.filter(function(b) { return b !== bName; });
+      }
       renderPrefList();
     });
   });
 }
+
+function renderPrefList() {
+  var prefList = $('prefList');
+  if(!prefList) return;
+  prefList.innerHTML = '';
+
+  if(selectedBankOrder.length === 0){
+    prefList.innerHTML = '<div class="p-3 text-muted small">No banks selected. Select checkboxes on the left.</div>';
+    return;
+  }
+
+  selectedBankOrder.forEach(function(bankName, idx) {
+    var div = document.createElement('div');
+    div.className = 'pref-order-item';
+    div.setAttribute('draggable', 'true');
+    div.setAttribute('data-idx', idx);
+    div.textContent = bankName;
+    prefList.appendChild(div);
+  });
+
+  var items = prefList.querySelectorAll('.pref-order-item');
+  var dragIdx = null;
+  items.forEach(function(item) {
+    item.addEventListener('dragstart', function(e) {
+      dragIdx = parseInt(this.getAttribute('data-idx'));
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', function() {
+      this.classList.remove('dragging');
+    });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    item.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var dropIdx = parseInt(this.getAttribute('data-idx'));
+      if (dragIdx === null || dragIdx === dropIdx) return;
+      var moved = selectedBankOrder.splice(dragIdx, 1)[0];
+      selectedBankOrder.splice(dropIdx, 0, moved);
+      renderPrefList();
+      renderBankCheckboxes();
+    });
+  });
+}
+
+renderBankCheckboxes();
+renderPrefList();
 
 // Uppercase and sanitize name fields (allow A-Z, space, dot)
 ['txtFather','txtMother','txtSpouse','txtConfirmFather','txtConfirmMother','txtConfirmSpouse'].forEach(function(id){
