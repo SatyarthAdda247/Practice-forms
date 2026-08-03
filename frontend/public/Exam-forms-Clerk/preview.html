@@ -496,11 +496,7 @@ var $ = function(id){ return document.getElementById(id); };
   }
   sections.push(['Experience Details', qexpRows]);
 
-  sections.push(['Languages Known', [
-    ["Language 1 (Proficient)", g('lang1')],
-    ["Language 2", g('lang2')],
-    ["Language 3", g('lang3')]
-  ]]);
+  // (Languages Known is rendered as its own Read/Write/Speak table below.)
 
   // Render sections
   var html = '';
@@ -529,6 +525,28 @@ var $ = function(id){ return document.getElementById(id); };
     html += 'No preference set';
   }
   html += '</td></tr></tbody></table></div>';
+
+  // Languages Known — Read / Write / Speak table (matches the official preview)
+  function yn(v){ v=(''+(v||'')).trim().toLowerCase(); return (v==='yes'||v==='y')?'YES':'NO'; }
+  var langRows = '';
+  [['lang1','lang1_read','lang1_write','lang1_speak'],
+   ['lang2','lang2_read','lang2_write','lang2_speak'],
+   ['lang3','lang3_read','lang3_write','lang3_speak']].forEach(function(r){
+    var name = g(r[0]);
+    if(!name) return;
+    langRows += '<tr><td class="text-center">' + esc(name) + '</td><td class="text-center">' + yn(g(r[1])) +
+                '</td><td class="text-center">' + yn(g(r[2])) + '</td><td class="text-center">' + yn(g(r[3])) + '</td></tr>';
+  });
+  if(langRows){
+    html += '<div class="preview-section-header">Languages Known</div>';
+    html += '<div class="table-responsive"><table class="table table-bordered bg-white mb-0">'
+         +  '<thead><tr>'
+         +  '<th class="text-center" style="background:#5b6cf0;color:#fff;">LANGUAGES KNOWN</th>'
+         +  '<th class="text-center" style="background:#5b6cf0;color:#fff;">Read</th>'
+         +  '<th class="text-center" style="background:#5b6cf0;color:#fff;">Write</th>'
+         +  '<th class="text-center" style="background:#5b6cf0;color:#fff;">Speak</th>'
+         +  '</tr></thead><tbody>' + langRows + '</tbody></table></div>';
+  }
 
   $('previewBody').innerHTML = html;
 })();
