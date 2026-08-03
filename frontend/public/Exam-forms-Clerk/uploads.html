@@ -36,27 +36,97 @@
     display: inline-block;
     color: #1e293b;
   }
-  
-  #captchaImg {
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: #0f172a;
-    background: linear-gradient(45deg, #f1f5f9, #e2e8f0);
-    padding: 6px 16px;
-    border-radius: 6px;
-    border: 1px dashed #94a3b8;
-    user-select: none;
-    font-family: monospace;
-    display: inline-block;
-  }
 
   .file-upload-card {
     background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 18px;
+    min-height: 180px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+  .file-upload-card:hover {
+    border-color: #4f46e5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08);
+  }
+
+  .preview-inline-box {
+    display: none;
+    margin-top: 12px;
+    padding: 10px;
+    background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 16px;
-    min-height: 140px;
+    text-align: center;
+  }
+  .preview-inline-box img {
+    max-height: 80px;
+    width: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #fff;
+    padding: 2px;
+  }
+
+  /* Document Preview Modal */
+  .doc-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 1060;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .doc-modal-card {
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    width: 90%;
+    max-width: 650px;
+    overflow: hidden;
+    animation: docModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes docModalPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .doc-modal-header {
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    color: #ffffff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .doc-modal-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.85;
+  }
+  .doc-modal-close:hover { opacity: 1; }
+  .doc-modal-body {
+    padding: 20px;
+    background: #f1f5f9;
+    max-height: 480px;
+    overflow-y: auto;
+    text-align: center;
+  }
+  .doc-modal-footer {
+    padding: 12px 20px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   </style>
 </head>
@@ -134,6 +204,16 @@
           </div>
           <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg)</small>
           <div class="invalid-feedback" id="err_thumbFile"></div>
+
+          <!-- Inline Preview Card -->
+          <div class="preview-inline-box" id="thumbInlineBox">
+            <img id="thumbInlineImg" src="" alt="Thumb Preview">
+            <div class="mt-2">
+              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewThumb" style="font-size: 12px;">
+                <i class="bi bi-eye-fill"></i> Preview Document
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -148,6 +228,16 @@
           </div>
           <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg)</small>
           <div class="invalid-feedback" id="err_declFile"></div>
+
+          <!-- Inline Preview Card -->
+          <div class="preview-inline-box" id="declInlineBox">
+            <img id="declInlineImg" src="" alt="Declaration Preview">
+            <div class="mt-2">
+              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewDecl" style="font-size: 12px;">
+                <i class="bi bi-eye-fill"></i> Preview Document
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -162,6 +252,18 @@
           </div>
           <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: pdf)</small>
           <div class="invalid-feedback" id="err_sscFile"></div>
+
+          <!-- Inline Preview Card -->
+          <div class="preview-inline-box" id="sscInlineBox">
+            <div class="p-2 bg-light rounded text-primary font-weight-bold" style="font-size: 12.5px;">
+              <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 24px;"></i> SSC Certificate Document
+            </div>
+            <div class="mt-2">
+              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewSsc" style="font-size: 12px;">
+                <i class="bi bi-eye-fill"></i> Preview Document
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -222,6 +324,28 @@
   </form>
 </div>
 
+<!-- Modal Popup for Document Preview -->
+<div class="doc-modal-backdrop" id="docPreviewModal">
+  <div class="doc-modal-card">
+    <div class="doc-modal-header">
+      <span id="docPreviewModalTitle"><i class="bi bi-eye-fill mr-2"></i> Document Preview</span>
+      <button type="button" class="doc-modal-close" id="btnCloseDocModal">&times;</button>
+    </div>
+    <div class="doc-modal-body">
+      <img id="docModalImg" src="" alt="Document Preview Image" style="max-width: 100%; max-height: 400px; display: none; margin: 0 auto; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <div id="docModalPdfBox" style="display: none; padding: 30px; background: #ffffff; border-radius: 8px; border: 1px solid #cbd5e1;">
+        <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 64px;"></i>
+        <h5 class="mt-3 font-weight-bold text-dark" id="pdfDocName">SSC 10th Standard Certificate.pdf</h5>
+        <p class="text-muted small mb-0">PDF Document verified &amp; ready for submission.</p>
+      </div>
+    </div>
+    <div class="doc-modal-footer">
+      <span class="text-success small font-weight-bold"><i class="bi bi-check-circle-fill"></i> Uploaded &amp; Verified</span>
+      <button type="button" class="btn btn-primary px-4 font-weight-bold" id="btnConfirmDocModal" style="background-color: #4f46e5; border-color: #4f46e5;">OK / Confirm</button>
+    </div>
+  </div>
+</div>
+
 <footer class="footer">
   <div class="container-fluid text-right">
     <span class="text-muted">Practice replica by Adda247 for exam-prep rehearsal — Support and Best Viewed on Chrome/Firefox/Edge.</span>
@@ -240,13 +364,32 @@ var $ = function(id){ return document.getElementById(id); };
     $('hdrName').textContent = regName;
     $('hdrRegNo').textContent = regNo;
   }
-  // Disable copy-paste on all inputs
-  document.querySelectorAll('#uploads_frm input').forEach(function(el){
-    el.addEventListener('copy', function(e){ e.preventDefault(); });
-    el.addEventListener('paste', function(e){ e.preventDefault(); });
-    el.addEventListener('cut', function(e){ e.preventDefault(); });
-  });
 })();
+
+// Document Preview Modal Manager
+function openDocModal(title, imageSrc, isPdf, pdfName) {
+  var modal = $('docPreviewModal');
+  $('docPreviewModalTitle').innerHTML = '<i class="bi bi-eye-fill mr-2"></i> ' + title;
+  
+  if (isPdf) {
+    $('docModalImg').style.display = 'none';
+    $('docModalPdfBox').style.display = 'block';
+    if(pdfName) $('pdfDocName').textContent = pdfName;
+  } else {
+    $('docModalPdfBox').style.display = 'none';
+    $('docModalImg').style.display = 'block';
+    $('docModalImg').src = imageSrc;
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function closeDocModal() {
+  $('docPreviewModal').style.display = 'none';
+}
+
+$('btnCloseDocModal').onclick = closeDocModal;
+$('btnConfirmDocModal').onclick = closeDocModal;
 
 // Captcha setup
 var currentCaptcha = '';
@@ -265,15 +408,94 @@ $('refreshCaptcha').addEventListener('click', function(){
   clearError('txtCode');
 });
 
+// File upload listeners with instant preview modal popups
+$('thumbFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var data = evt.target.result;
+    sessionStorage.setItem('ibps_thumbImg', data);
+    $('thumbInlineImg').src = data;
+    $('thumbInlineBox').style.display = 'block';
+    clearError('thumbFile');
+    // Open preview popup immediately upon upload
+    openDocModal('Preview - Left Thumb Impression', data, false);
+  };
+  reader.readAsDataURL(file);
+});
+
+$('declFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(evt) {
+    var data = evt.target.result;
+    sessionStorage.setItem('ibps_declImg', data);
+    $('declInlineImg').src = data;
+    $('declInlineBox').style.display = 'block';
+    clearError('declFile');
+    // Open preview popup immediately upon upload
+    openDocModal('Preview - Handwritten Declaration', data, false);
+  };
+  reader.readAsDataURL(file);
+});
+
+$('sscFile').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  sessionStorage.setItem('ibps_sscPdf', file.name);
+  $('sscInlineBox').style.display = 'block';
+  clearError('sscFile');
+  // Open preview popup immediately upon upload
+  openDocModal('Preview - SSC 10th Certificate (PDF)', null, true, file.name);
+});
+
+// Re-open preview modal anytime user clicks "Preview Document" buttons
+$('btnPreviewThumb').onclick = function() {
+  var src = sessionStorage.getItem('ibps_thumbImg') || $('thumbInlineImg').src;
+  openDocModal('Preview - Left Thumb Impression', src, false);
+};
+
+$('btnPreviewDecl').onclick = function() {
+  var src = sessionStorage.getItem('ibps_declImg') || $('declInlineImg').src;
+  openDocModal('Preview - Handwritten Declaration', src, false);
+};
+
+$('btnPreviewSsc').onclick = function() {
+  var pdfName = sessionStorage.getItem('ibps_sscPdf') || 'SSC_10th_Certificate.pdf';
+  openDocModal('Preview - SSC 10th Certificate (PDF)', null, true, pdfName);
+};
+
 // Demo data generator
 $('btnDemoUploads').addEventListener('click', function() {
+  var demoThumb = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='%23e0f2fe'/><circle cx='60' cy='60' r='35' fill='none' stroke='%230369a1' stroke-width='4' stroke-dasharray='10 5'/><circle cx='60' cy='60' r='25' fill='none' stroke='%230369a1' stroke-width='3' stroke-dasharray='5 5'/><circle cx='60' cy='60' r='15' fill='none' stroke='%230369a1' stroke-width='2'/><text x='60' y='110' font-family='sans-serif' font-size='10' fill='%230369a1' text-anchor='middle'>DEMO THUMB IMPRESSION</text></svg>";
+  var demoDecl = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'><rect width='320' height='120' fill='%23ffffff'/><text x='15' y='30' font-family='sans-serif' font-size='13' fill='%230f172a'>I, SATYARTH SRIVASTAVA, hereby declare that all</text><text x='15' y='55' font-family='sans-serif' font-size='13' fill='%230f172a'>the information submitted by me in this application</text><text x='15' y='80' font-family='sans-serif' font-size='13' fill='%230f172a'>form is correct, true and valid.</text></svg>";
+  
+  sessionStorage.setItem('ibps_thumbImg', demoThumb);
+  $('thumbInlineImg').src = demoThumb;
+  $('thumbInlineBox').style.display = 'block';
+
+  sessionStorage.setItem('ibps_declImg', demoDecl);
+  $('declInlineImg').src = demoDecl;
+  $('declInlineBox').style.display = 'block';
+
+  sessionStorage.setItem('ibps_sscPdf', 'Demo_SSC_10th_Certificate.pdf');
+  $('sscInlineBox').style.display = 'block';
+
   $('confirmDocsValid').checked = true;
   $('digi_y').checked = true;
   $('txtCode').value = currentCaptcha;
 
+  clearError('thumbFile');
+  clearError('declFile');
+  clearError('sscFile');
   clearError('confirmDocsValid');
   clearError('digilocker_agree');
   clearError('txtCode');
+
+  // Automatically pop up document preview modal so user sees it right away
+  openDocModal('Preview - Left Thumb Impression', demoThumb, false);
 });
 
 function radioVal(name){
