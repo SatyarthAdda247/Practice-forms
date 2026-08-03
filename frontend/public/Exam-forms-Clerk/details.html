@@ -188,25 +188,27 @@
 
   /* Two-column grid inside each section (matches the official layout). Section
      headers, notes, full-width rows and declaration checkboxes span both cols. */
+  /* Scoped to the BASIC tab only — the Qualification tab holds a wide education
+     table and the Preference tab its own panels, both of which need full width. */
   @media (min-width: 768px){
-    .tab-panel.active{ display:grid; grid-template-columns:1fr 1fr; column-gap:28px; align-items:start; }
-    .cond-field{ display:grid; grid-template-columns:1fr 1fr; column-gap:28px; align-items:start; }
-    .tab-panel.active > .section-header,
-    .tab-panel.active > .note-box,
-    .tab-panel.active > .mb-2,
-    .tab-panel.active > .advisory-box,
-    .tab-panel.active > .form-row,
-    .tab-panel.active > .row,
-    .tab-panel.active > .cond-field,
-    .tab-panel.active > .custom-control,
-    .cond-field > .section-header,
-    .cond-field > .note-box,
-    .cond-field > .custom-control{
+    #tab-basic.active{ display:grid; grid-template-columns:1fr 1fr; column-gap:28px; align-items:start; }
+    #tab-basic .cond-field{ display:grid; grid-template-columns:1fr 1fr; column-gap:28px; align-items:start; }
+    #tab-basic.active > .section-header,
+    #tab-basic.active > .note-box,
+    #tab-basic.active > .mb-2,
+    #tab-basic.active > .advisory-box,
+    #tab-basic.active > .form-row,
+    #tab-basic.active > .row,
+    #tab-basic.active > .cond-field,
+    #tab-basic.active > .custom-control,
+    #tab-basic .cond-field > .section-header,
+    #tab-basic .cond-field > .note-box,
+    #tab-basic .cond-field > .custom-control{
       grid-column: 1 / -1;
     }
     /* Long declaration questions (radio rows with a .sub-label) read better full width */
-    .tab-panel.active > .form-group:has(> .sub-label),
-    .cond-field > .form-group:has(> .sub-label){ grid-column: 1 / -1; }
+    #tab-basic.active > .form-group:has(> .sub-label),
+    #tab-basic .cond-field > .form-group:has(> .sub-label){ grid-column: 1 / -1; }
   }
 
   /* Bank preference panel styles */
@@ -1555,9 +1557,11 @@
           </select>
         </div>
         <div class="col-md-4">
-          <select class="custom-select multi-select-box" name="comp_details_subject" id="selCompSubj" multiple size="2" style="height:80px !important;">
+          <select class="custom-select multi-select-box" name="comp_details_subject" id="selCompSubj" multiple size="4" style="height:120px !important;">
             <option value="Computer Operations">Computer Operations</option>
             <option value="Computer Language">Computer Language</option>
+            <option value="Computer as a Subject">Computer as a Subject</option>
+            <option value="I.T as a Subject">I.T as a Subject</option>
           </select>
         </div>
       </div>
@@ -2171,6 +2175,50 @@ function renderPrefList(){
   var el=$(id);
   if(el) el.addEventListener('input', function(){ this.value=this.value.replace(/[^0-9]/g,''); });
 });
+
+// ====== DYNAMIC COMPUTER KNOWLEDGE SUBJECTS ======
+var COMP_SUBJ_OPTIONS = {
+  school: [
+    { val: 'Computer as a Subject', text: 'Computer as a Subject' },
+    { val: 'I.T as a Subject', text: 'I.T as a Subject' }
+  ],
+  standard: [
+    { val: 'Computer Operations', text: 'Computer Operations' },
+    { val: 'Computer Language', text: 'Computer Language' }
+  ]
+};
+
+function updateCompSubjOptions() {
+  var typeEl = $('selCompType');
+  var subjEl = $('selCompSubj');
+  if(!typeEl || !subjEl) return;
+
+  var selTypes = Array.prototype.filter.call(typeEl.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+  var isSchool = selTypes.indexOf('Studied in High School/College/Institute') !== -1;
+  var targetList = isSchool ? COMP_SUBJ_OPTIONS.school : COMP_SUBJ_OPTIONS.standard;
+
+  var curSel = Array.prototype.filter.call(subjEl.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+
+  subjEl.innerHTML = '';
+  targetList.forEach(function(optData){
+    var opt = document.createElement('option');
+    opt.value = optData.val;
+    opt.textContent = optData.text;
+    if(curSel.indexOf(optData.val) !== -1){
+      opt.selected = true;
+    }
+    subjEl.appendChild(opt);
+  });
+
+  if(subjEl.options.length > 0 && Array.prototype.filter.call(subjEl.options, function(o){ return o.selected; }).length === 0){
+    subjEl.options[0].selected = true;
+  }
+}
+
+if($('selCompType')){
+  $('selCompType').addEventListener('change', updateCompSubjOptions);
+  $('selCompType').addEventListener('click', updateCompSubjOptions);
+}
 
 // ====== LIVE NAME MATCHING VALIDATION ======
 function validatePair(primaryId, confirmId, primaryKey, confirmKey, labelName) {
