@@ -2216,8 +2216,12 @@ function updateCompSubjOptions() {
 }
 
 if($('selCompType')){
-  $('selCompType').addEventListener('change', updateCompSubjOptions);
-  $('selCompType').addEventListener('click', updateCompSubjOptions);
+  ['change','click','mouseup','mousedown','input'].forEach(function(evtName){
+    $('selCompType').addEventListener(evtName, function(){
+      setTimeout(updateCompSubjOptions, 0);
+    });
+  });
+  updateCompSubjOptions();
 }
 
 // ====== LIVE NAME MATCHING VALIDATION ======
