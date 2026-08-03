@@ -21,7 +21,9 @@
   // Fields we must NOT persist (regenerated / verified per session).
   var SKIP_IDS = {
     txtCode: 1, security_check: 1, captchaImg: 1,
-    otpverify: 1, emailotpverify: 1, otpMobile: 1, otpEmail: 1
+    otpverify: 1, emailotpverify: 1, otpMobile: 1, otpEmail: 1,
+    // Sensitive ID fields are always mock-filled fresh by the page; never persist.
+    txtAadhaar: 1, txtPan: 1, txtIdProofNo: 1
   };
   function isSkipped(el) {
     if (!el) return true;
