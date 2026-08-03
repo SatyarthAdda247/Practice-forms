@@ -2001,6 +2001,11 @@ $('btnDemoDetails').addEventListener('click', function() {
   $('selLang1').value = "HINDI";
   $('selLang2').value = "ENGLISH";
 
+  if($('selOptedLang')) $('selOptedLang').value = "HINDI";
+  if($('langProficientDecl')) $('langProficientDecl').checked = true;
+  if($('lang10_y')) $('lang10_y').checked = true;
+  if($('selMedium')) $('selMedium').value = "ENGLISH & HINDI";
+
   clearAllErrors();
 });
 
@@ -2029,7 +2034,7 @@ function clearError(field){
   if(err){ err.textContent = ''; err.classList.remove('show'); }
 }
 
-var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','lang1'];
+var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','lang1','opted_lang','lang_proficient_decl','lang_10th_cert','medium_exam'];
 function clearAllErrors(){ ERROR_FIELDS.forEach(clearError); }
 
 // Map field key -> actual element id (where they differ)
@@ -2042,7 +2047,11 @@ function fieldEl(key){
     'corr_addr1':'txtCorrAddr1','corr_state':'selCorrState','corr_district':'selCorrDistrict','corr_pincode':'txtCorrPincode',
     'perm_addr1':'txtPermAddr1','perm_state':'selPermState','perm_district':'selPermDistrict','perm_pincode':'txtPermPincode',
     'gst_address':'selGst','bank_bfsi':'selBankBFSI','degree':'selDegree','passing_year':'txtDegreeYear','percentage':'txtPercentage','lang1':'selLang1',
-    'opted_lang':'selOptedLang','medium_exam':'selMedium'
+    'opted_lang':'selOptedLang','medium_exam':'selMedium',
+    'lang_proficient_decl':'langProficientDecl','lang_10th_cert':'lang10_y',
+    'category':'cat_general','disability':'dis_n','serving_govt':'serving_n','exserviceman':'exsvc_n',
+    'minority':'minor_n','cwe_appeared':'cwe_n','apprentice':'appr_n','dob':'dob_dd',
+    'gender':'gender_m','marital':'mar_unmarried','twin':'twin_n','has_experience':'exp_n'
   };
   return $(map[key] || key);
 }
