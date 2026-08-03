@@ -1070,6 +1070,34 @@
 })();
 </script>
 
+<!-- Carry the Name + Phone captured at the portal gate into the first form page,
+     so the mobile & first name stay consistent with what the user entered on
+     arriving at the website. Prefills only empty fields (never overrides edits). -->
+<script>
+(function(){
+  var u;
+  try { u = JSON.parse(localStorage.getItem('adda_practice_user')); } catch(e){}
+  if(!u || !u.name || !u.phone) return;
+  function setIfEmpty(id, val){
+    var el = document.getElementById(id);
+    if(el && !el.value){
+      el.value = val;
+      el.dispatchEvent(new Event('input', {bubbles:true}));
+      el.dispatchEvent(new Event('blur', {bubbles:true}));
+    }
+  }
+  var firstName = (u.name.trim().split(/\s+/)[0] || '').toUpperCase().replace(/[^A-Z' ]/g,'');
+  if(/^\d{10}$/.test(u.phone)){
+    setIfEmpty('txtmobile', u.phone);
+    setIfEmpty('txtcmobile', u.phone);
+  }
+  if(firstName){
+    setIfEmpty('fullname', firstName);
+    setIfEmpty('cfullname', firstName);
+  }
+})();
+</script>
+
   <script src="form-persist.js"></script>
 </body>
 </html>
