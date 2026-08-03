@@ -1432,9 +1432,11 @@
           </select>
         </div>
         <div class="col-md-4">
-          <select class="custom-select multi-select-box" name="comp_details_subject" id="selCompSubj" multiple size="2" style="height:80px !important;">
+          <select class="custom-select multi-select-box" name="comp_details_subject" id="selCompSubj" multiple size="4" style="height:120px !important;">
             <option value="Computer Operations">Computer Operations</option>
             <option value="Computer Language">Computer Language</option>
+            <option value="Computer as a Subject">Computer as a Subject</option>
+            <option value="I.T as a Subject">I.T as a Subject</option>
           </select>
         </div>
       </div>
@@ -1940,6 +1942,50 @@ function renderPrefList(){
   var el=$(id);
   if(el) el.addEventListener('input', function(){ this.value=this.value.replace(/[^0-9]/g,''); });
 });
+
+// ====== DYNAMIC COMPUTER KNOWLEDGE SUBJECTS ======
+var COMP_SUBJ_OPTIONS = {
+  school: [
+    { val: 'Computer as a Subject', text: 'Computer as a Subject' },
+    { val: 'I.T as a Subject', text: 'I.T as a Subject' }
+  ],
+  standard: [
+    { val: 'Computer Operations', text: 'Computer Operations' },
+    { val: 'Computer Language', text: 'Computer Language' }
+  ]
+};
+
+function updateCompSubjOptions() {
+  var typeEl = $('selCompType');
+  var subjEl = $('selCompSubj');
+  if(!typeEl || !subjEl) return;
+
+  var selTypes = Array.prototype.filter.call(typeEl.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+  var isSchool = selTypes.indexOf('Studied in High School/College/Institute') !== -1;
+  var targetList = isSchool ? COMP_SUBJ_OPTIONS.school : COMP_SUBJ_OPTIONS.standard;
+
+  var curSel = Array.prototype.filter.call(subjEl.options, function(o){ return o.selected; }).map(function(o){ return o.value; });
+
+  subjEl.innerHTML = '';
+  targetList.forEach(function(optData){
+    var opt = document.createElement('option');
+    opt.value = optData.val;
+    opt.textContent = optData.text;
+    if(curSel.indexOf(optData.val) !== -1){
+      opt.selected = true;
+    }
+    subjEl.appendChild(opt);
+  });
+
+  if(subjEl.options.length > 0 && Array.prototype.filter.call(subjEl.options, function(o){ return o.selected; }).length === 0){
+    subjEl.options[0].selected = true;
+  }
+}
+
+if($('selCompType')){
+  $('selCompType').addEventListener('change', updateCompSubjOptions);
+  $('selCompType').addEventListener('click', updateCompSubjOptions);
+}
 
 // ====== LIVE NAME MATCHING VALIDATION ======
 function validatePair(primaryId, confirmId, primaryKey, confirmKey, labelName) {
