@@ -183,9 +183,39 @@
   }
   .definition-btn:hover{background:#eef0ff;}
 
-  /* Conditional sub-blocks */
-  .cond-field{display:none;}
-  .cond-field.show{display:block;}
+  /* Conditional sub-blocks: ALWAYS VISIBLE, grayed-out and non-editable when inactive */
+  .cond-field, .cond-subblock {
+    display: block !important;
+    opacity: 0.55;
+    transition: opacity 0.2s ease;
+  }
+  .cond-field input,
+  .cond-field select,
+  .cond-field textarea,
+  .cond-subblock input,
+  .cond-subblock select,
+  .cond-subblock textarea {
+    background-color: #f1f5f9 !important;
+    color: #94a3b8 !important;
+    border-color: #cbd5e1 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+  }
+  .cond-field.active-field, .cond-subblock.active-field {
+    opacity: 1;
+  }
+  .cond-field.active-field input,
+  .cond-field.active-field select,
+  .cond-field.active-field textarea,
+  .cond-subblock.active-field input,
+  .cond-subblock.active-field select,
+  .cond-subblock.active-field textarea {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    border-color: #ced4da !important;
+    cursor: auto !important;
+    pointer-events: auto !important;
+  }
 
   .field-hint{font-size:11.5px;color:#64748b;margin-top:2px;}
   .sub-label{font-size:13.5px;color:#334155;font-weight:500;display:block;margin-bottom:4px;margin-top:6px;}
@@ -1593,13 +1623,27 @@ function calculateAge(){
 }
 ['dob_dd','dob_mm','dob_yyyy'].forEach(function(id){ $(id).addEventListener('change', calculateAge); });
 
-// ====== CONDITIONAL SECTION TOGGLES ======
+// ====== CONDITIONAL SECTION TOGGLES (fields remain visible but grayed-out and non-editable when inactive) ======
+function setCondState(subId, enabled){
+  var box = typeof subId === 'string' ? $(subId) : subId;
+  if(!box) return;
+  if(enabled){
+    box.classList.add('active-field');
+  } else {
+    box.classList.remove('active-field');
+  }
+}
+
 function toggleOnYes(radioName, subId){
+  function check(){
+    var val = '';
+    document.getElementsByName(radioName).forEach(function(r){ if(r.checked) val = r.value; });
+    setCondState(subId, val === 'Y');
+  }
   document.getElementsByName(radioName).forEach(function(r){
-    r.addEventListener('change', function(){
-      $(subId).classList.toggle('show', this.value==='Y');
-    });
+    r.addEventListener('change', check);
   });
+  check(); // Set initial state
 }
 toggleOnYes('disability', 'disabilitySub');
 toggleOnYes('exserviceman', 'exsvcSub');
@@ -1608,11 +1652,15 @@ toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
 
 // ====== EXPERIENCE TOGGLE (Qualification tab) ======
+function checkExp(){
+  var val = '';
+  document.getElementsByName('has_experience').forEach(function(r){ if(r.checked) val = r.value; });
+  setCondState('experienceFields', val === 'Y');
+}
 document.getElementsByName('has_experience').forEach(function(r){
-  r.addEventListener('change', function(){
-    $('experienceFields').style.display = this.value==='Y' ? 'block' : 'none';
-  });
+  r.addEventListener('change', checkExp);
 });
+checkExp();
 
 // ====== EXAM CENTRE + STATE/DISTRICT DATA (all States & UTs) ======
 // One master table: each State/UT -> { code, cities }. The city list is used
