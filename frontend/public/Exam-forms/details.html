@@ -1504,7 +1504,6 @@ function fillYears(sel, from, to){
   }
 }
 fillDays($('dob_dd'));
-fillYears($('dob_yyyy'), curYear, curYear-60);
 fillDays($('relief_dd'));
 fillYears($('relief_yyyy'), curYear, curYear-45);
 fillDays($('appstart_dd'));
@@ -1512,12 +1511,56 @@ fillYears($('appstart_yyyy'), curYear, curYear-20);
 fillDays($('append_dd'));
 fillYears($('append_yyyy'), curYear, curYear-20);
 
+// ====== CATEGORY-BASED DOB YEAR LIMITS ======
+var CATEGORY_MIN_YEAR = {
+  'GENERAL': 1998,
+  'EWS': 1998,
+  'OBC': 1995,
+  'ST': 1993,
+  'SC': 1993
+};
+
+function updateDobYears(){
+  var cat = radioVal('category') || 'GENERAL';
+  var minYear = CATEGORY_MIN_YEAR[cat] || 1998;
+  var sel = $('dob_yyyy');
+  if(!sel) return;
+  var currentVal = sel.value;
+  sel.innerHTML = '<option value="">Year</option>';
+  for(var y = 2006; y >= minYear; y--){
+    var o = document.createElement('option');
+    o.value = y; o.textContent = y; sel.appendChild(o);
+  }
+  if(currentVal && parseInt(currentVal, 10) >= minYear && parseInt(currentVal, 10) <= 2006){
+    sel.value = currentVal;
+  } else if(currentVal) {
+    sel.value = '';
+    calculateAge();
+  }
+}
+updateDobYears();
+document.getElementsByName('category').forEach(function(r){
+  r.addEventListener('change', function(){
+    updateDobYears();
+    calculateAge();
+  });
+});
+
 // ====== AGE CALCULATION (as on 01.07.2026) ======
 var ELIGIBILITY_DATE = new Date(2026, 6, 1);
 function calculateAge(){
   var dd=$('dob_dd').value, mm=$('dob_mm').value, yyyy=$('dob_yyyy').value;
   var ageEl=$('ageDisplay');
   if(!dd||!mm||!yyyy){ ageEl.style.display='none'; return; }
+  var cat = radioVal('category') || 'GENERAL';
+  var minYear = CATEGORY_MIN_YEAR[cat] || 1998;
+  var yNum = parseInt(yyyy, 10);
+  if(yNum < minYear){
+    ageEl.style.display='block';
+    ageEl.className = 'age-display text-danger';
+    ageEl.innerHTML='<i class="bi bi-exclamation-triangle-fill"></i> For <strong>' + cat + '</strong> category, birth year cannot be earlier than <strong>' + minYear + '</strong>.';
+    return;
+  }
   var dob=new Date(parseInt(yyyy), parseInt(mm)-1, parseInt(dd));
   if(isNaN(dob.getTime())){ ageEl.style.display='none'; return; }
   var ref=ELIGIBILITY_DATE;
@@ -1527,6 +1570,7 @@ function calculateAge(){
   if(days<0){ months--; var pm=new Date(ref.getFullYear(), ref.getMonth(), 0); days+=pm.getDate(); }
   if(months<0){ years--; months+=12; }
   ageEl.style.display='block';
+  ageEl.className = 'age-display';
   ageEl.innerHTML='<i class="bi bi-calendar-check"></i> Age completed as on 01.07.2026 is <strong>'+years+' Years, '+months+' Month(s), '+days+' Day(s)</strong>';
 }
 ['dob_dd','dob_mm','dob_yyyy'].forEach(function(id){ $(id).addEventListener('change', calculateAge); });
@@ -1912,7 +1956,14 @@ function validateAll(){
   if(!val('txtIdProofNo')) setErr('id_proof_no','Please enter ID Proof No.', errors);
 
   // Personal Details
-  if(!val('dob_dd')||!val('dob_mm')||!val('dob_yyyy')) setErr('dob','Please select Date of Birth.', errors);
+  var cat = radioVal('category');
+  var minYear = CATEGORY_MIN_YEAR[cat] || 1998;
+  var dobY = parseInt(val('dob_yyyy'), 10);
+  if(!val('dob_dd')||!val('dob_mm')||!val('dob_yyyy')) {
+    setErr('dob','Please select Date of Birth.', errors);
+  } else if(cat && dobY && dobY < minYear) {
+    setErr('dob','For ' + cat + ' category, birth year cannot be earlier than ' + minYear + '.', errors);
+  }
   if(!radioVal('gender')) setErr('gender','Please choose Gender.', errors);
   if(!radioVal('marital')) setErr('marital','Please choose Marital Status.', errors);
   if(!radioVal('twin')) setErr('twin','Please select an option.', errors);
