@@ -1388,11 +1388,17 @@
               <select class="custom-select custom-select-sm" name="degree" id="selDegree">
                 <option value="" selected>Select</option>
                 <option value="Bachelor of Science (B.Sc.)">Bachelor of Science (B.Sc.)</option>
+                <option value="Bachelor of Commerce (B.Com)">Bachelor of Commerce (B.Com)</option>
                 <option value="Bachelor of Arts (B.A.)">Bachelor of Arts (B.A.)</option>
-                <option value="Bachelor of Commerce (B.Com.)">Bachelor of Commerce (B.Com.)</option>
-                <option value="Engineering (B.E./B.Tech.)">Engineering (B.E./B.Tech.)</option>
-                <option value="Management (B.B.A.)">Management (B.B.A.)</option>
-                <option value="Computer Applications (B.C.A.)">Computer Applications (B.C.A.)</option>
+                <option value="Engineering (BE/B.TECH)">Engineering (BE/B.TECH)</option>
+                <option value="Management">Management</option>
+                <option value="Bachelor of Computer Applications (BCA)">Bachelor of Computer Applications (BCA)</option>
+                <option value="B. Pharma">B. Pharma</option>
+                <option value="B. Arch">B. Arch</option>
+                <option value="LAW">LAW</option>
+                <option value="CA">CA</option>
+                <option value="CS">CS</option>
+                <option value="ICWA">ICWA</option>
                 <option value="Others">Others</option>
               </select>
               <div class="invalid-feedback" id="err_degree"></div>
@@ -1552,7 +1558,45 @@
       </table>
     </div>
 
-    <!-- 3c. Languages Known -->
+    <!-- 3c. Other Details -->
+    <div class="section-header">Other Details</div>
+
+    <div class="form-group mb-3">
+      <label class="d-block">Are you desirous of taking Pre-Exam Training conducted in Online mode ? (Only for SC/ST/OBC/Religious Minority Communities/Ex-Serviceman/Disabled Ex-Serviceman/Dependent of a Servicemen/PwBD)</label>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="Y" name="pre_exam_training" id="pet_y" class="custom-control-input">
+        <label class="custom-control-label" for="pet_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="pre_exam_training" id="pet_n" class="custom-control-input">
+        <label class="custom-control-label" for="pet_n">No</label>
+      </div>
+    </div>
+
+    <div class="form-group mb-3">
+      <label class="d-block">Whether any prosecution/ detention/ fine/conviction/ sentence against you has been awarded by any court of law for any offence ? <sup class="error">*</sup></label>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="Y" name="prosecution" id="pros_y" class="custom-control-input">
+        <label class="custom-control-label" for="pros_y">Yes</label>
+      </div>
+      <div class="custom-control custom-radio custom-control-inline">
+        <input type="radio" value="N" name="prosecution" id="pros_n" class="custom-control-input">
+        <label class="custom-control-label" for="pros_n">No</label>
+      </div>
+      <div class="invalid-feedback" id="err_prosecution"></div>
+    </div>
+
+    <div class="cond-field active-field mb-4" id="prosecutionSub">
+      <div class="form-row align-items-center">
+        <label for="txtProsecutionDetails" class="col-md-4 mb-0">If yes, particulars of the same</label>
+        <div class="col-md-5">
+          <input type="text" class="form-control" name="prosecution_details" id="txtProsecutionDetails" maxlength="35" placeholder="">
+          <div class="field-hint">(Maximum 35 Characters)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3d. Languages Known -->
     <div class="section-header">Languages Known</div>
     <div class="form-row">
       <div class="form-group col-md-4">
@@ -1824,6 +1868,7 @@ toggleOnYes('exserviceman', 'exsvcSub');
 toggleOnYes('cwe_appeared', 'cweSub');
 toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
+toggleOnYes('prosecution', 'prosecutionSub');
 
 // ====== EXPERIENCE TOGGLE (Qualification tab) ======
 function checkExp(){
@@ -2212,6 +2257,8 @@ $('btnDemoDetails').addEventListener('click', function() {
   if($('txtPercentage')) $('txtPercentage').value = "78.45";
   if($('comp_y')) $('comp_y').checked = true;
   if($('exp_n')) $('exp_n').checked = true;
+  if($('pet_n')) $('pet_n').checked = true;
+  if($('pros_n')) $('pros_n').checked = true; setCondState('prosecutionSub', false);
   if($('selLang1')) $('selLang1').value = "HINDI";
   if($('selLang2')) $('selLang2').value = "ENGLISH";
 
@@ -2237,7 +2284,7 @@ function clearError(field){
   if(err){ err.textContent = ''; err.classList.remove('show'); }
 }
 
-var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','lang1'];
+var ERROR_FIELDS = ['category','disability','serving_govt','exserviceman','minority','religion','cwe_appeared','apprentice','bank_bfsi','naps_register','nationality','exam_state','prelim_i','prelim_ii','main_i','main_ii','confirm_id','id_proof','id_proof_no','dob','gender','marital','twin','father_name','mother_name','confirm_father','confirm_mother','confirm_spouse','corr_addr1','corr_state','corr_district','corr_pincode','perm_addr1','perm_state','perm_district','perm_pincode','gst_address','degree','passing_year','percentage','has_experience','prosecution','prosecution_details','lang1'];
 function clearAllErrors(){ ERROR_FIELDS.forEach(clearError); }
 
 // Map field key -> actual element id (where they differ)
@@ -2252,7 +2299,7 @@ function fieldEl(key){
     'gst_address':'selGst','bank_bfsi':'selBankBFSI','degree':'selDegree','passing_year':($('txtPassingDate')?'txtPassingDate':'txtDegreeYear'),'percentage':'txtPercentage','lang1':'selLang1',
     'category':'cat_general','disability':'dis_n','serving_govt':'serving_n','exserviceman':'exsvc_n',
     'minority':'minor_n','cwe_appeared':'cwe_n','apprentice':'appr_n','dob':'dob_dd',
-    'gender':'gender_m','marital':'mar_unmarried','twin':'twin_n','has_experience':'exp_n'
+    'gender':'gender_m','marital':'mar_unmarried','twin':'twin_n','has_experience':'exp_n','prosecution':'pros_n','prosecution_details':'txtProsecutionDetails'
   };
   return $(map[key] || key);
 }
@@ -2345,6 +2392,10 @@ function validateAll(){
   var pct=val('txtPercentage');
   if(!pct || isNaN(pct) || pct<0 || pct>100) setErr('percentage','Enter a valid graduation percentage between 0 and 100.', errors);
   if(!radioVal('has_experience')) setErr('has_experience','Please select an option.', errors);
+  if(!radioVal('prosecution')) setErr('prosecution','Please select an option for prosecution.', errors);
+  if(radioVal('prosecution') === 'Y'){
+    if(!val('txtProsecutionDetails')) setErr('prosecution_details','Please enter particulars of prosecution.', errors);
+  }
   if(!val('selLang1')) setErr('lang1','At least one language is required.', errors);
 
   return errors;
