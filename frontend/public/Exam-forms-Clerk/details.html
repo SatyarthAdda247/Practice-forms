@@ -2201,9 +2201,9 @@ $('btnNext').addEventListener('click', function() {
 
   // Official / local language(s) of each State/UT (Clerk is state-wise).
   var STATE_LANG = {
-    'ANDHRA PRADESH':['TELUGU'], 'ARUNACHAL PRADESH':['ENGLISH','HINDI'], 'ASSAM':['ASSAMESE','BENGALI','BODO'],
+    'ANDHRA PRADESH':['TELUGU', 'ENGLISH'], 'ARUNACHAL PRADESH':['ENGLISH','HINDI'], 'ASSAM':['ASSAMESE','BENGALI','BODO'],
     'BIHAR':['HINDI'], 'CHHATTISGARH':['HINDI'], 'GOA':['KONKANI','MARATHI'], 'GUJARAT':['GUJARATI'],
-    'HARYANA':['HINDI','PUNJABI'], 'HIMACHAL PRADESH':['HINDI'], 'JHARKHAND':['HINDI'], 'KARNATAKA':['KANNADA'],
+    'HARYANA':['HINDI','PUNJABI'], 'HIMACHAL PRADESH':['HINDI'], 'JHARKHAND':['HINDI', 'SANTHALI', 'BENGALI', 'URDU'], 'KARNATAKA':['KANNADA'],
     'KERALA':['MALAYALAM'], 'MADHYA PRADESH':['HINDI'], 'MAHARASHTRA':['MARATHI'], 'MANIPUR':['MANIPURI'],
     'MEGHALAYA':['ENGLISH'], 'MIZORAM':['MIZO','ENGLISH'], 'NAGALAND':['ENGLISH'], 'ODISHA':['ODIA'],
     'PUNJAB':['PUNJABI'], 'RAJASTHAN':['HINDI'], 'SIKKIM':['NEPALI','ENGLISH'], 'TAMIL NADU':['TAMIL'],
@@ -2212,27 +2212,38 @@ $('btnNext').addEventListener('click', function() {
     'ANDAMAN & NICOBAR ISLANDS':['HINDI','ENGLISH','TAMIL','BENGALI'],
     'CHANDIGARH':['HINDI','PUNJABI','ENGLISH'],
     'DADRA & NAGAR HAVELI AND DAMAN & DIU':['GUJARATI','HINDI','MARATHI'],
-    'DELHI (NCT)':['HINDI'], 'JAMMU & KASHMIR':['URDU','HINDI','KASHMIRI','DOGRI'],
+    'DELHI / NCR':['HINDI', 'PUNJABI', 'URDU', 'ENGLISH'],
+    'DELHI (NCT)':['HINDI', 'PUNJABI', 'URDU', 'ENGLISH'],
+    'DELHI-NCR':['HINDI', 'PUNJABI', 'URDU', 'ENGLISH'],
+    'JAMMU & KASHMIR':['URDU','HINDI','KASHMIRI','DOGRI'],
     'LADAKH':['HINDI','ENGLISH'], 'LAKSHADWEEP':['MALAYALAM'], 'PUDUCHERRY':['TAMIL']
   };
 
   function fillLanguages(){
-    var st = $('selVacancyState').value;
-    var sel = $('selOfficialLang');
-    var langs = STATE_LANG[st] || [];
-    sel.innerHTML = '';
-    if(!langs.length){
-      sel.appendChild(new Option('Select State/UT first',''));
+    var stateEl = $('selExamState') || $('selVacancyState');
+    var langSel = $('selOptedLang') || $('selOfficialLang');
+    if(!stateEl || !langSel) return;
+    var st = stateEl.value;
+    var langs = STATE_LANG[st] || ['HINDI', 'ENGLISH'];
+    langSel.innerHTML = '';
+    if(!st){
+      langSel.appendChild(new Option('Select State/UT first',''));
       return;
     }
-    if(langs.length > 1) sel.appendChild(new Option('Select Language',''));
-    langs.forEach(function(l){ sel.appendChild(new Option(l, l)); });
-    if(langs.length === 1) sel.value = langs[0]; // auto-select when unambiguous
+    if(langs.length > 1) langSel.appendChild(new Option('Select Language',''));
+    langs.forEach(function(l){ langSel.appendChild(new Option(l, l)); });
+    if(langs.length >= 1){
+      langSel.value = langs[0];
+      langSel.classList.add('is-valid');
+      langSel.classList.remove('is-invalid');
+    }
   }
-  $('selVacancyState').addEventListener('change', function(){
-    fillLanguages();
-    clr('vacancy_state');
-  });
+
+  var stateEl = $('selExamState') || $('selVacancyState');
+  if(stateEl){
+    stateEl.addEventListener('change', fillLanguages);
+  }
+  fillLanguages();
 
   function err(field,msg){ var f=$(field), e=$('err_'+field); if(f&&f.classList)f.classList.add('valid_error'); if(e){e.textContent=msg;e.style.display='inline-block';} }
   function clr(field){ var f=$(field), e=$('err_'+field); if(f&&f.classList)f.classList.remove('valid_error'); if(e){e.textContent='';e.style.display='none';} }
