@@ -2992,7 +2992,62 @@ function handleValidateClick(){
   }
 }
 
+function validateTab(tabId){
+  var tabEl = $(tabId);
+  if(!tabEl) return [];
+  var allErrors = validateAll();
+  return allErrors.filter(function(errFieldId){
+    var el = fieldEl(errFieldId);
+    return el && tabEl.contains(el);
+  });
+}
+
 function handleSaveNextClick() {
+  var activeTab = document.querySelector('.tab-panel.active');
+  var activeId = activeTab ? activeTab.id : 'tab-basic';
+
+  if (activeId === 'tab-basic') {
+    var errors = validateTab('tab-basic');
+    var result = $('result');
+    if (errors.length) {
+      result.className = 'alert-box error show';
+      result.style.display = 'block';
+      result.textContent = 'Please correct the ' + errors.length + ' highlighted error(s) in Basic Details before proceeding.';
+      focusFirstError(errors);
+      return;
+    }
+    lockBasicInformation();
+    result.style.display = 'none';
+    document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    var qBtn = document.querySelector('[data-tab="tab-qual"]');
+    if(qBtn) qBtn.classList.add('active');
+    if($('tab-qual')) $('tab-qual').classList.add('active');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    return;
+  }
+
+  if (activeId === 'tab-qual') {
+    var errors = validateTab('tab-qual');
+    var result = $('result');
+    if (errors.length) {
+      result.className = 'alert-box error show';
+      result.style.display = 'block';
+      result.textContent = 'Please correct the ' + errors.length + ' highlighted error(s) in Qualification / Experience / Languages before proceeding.';
+      focusFirstError(errors);
+      return;
+    }
+    result.style.display = 'none';
+    document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    var pBtn = document.querySelector('[data-tab="tab-pref"]');
+    if(pBtn) pBtn.classList.add('active');
+    if($('tab-pref')) $('tab-pref').classList.add('active');
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    return;
+  }
+
+  // On Preference sub-tab (final tab): validate all fields and proceed to preview
   var errors = validateAll();
   var result = $('result');
   if (errors.length) {
