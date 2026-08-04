@@ -14,10 +14,12 @@ border to find — its columns are recovered from the bubbles themselves.
 100-question form (:func:`_find_answer_blocks`, :func:`_read_block`):
 
   1. Render the page to a grayscale raster (PDF via PyMuPDF, or a plain image).
-  2. Otsu-threshold the lower region and find the 5 block rectangles by size.
-  3. Inside each block, find bubble contours, then cluster their centres into
-     exactly 4 columns × 20 rows (k-means on x and y). Because we cluster the
-     *actual* detected bubbles per block, per-block skew is absorbed.
+  2. Otsu-threshold the lower region and find the 5 block rectangles by size,
+     retrying on a taller region until none of them is clipped by the crop.
+  3. Inside each block, find bubble contours and fit a comb to their centres on
+     each axis — 20 question rows (printed in groups of five, so not evenly
+     spaced) by 4 option columns. Because the geometry comes from the *actual*
+     detected bubbles of each block, per-block skew is absorbed.
   4. Sample a disk at each bubble centre and measure its darkness (fraction of
      dark pixels). Per question, the darkest option above a fill threshold is
      the marked answer; two dark options → a MULTIPLE_MARKS review flag.
@@ -75,6 +77,25 @@ SNAP_TOLERANCE = 0.40
 # same filled option before the estimate begins to drift.
 SHADE_WINDOW = 11
 SHADE_PERCENTILE = 25
+
+# Printed geometry of one answer block on the 100-question form, used to fit its
+# question rows (see :func:`_block_rows`). Rows come in groups of five with a
+# gap of about one row between groups, so a block of N rows is about N * 1.18
+# row pitches tall including its inner margins; a bubble's radius is about a
+# third of that pitch. Both hold across every scan of the form measured
+# (row pitch 28-30px at 200 dpi, bubble radius 9-10px), which is what makes
+# them a safer scale reference than statistics over the detected contours.
+ROW_SPAN = 1.18
+BUBBLE_RADIUS_PITCH = 0.33
+
+# Per-option baseline for one block (see :func:`_level_block_shading`). The
+# percentile is low enough that a block's marks can't raise it — real sheets run
+# to at most 12 of 20 rows marked in the same option, where this would need 18 —
+# and the ceiling is the darkest an *unmarked* bubble has been measured at
+# (0.41, a shaded B glyph) rounded up, so the correction can never subtract a
+# real mark.
+BLOCK_SHADE_PERCENTILE = 15
+BLOCK_SHADE_MAX = 0.45
 
 
 # --- NAME block (the A-Z bubble matrix under the handwriting boxes) --------- #
@@ -193,21 +214,42 @@ def _render_bgr(path, page=0, dpi=200):
         return None
 
 
-def _find_answer_blocks(gray):
-    """Locate the five bordered answer-column boxes in the lower region.
-    Returns a left-to-right sorted list of (x, y, w, h)."""
+def _find_answer_blocks(gray, want=5):
+    """Locate the ``want`` bordered answer-column boxes in the lower region.
+    Returns a left-to-right sorted list of (x, y, w, h).
+
+    Several region tops are tried, shortest first, and a candidate is only
+    accepted when no box touches the region's top edge. Where the answer grid
+    starts on the page varies by a good few percent between scans of the same
+    form — a tighter crop of the header, or a sheet fed slightly high — and a
+    fixed crop that slices through the blocks is *silently* destructive: the
+    contour is cut at the boundary, so the box looks plausible but is missing
+    its first rows, and the reader then spreads 20 row centres over the 17 rows
+    that survived. On one real sheet that shifted every answer in three of the
+    five columns by up to three questions (77 answers read, 35 of them wrong)
+    while reporting no error at all. A clipped box is therefore never accepted
+    if a lower crop can find the whole thing."""
     H, W = gray.shape
-    top = int(H * 0.55)
-    region = gray[top:, :]
-    th = cv2.threshold(region, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-    cnts, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    boxes = []
-    for c in cnts:
-        x, y, w, h = cv2.boundingRect(c)
-        if w > W * 0.10 and h > (H - top) * 0.5:
-            boxes.append((x, y + top, w, h))
-    boxes.sort(key=lambda b: b[0])
-    return boxes
+    fallback = []
+    for top_frac in (0.55, 0.50, 0.45, 0.40):
+        top = int(H * top_frac)
+        th = cv2.threshold(gray[top:, :], 0, 255,
+                           cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+        cnts, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        boxes = []
+        for c in cnts:
+            x, y, w, h = cv2.boundingRect(c)
+            # A block is a tall, narrow box about a seventh of the page wide.
+            # The width ceiling and the aspect test are what keep the sheet's
+            # own outer border out of the list as the crop reaches up the page.
+            if W * 0.06 < w < W * 0.35 and h > H * 0.18 and h > w * 1.5:
+                boxes.append((x, y + top, w, h))
+        boxes.sort(key=lambda b: b[0])
+        if len(boxes) == want and not any(y - top <= 2 for _, y, _, _ in boxes):
+            return boxes
+        if len(boxes) > len(fallback):
+            fallback = boxes
+    return fallback
 
 
 def _kmeans_1d(values, k, iters=50):
@@ -242,17 +284,20 @@ def _kmeans_1d(values, k, iters=50):
     return labels, centres
 
 
-def _read_block(gray, box, rows=20):
-    """Read one answer block. Returns a list of ``rows`` darkness vectors
-    (one [A,B,C,D] list per question), or ``None`` if too few bubbles found."""
-    x, y, w, h = box
-    pad = int(w * 0.03)
-    sub = gray[y + pad:y + h - pad, x + pad:x + w - pad]
-    sh, sw = sub.shape
-    th = cv2.threshold(sub, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-    cnts, _ = cv2.findContours(th, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+def _block_bubbles(sub):
+    """Bubble-ish contour centres inside one answer block, as (x, y, r).
 
-    bubbles = []
+    Adaptive rather than Otsu: whole groups of five print or scan as a grey
+    wash on these sheets, and a single global cut-off turns a shaded group
+    solid black, merging its bubbles into one blob. Losing those detections is
+    what breaks the row geometry below, so the rows are found from an adaptive
+    threshold that reads each group against its own local background."""
+    sw = sub.shape[1]
+    th = cv2.adaptiveThreshold(
+        sub, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 31, 7
+    )
+    cnts, _ = cv2.findContours(th, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    out = []
     for c in cnts:
         (cx, cy), r = cv2.minEnclosingCircle(c)
         if r < sw * 0.015 or r > sw * 0.06:
@@ -261,38 +306,143 @@ def _read_block(gray, box, rows=20):
             continue
         if cx < sw * 0.18:  # left column holds the question numbers, not bubbles
             continue
-        bubbles.append((cx, cy, r))
+        out.append((cx, cy, r))
+    return out
 
+
+def _grid_axis(vals, prior, want, min_count, lo, hi, max_gap):
+    """Fit ``want`` evenly-spaced grid lines to 1-D positions ``vals``.
+
+    Returns ``(centres, pitch)``, or ``(None, pitch)`` when no comb of that
+    length is occupied. The pitch is searched in ``[lo, hi] * prior``: an
+    independent estimate of the spacing keeps the fit off the sub-harmonics
+    (locking onto every *other* line fits the data just as tidily and is
+    catastrophic), so callers pass a prior taken from the printed geometry.
+
+    A comb is used rather than clustering because neither axis of this grid is
+    a clean set of ``want`` clusters. Teeth that fall in a gap hold no bubbles
+    and drop out via ``min_count``; teeth beyond the grid (the block border,
+    stray ink in the margin) are cut by keeping only the longest run of
+    consecutive occupied teeth and then trimming from whichever end holds
+    fewer bubbles."""
+    pitch, teeth = _comb_axis(vals, prior, lo=lo, hi=hi)
+    kept = [(c, n) for c, n in
+            ((c, int((np.abs(vals - c) < pitch * 0.35).sum())) for c in teeth)
+            if n >= min_count]
+    if len(kept) < want:
+        return None, pitch
+    runs = [[kept[0]]]
+    for c, n in kept[1:]:
+        if c - runs[-1][-1][0] <= pitch * max_gap:
+            runs[-1].append((c, n))
+        else:
+            runs.append([(c, n)])
+    band = max(runs, key=len)
+    if len(band) < want:
+        return None, pitch
+    while len(band) > want:
+        band.pop(0 if band[0][1] <= band[-1][1] else -1)
+    return [c for c, _ in band], pitch
+
+
+def _block_rows(ys, height, rows):
+    """The ``rows`` question-row centres of one block, or ``None``.
+
+    The rows are *not* evenly spaced: they are printed in groups of five with a
+    blank row's worth of gap between groups. Clustering them into ``rows``
+    groups is what the reader used to do and it fails on exactly that
+    structure — k-means spends a cluster on the gap and then has to merge two
+    real rows to pay for it, so a pair of questions ends up sharing one sample
+    point and the row between them is read off blank paper. On real sheets that
+    quietly dropped four to five answers a page.
+
+    A group break is just one missing tooth to the comb, so the gaps cost
+    nothing. Its pitch prior comes from the block's own height rather than from
+    the detected bubble radius: that radius is polluted by the letters printed
+    inside the bubbles, and on one block it came out at half the true row
+    pitch."""
+    return _grid_axis(ys, height / (rows * ROW_SPAN), rows,
+                      min_count=4,        # a question row prints four bubbles
+                      lo=0.85, hi=1.18, max_gap=2.5)
+
+
+def _block_columns(xs, row_pitch, rows, opts=4):
+    """The ``opts`` option-column centres of one block, or ``None``.
+
+    Anchored on the row pitch, which the printed form fixes at about 0.6 of the
+    option pitch. k-means on x — the previous approach — has no way to tell a
+    column from stray ink: a pen mark in the margin becomes a fifth cluster and
+    all four real columns shift to pay for it. Worse, a blot bleeding past the
+    block's border also widens the box this crops, so the junk arrives together
+    with a wider frame to hide in. On one real scan that left the D column
+    sampling the paper margin: the whole block read blank in D, and two clearly
+    filled bubbles in the shifted columns fell between sample points."""
+    return _grid_axis(xs, row_pitch, opts,
+                      min_count=max(4, rows // 2),
+                      lo=1.45, hi=1.75, max_gap=1.5)
+
+
+def _level_block_shading(grid):
+    """Restate a block's darkness readings against each option's own baseline.
+
+    Every bubble on this form has its option letter printed inside it, and the
+    letters are not equally inky: an untouched B measures up to 0.41 where an
+    untouched A in the same row measures 0.22. That is enough to clear both
+    tests in :func:`_classify` on a lightly shaded row and invent a B on a
+    question the student left alone. Measuring the baseline per option column
+    over the whole block removes the glyph and any column-wide shading with it.
+
+    The baseline is a low percentile so that marked rows don't raise it, and it
+    is additionally capped at what a *blank* bubble can plausibly measure. The
+    cap is what makes this safe for the student who bubbles one option all the
+    way down a block: without it, their marks become the baseline and the whole
+    column reads blank."""
+    grid = np.asarray(grid, dtype=np.float64)
+    base = np.minimum(np.percentile(grid, BLOCK_SHADE_PERCENTILE, axis=0),
+                      BLOCK_SHADE_MAX)
+    return np.clip((grid - base) / np.maximum(0.15, 1.0 - base), 0.0, 1.0)
+
+
+def _read_block(gray, box, rows=20):
+    """Read one answer block. Returns a ``rows`` x 4 array of darkness values
+    (one [A,B,C,D] row per question), or ``None`` if too few bubbles found."""
+    x, y, w, h = box
+    pad = int(w * 0.03)
+    sub = gray[y + pad:y + h - pad, x + pad:x + w - pad]
+    bubbles = _block_bubbles(sub)
     if len(bubbles) < rows * 2:  # need a believable grid
         return None
 
-    xs = [b[0] for b in bubbles]
-    ys = [b[1] for b in bubbles]
-    xlab, xc = _kmeans_1d(xs, 4)
-    ylab, yc = _kmeans_1d(ys, rows)
-    col_rank = {old: new for new, old in enumerate(np.argsort(xc))}
-    row_rank = {old: new for new, old in enumerate(np.argsort(yc))}
-    col_x = np.sort(xc)
-    row_y = np.sort(yc)
-    rad = int(np.median([b[2] for b in bubbles]))
+    xs = np.array([b[0] for b in bubbles])
+    ys = np.array([b[1] for b in bubbles])
+    row_y, pitch = _block_rows(ys, sub.shape[0], rows)
+    if row_y is None:              # no comb fits — fall back to clustering
+        _, yc = _kmeans_1d(ys, rows)
+        row_y = np.sort(yc)
+        pitch = float(np.median(np.diff(row_y)))
+    col_x, _ = _block_columns(xs, pitch, rows)
+    if col_x is None:
+        _, xc = _kmeans_1d(xs, 4)
+        col_x = np.sort(xc)
 
-    # Prefer each cell's actually-detected bubble centre (absorbs skew); fall
-    # back to the row/col cluster intersection when a bubble wasn't detected.
-    cell = {}
-    for (cx, cy, _), cl, rl in zip(bubbles, xlab, ylab):
-        cell[(row_rank[rl], col_rank[cl])] = (cx, cy)
-
-    grid = []
-    r0 = max(3, int(rad * 0.7))
-    for ri in range(rows):
-        darkness = []
-        for ci in range(4):
-            bx, by = cell.get((ri, ci), (col_x[ci], row_y[ri]))
-            bx, by = int(bx), int(by)
-            patch = sub[max(0, by - r0):by + r0, max(0, bx - r0):bx + r0]
-            darkness.append(float((patch < 128).mean()) if patch.size else 0.0)
-        grid.append(darkness)
-    return grid
+    # Size the sampling disk from the row pitch, not from the median detected
+    # radius: every bubble has its option letter printed inside it, and those
+    # glyphs are contours of about half a bubble's radius. How many of them get
+    # picked up varies with the shading, so the median radius swings between a
+    # bubble and a glyph from block to block. It came out at 6px against a true
+    # 11px on one shaded block, which shrank the sample disk to the pale centre
+    # of a ring-shaped pen mark and read three filled bubbles as empty. The
+    # printed geometry doesn't swing: the bubble is a fixed fraction of the
+    # pitch on every copy of the form.
+    rad = pitch * BUBBLE_RADIUS_PITCH
+    centres = np.array([[b[0], b[1]] for b in bubbles], dtype=np.float64)
+    tol_x = max(1.0, float(np.median(np.diff(col_x))) * SNAP_TOLERANCE)
+    tol_y = max(1.0, pitch * SNAP_TOLERANCE)
+    return _level_block_shading([
+        [_bubble_darkness(sub, *_snap_to_bubble(centres, cx, cy, tol_x, tol_y), rad)
+         for cx in col_x]
+        for cy in row_y
+    ])
 
 
 def _classify(darkness):
@@ -895,7 +1045,7 @@ def read_sheet(path, page=0, dpi=200, read_name=False,
             name = _ocr_name(path, page, dpi)
         return {"answers": answers, "flags": sorted(flags), "name": name}
 
-    blocks = _find_answer_blocks(gray)
+    blocks = _find_answer_blocks(gray, want=len(layout))
     if len(blocks) < 1:
         raise OMRError("no answer blocks detected — unexpected sheet layout")
     # Fail loudly on a template mismatch. Without this the reader quietly forces
