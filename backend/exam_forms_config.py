@@ -18,9 +18,8 @@
 # The DynamoDB table (composite key: PK String, SK String).
 EXAM_FORMS_DDB_TABLE = "exam-forms-submissions"
 
-# AWS region the table lives in.
-AWS_REGION = "ap-south-1"
+import os
 
-# IAM credentials. Leave blank to fall back to env vars / instance role.
-AWS_ACCESS_KEY_ID = ""
-AWS_SECRET_ACCESS_KEY = ""
+AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
