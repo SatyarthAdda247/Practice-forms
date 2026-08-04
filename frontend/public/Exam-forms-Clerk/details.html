@@ -2251,8 +2251,19 @@ var STATES_DATA = {
 var STATES = Object.keys(STATES_DATA);
 
 function fillOptions(sel, items, placeholder){
+  if(!sel) return;
+  var prevVal = sel.value;
+  var existingVals = Array.prototype.map.call(sel.options, function(o){ return o.value; });
+  var newVals = [''].concat(items);
+  if(existingVals.length === newVals.length && existingVals.every(function(v, i){ return v === newVals[i]; })){
+    if(prevVal && items.indexOf(prevVal) !== -1) sel.value = prevVal;
+    return;
+  }
   sel.innerHTML = '<option value="">' + (placeholder || 'Select') + '</option>';
   items.forEach(function(it){ var o=document.createElement('option'); o.value=it; o.textContent=it; sel.appendChild(o); });
+  if(prevVal && items.indexOf(prevVal) !== -1){
+    sel.value = prevVal;
+  }
 }
 
 // Populate every state dropdown (correspondence, permanent, and exam centre)
@@ -2263,8 +2274,15 @@ if($('selExamState')) fillOptions($('selExamState'), STATES, 'Select');
 function citiesFor(st){ return (STATES_DATA[st] && STATES_DATA[st].cities) || []; }
 
 function fillDistricts(stateSelId, distSelId){
-  var st=$(stateSelId).value;
-  fillOptions($(distSelId), citiesFor(st), 'Select');
+  var stateEl = $(stateSelId), distEl = $(distSelId);
+  if(!stateEl || !distEl) return;
+  var st = stateEl.value;
+  var cities = citiesFor(st);
+  var prevVal = distEl.value;
+  fillOptions(distEl, cities, 'Select');
+  if(prevVal && cities.indexOf(prevVal) !== -1){
+    distEl.value = prevVal;
+  }
 }
 $('selCorrState').addEventListener('change', function(){ fillDistricts('selCorrState','selCorrDistrict'); });
 $('selPermState').addEventListener('change', function(){ fillDistricts('selPermState','selPermDistrict'); });
@@ -2274,7 +2292,13 @@ $('selExamState').addEventListener('change', function(){
   var st=this.value;
   $('txtStateCode').value = (STATES_DATA[st] && STATES_DATA[st].code) || '';
   var centres = citiesFor(st);
-  document.querySelectorAll('.exam-centre').forEach(function(sel){ fillOptions(sel, centres, 'Select'); });
+  document.querySelectorAll('.exam-centre').forEach(function(sel){
+    var prevVal = sel.value;
+    fillOptions(sel, centres, 'Select');
+    if(prevVal && centres.indexOf(prevVal) !== -1){
+      sel.value = prevVal;
+    }
+  });
 
   var STATE_LANG = {
     'ANDHRA PRADESH':['TELUGU', 'ENGLISH'], 'ARUNACHAL PRADESH':['ENGLISH','HINDI'], 'ASSAM':['ASSAMESE','BENGALI','BODO'],
@@ -2297,8 +2321,13 @@ $('selExamState').addEventListener('change', function(){
   var langSel = $('selOptedLang');
   if(langSel){
     var langs = STATE_LANG[st] || ['HINDI', 'ENGLISH', 'BENGALI', 'GUJARATI', 'KANNADA', 'MARATHI', 'PUNJABI', 'TAMIL', 'TELUGU', 'URDU'];
+    var prevLang = langSel.value;
     fillOptions(langSel, langs, 'Select');
-    if(langs.length > 0){
+    if(prevLang && langs.indexOf(prevLang) !== -1){
+      langSel.value = prevLang;
+      langSel.classList.add('is-valid');
+      langSel.classList.remove('is-invalid');
+    } else if(langs.length > 0){
       langSel.value = langs[0];
       langSel.classList.add('is-valid');
       langSel.classList.remove('is-invalid');
@@ -2328,13 +2357,19 @@ $('selExamState').addEventListener('change', function(){
   var ol = document.getElementById('selOfficialLang');
   if(!vs || !ol) return;
   function fill(){
+    var prevVal = ol.value;
     var st = vs.value;
     var langs = VSTATE_LANG[st];
-    ol.innerHTML = '';
-    if(!st || !langs){ ol.appendChild(new Option('Select State/UT first','')); return; }
-    if(langs.length > 1) ol.appendChild(new Option('Select Language',''));
-    langs.forEach(function(l){ ol.appendChild(new Option(l, l)); });
-    if(langs.length === 1){ ol.value = langs[0]; ol.classList.add('is-valid'); ol.classList.remove('is-invalid'); }
+    if(!st || !langs){
+      ol.innerHTML = '<option value="">Select State/UT first</option>';
+      return;
+    }
+    fillOptions(ol, langs, langs.length > 1 ? 'Select Language' : 'Select');
+    if(prevVal && langs.indexOf(prevVal) !== -1){
+      ol.value = prevVal;
+    } else if(langs.length === 1){
+      ol.value = langs[0]; ol.classList.add('is-valid'); ol.classList.remove('is-invalid');
+    }
   }
   vs.addEventListener('change', fill);
   fill();

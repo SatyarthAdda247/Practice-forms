@@ -2103,8 +2103,18 @@ var STATES = Object.keys(STATES_DATA);
 
 function fillOptions(sel, items, placeholder){
   if(!sel) return;
+  var prevVal = sel.value;
+  var existingVals = Array.prototype.map.call(sel.options, function(o){ return o.value; });
+  var newVals = [''].concat(items);
+  if(existingVals.length === newVals.length && existingVals.every(function(v, i){ return v === newVals[i]; })){
+    if(prevVal && items.indexOf(prevVal) !== -1) sel.value = prevVal;
+    return;
+  }
   sel.innerHTML = '<option value="">' + (placeholder || 'Select') + '</option>';
   items.forEach(function(it){ var o=document.createElement('option'); o.value=it; o.textContent=it; sel.appendChild(o); });
+  if(prevVal && items.indexOf(prevVal) !== -1){
+    sel.value = prevVal;
+  }
 }
 
 // Populate correspondence and permanent state selects
@@ -2113,8 +2123,15 @@ document.querySelectorAll('.state-select').forEach(function(sel){ fillOptions(se
 function citiesFor(st){ return (STATES_DATA[st] && STATES_DATA[st].cities) || []; }
 
 function fillDistricts(stateSelId, distSelId){
-  var st=$(stateSelId).value;
-  fillOptions($(distSelId), citiesFor(st), 'Select');
+  var stateEl = $(stateSelId), distEl = $(distSelId);
+  if(!stateEl || !distEl) return;
+  var st = stateEl.value;
+  var cities = citiesFor(st);
+  var prevVal = distEl.value;
+  fillOptions(distEl, cities, 'Select');
+  if(prevVal && cities.indexOf(prevVal) !== -1){
+    distEl.value = prevVal;
+  }
 }
 $('selCorrState').addEventListener('change', function(){ fillDistricts('selCorrState','selCorrDistrict'); });
 $('selPermState').addEventListener('change', function(){ fillDistricts('selPermState','selPermDistrict'); });
@@ -2124,7 +2141,13 @@ $('selExamState').addEventListener('change', function(){
   var st=this.value;
   $('txtStateCode').value = (STATES_DATA[st] && STATES_DATA[st].code) || '';
   var centres = citiesFor(st);
-  document.querySelectorAll('.exam-centre').forEach(function(sel){ fillOptions(sel, centres, 'Select'); });
+  document.querySelectorAll('.exam-centre').forEach(function(sel){
+    var prevVal = sel.value;
+    fillOptions(sel, centres, 'Select');
+    if(prevVal && centres.indexOf(prevVal) !== -1){
+      sel.value = prevVal;
+    }
+  });
 });
 
 // ====== APPLICATION FEE (by category) ======
