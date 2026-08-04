@@ -2412,21 +2412,6 @@ $('selExamState').addEventListener('change', function(){
     'UTTAR PRADESH': ['HINDI', 'URDU'],
     'UTTARAKHAND': ['HINDI'],
     'WEST BENGAL': ['BENGALI', 'NEPALI']
-  };
-  var langSel = $('selOptedLang');
-  if(langSel){
-    var langs = STATE_LANG[st] || ['HINDI', 'ENGLISH', 'BENGALI', 'GUJARATI', 'KANNADA', 'MARATHI', 'PUNJABI', 'TAMIL', 'TELUGU', 'URDU'];
-    var prevLang = langSel.value;
-    fillOptions(langSel, langs, 'Select');
-    if(prevLang && langs.indexOf(prevLang) !== -1){
-      langSel.value = prevLang;
-      langSel.classList.add('is-valid');
-      langSel.classList.remove('is-invalid');
-    } else if(langs.length > 0){
-      langSel.value = langs[0];
-      langSel.classList.add('is-valid');
-      langSel.classList.remove('is-invalid');
-    }
   var STATE_MEDIUM_LANGS = {
     'ANDAMAN & NICOBAR ISLANDS': ['English', 'Hindi'],
     'ANDAMAN AND NICOBAR ISLANDS': ['English', 'Hindi'],
@@ -2505,9 +2490,34 @@ $('selExamState').addEventListener('change', function(){
     }
 
     var prevVal = medSel.value;
-    fillOptions(medSel, combos, 'Select');
+    medSel.innerHTML = '<option value="">Select</option>';
+    combos.forEach(function(it){
+      var o = document.createElement('option');
+      o.value = it;
+      o.textContent = it;
+      medSel.appendChild(o);
+    });
+
     if (prevVal && combos.indexOf(prevVal) !== -1) {
       medSel.value = prevVal;
+    } else if (combos.length > 0) {
+      medSel.value = combos[0];
+    }
+  }
+
+  var langSel = $('selOptedLang');
+  if(langSel){
+    var langs = STATE_LANG[st] || ['HINDI', 'ENGLISH', 'BENGALI', 'GUJARATI', 'KANNADA', 'MARATHI', 'PUNJABI', 'TAMIL', 'TELUGU', 'URDU'];
+    var prevLang = langSel.value;
+    fillOptions(langSel, langs, 'Select');
+    if(prevLang && langs.indexOf(prevLang) !== -1){
+      langSel.value = prevLang;
+      langSel.classList.add('is-valid');
+      langSel.classList.remove('is-invalid');
+    } else if(langs.length > 0){
+      langSel.value = langs[0];
+      langSel.classList.add('is-valid');
+      langSel.classList.remove('is-invalid');
     }
   }
 
@@ -2515,6 +2525,7 @@ $('selExamState').addEventListener('change', function(){
 });
 
 if($('selVacancyState')) $('selVacancyState').addEventListener('change', function(){ updateMediumOptions(this.value); });
+if($('selExamState')) $('selExamState').addEventListener('change', function(){ updateMediumOptions(this.value); });
 updateMediumOptions();
 
 // ====== VACANCY STATE (Preference tab) -> Official / Local Language ======
