@@ -278,39 +278,37 @@ var $ = function(id){ return document.getElementById(id); };
   var regName = sessionStorage.getItem('ibps_fullname');
   var regNo = sessionStorage.getItem('ibps_reg_no');
   if(regName && regNo){
-    $('headerRegInfo').style.display = 'block';
-    $('hdrName').textContent = regName;
-    $('hdrRegNo').textContent = regNo;
+    if($('headerRegInfo')) $('headerRegInfo').style.display = 'block';
+    if($('hdrName')) $('hdrName').textContent = regName;
+    if($('hdrRegNo')) $('hdrRegNo').textContent = regNo;
   }
 
   var snap = {};
   try { snap = JSON.parse(sessionStorage.getItem('ibps_snapshot') || '{}'); } catch(e){ snap = {}; }
 
-  // Fallback to the individual keys details.html has always stored, so the
-  // preview stays complete even if the full snapshot isn't present.
-  var LEGACY = {
-    category:'ibps_category', disability:'ibps_disability', serving_govt:'ibps_serving_govt',
-    exserviceman:'ibps_exserviceman', minority:'ibps_minority', religion:'ibps_religion',
-    cwe_appeared:'ibps_cwe_appeared', apprentice:'ibps_apprentice', nationality:'ibps_nationality',
-    exam_state:'ibps_exam_state', prelim_i:'ibps_prelim_i', prelim_ii:'ibps_prelim_ii',
-    main_i:'ibps_main_i', main_ii:'ibps_main_ii', id_proof:'ibps_id_proof', id_proof_no:'ibps_id_proof_no',
-    gender:'ibps_gender', marital:'ibps_marital', aadhaar:'ibps_aadhaar', pan:'ibps_pan',
-    father_name:'ibps_father', mother_name:'ibps_mother', spouse_name:'ibps_spouse',
-    corr_state:'ibps_corr_state', corr_district:'ibps_corr_district', corr_pincode:'ibps_corr_pincode',
-    perm_state:'ibps_perm_state', perm_pincode:'ibps_perm_pincode', gst_address:'ibps_gst_address',
-    degree:'ibps_degree', passing_year:'ibps_year', percentage:'ibps_percentage',
-    lang1:'ibps_lang1', lang2:'ibps_lang2', lang3:'ibps_lang3'
-  };
-  var YN = { Y:'Yes', N:'No' };
-  function g(k){
-    var v = snap[k];
-    if(v === undefined || v === null || ('' + v).trim() === ''){
-      var lk = LEGACY[k];
-      if(lk){ var lv = sessionStorage.getItem(lk); if(lv){ v = YN[lv] || lv; } }
+  var YN = { Y:'Yes', N:'No', 'y':'Yes', 'n':'No' };
+
+  function g() {
+    for (var i = 0; i < arguments.length; i++) {
+      var k = arguments[i];
+      if (!k) continue;
+
+      var v = snap[k];
+      if (v === undefined || v === null || ('' + v).trim() === '') {
+        v = sessionStorage.getItem(k);
+      }
+      if (v === undefined || v === null || ('' + v).trim() === '') {
+        v = sessionStorage.getItem('ibps_' + k);
+      }
+      if (v !== undefined && v !== null && ('' + v).trim() !== '') {
+        var str = ('' + v).trim();
+        return YN[str] || str;
+      }
     }
-    return (v === undefined || v === null) ? '' : ('' + v).trim();
+    return '';
   }
-  function isYes(v){ return /^yes$/i.test((v||'').trim()); }
+
+  function isYes(v){ return /^yes$/i.test((v||'').trim()) || /^y$/i.test((v||'').trim()); }
   function join(sep, parts){ return parts.filter(function(p){ return p && (''+p).trim(); }).join(sep); }
   function esc(s){
     return ('' + s).replace(/[&<>"]/g, function(c){
@@ -318,17 +316,20 @@ var $ = function(id){ return document.getElementById(id); };
     });
   }
 
-  // Combined helpers
-  var mobile = sessionStorage.getItem('ibps_mobile') || '';
-  var email  = sessionStorage.getItem('ibps_email')  || '';
-  var fullName = regName || '';
-  var dob = join(' ', [g('dob_dd'), g('dob_mm'), g('dob_yyyy')]) || (sessionStorage.getItem('ibps_dob') || '');
+  var mobile = sessionStorage.getItem('ibps_mobile') || g('mobile', 'txtMobile');
+  var email  = sessionStorage.getItem('ibps_email')  || g('email', 'txtEmail');
+  var fullName = regName || g('fullname', 'fullname_confirm', 'first_name', 'txtFirst') || '';
+  var dob = g('dob') || join(' ', [g('dob_dd'), g('dob_mm'), g('dob_yyyy')]);
   var reliefDate = join(' ', [g('relief_dd'), g('relief_mm'), g('relief_yyyy')]);
   var appStart = join(' ', [g('appstart_dd'), g('appstart_mm'), g('appstart_yyyy')]);
   var appEnd   = join(' ', [g('append_dd'), g('append_mm'), g('append_yyyy')]);
-  var corrAddr = join(', ', [g('corr_addr1'), g('corr_addr2'), g('corr_addr3')])
+  var sscDate  = join(' ', [g('ssc_date'), g('txtSscDate')]);
+  var hscDate  = join(' ', [g('hsc_date'), g('txtHscDate')]);
+  var degDate  = join(' ', [g('passing_date'), g('txtPassingDate'), g('degree_date')]);
+
+  var corrAddr = g('corr_addr') || join(', ', [g('corr_addr1', 'txtCorrAddr1'), g('corr_addr2', 'txtCorrAddr2'), g('corr_addr3', 'txtCorrAddr3')])
                  || sessionStorage.getItem('ibps_corr_addr') || sessionStorage.getItem('ibps_address') || '';
-  var permAddr = join(', ', [g('perm_addr1'), g('perm_addr2'), g('perm_addr3')])
+  var permAddr = g('perm_addr') || join(', ', [g('perm_addr1', 'txtPermAddr1'), g('perm_addr2', 'txtPermAddr2'), g('perm_addr3', 'txtPermAddr3')])
                  || sessionStorage.getItem('ibps_perm_addr') || '';
 
   var disabilityYes = isYes(g('disability'));
@@ -337,10 +338,12 @@ var $ = function(id){ return document.getElementById(id); };
   var apprYes       = isYes(g('apprentice'));
   var twinYes       = isYes(g('twin'));
   var expYes        = isYes(g('has_experience'));
+  var petYes        = isYes(g('pet_opt'));
+  var prosYes       = isYes(g('prosecution'));
 
-  // Build sections: each is [title, rows[]] where a row is [label, value]
   var sections = [];
 
+  // 1. Basic Information
   sections.push(['Basic Details', [
     ["Full Name", fullName],
     ["Mobile Number", mobile ? ('+91 ' + mobile) : ''],
@@ -348,157 +351,208 @@ var $ = function(id){ return document.getElementById(id); };
     ["Category", g('category')]
   ]]);
 
+  // 2. Disability Details
   var disRows = [["Person with benchmark disability (>= 40%)", g('disability')]];
   if(disabilityYes){
     disRows.push(
-      ["Type of Disability", g('disability_type')],
-      ["Sub-Type ('ID & Others')", g('subtype_id')],
-      ["Sub-Type of Disability", g('subtype')],
-      ["Sub-Type of Multiple Disability", g('multi_disability')],
+      ["Type of Disability", g('disability_type', 'selDisabilityType')],
+      ["Sub-Type ('ID & Others')", g('subtype_id', 'selSubTypeID')],
+      ["Sub-Type of Disability", g('subtype', 'selSubType')],
+      ["Sub-Type of Multiple Disability", g('multi_disability', 'multiDisability')],
       ["Eligible for compensatory time (PwBD)", g('comp_time')],
       ["Cerebral palsy affecting writing speed", g('cerebral')],
       ["→ Needs compensatory time", g('cerebral_comp')],
       ["Dominant (writing) hand affected", g('dominant_hand')],
       ["→ Needs compensatory time", g('dominant_comp')],
       ["Wishes to use scribe", g('scribe')],
-      ["Specified disability u/s 2(s), not 2(r), difficulty writing", g('spec_2s')],
+      ["Specified disability u/s 2(s), difficulty writing", g('spec_2s')],
       ["→ Needs compensatory time", g('spec_2s_comp')],
-      ["Eligible & wishes to use scribe u/s 2(s)", g('scribe_2s')],
+      ["Wishes to use scribe u/s 2(s)", g('scribe_2s')],
       ["Scribe certificate declaration accepted", g('cert_scribe')]
     );
   }
   sections.push(['Details of Disability', disRows]);
 
-  sections.push(['Experience', [
-    ["Serving in Govt./ quasi-Govt./ PSU", g('serving_govt')]
+  // 3. Government / PSU Employee
+  sections.push(['Government / Public Sector Employment', [
+    ["Serving in Govt./ quasi-Govt./ PSU / BFSI", g('serving_govt')]
   ]]);
 
+  // 4. Ex-Serviceman Details
   var exRows = [["Ex-Serviceman", g('exserviceman')]];
   if(exsvcYes){
     exRows.push(
-      ["Service rendered (in months)", g('service_months')],
+      ["Service rendered (in months)", g('service_months', 'txtServiceMonths')],
       ["Date of relief from defence services", reliefDate],
       ["Joined Govt. civil job after ex-serviceman benefits", g('civil_job')],
-      ["Organization name", g('civil_org')]
+      ["Organization name", g('civil_org', 'txtCivilOrg')],
+      ["Disabled Ex-Serviceman", g('disabled_exsvc')],
+      ["Matriculate Ex-Serviceman", g('matric_exsvc')],
+      ["Ex-Serviceman % Marks", g('exsvc_pct', 'txtExsvcPct')],
+      ["Dependent of Service Personnel killed in action", g('dependent_killed')],
+      ["Seeking age relaxation as Widow/Divorced woman", g('widow_relax')]
     );
   }
   sections.push(['Ex-Serviceman Details', exRows]);
 
-  sections.push(['Religious Minority', [
+  // 5. Religious Minority
+  sections.push(['Religious Minority Details', [
     ["Belongs to Religious Minority Community", g('minority')],
-    ["Religion of the applicant", g('religion')]
+    ["Religion of the applicant", g('religion', 'selReligion')]
   ]]);
 
-  var cweRows = [["Appeared for CWE/CRP-Clerk earlier", g('cwe_appeared')]];
+  // 6. CWE / CRP Appeared Details
+  var cweRows = [["Appeared for CWE/CRP earlier", g('cwe_appeared')]];
   if(cweYes){
     cweRows.push(
-      ["Number of earlier attempts", g('cwe_attempts')],
-      ["Attempts selected", g('cwe_list')]
+      ["Number of earlier attempts", g('cwe_attempts', 'selCweAttempts')],
+      ["Attempts / Details selected", g('cwe_list', 'cwe_details', 'txtCweDetails')]
     );
   }
   sections.push(['CWE/CRP Appeared Details', cweRows]);
 
+  // 7. Apprenticeship Details
   var apprRows = [["Trained Apprentice (PSB/SBI/BFSI)", g('apprentice')]];
   if(apprYes){
     apprRows.push(
-      ["Bank / BFSI Sector", g('bank_bfsi')],
+      ["Bank / BFSI Sector", g('bank_bfsi', 'selBankBFSI')],
       ["Apprenticeship start date", appStart],
       ["Apprenticeship end date", appEnd],
-      ["HRMS ID", g('hrms_id')],
+      ["HRMS ID", g('hrms_id', 'txtHrms')],
       ["Registered on NATS/NAPS portal", g('naps_register')],
-      ["NATS/NAPS Enrollment Number", g('naps_number')]
+      ["NATS/NAPS Enrollment Number", g('naps_number', 'txtNapsNumber')]
     );
   }
   sections.push(['Details of Apprenticeship', apprRows]);
 
+  // 8. Nationality / Citizenship
   sections.push(['Nationality / Citizenship', [
-    ["Nationality / Citizenship", g('nationality')]
+    ["Nationality / Citizenship", g('nationality', 'selNationality')]
   ]]);
 
-  sections.push(['State / UT of Vacancy', [
-    ["State/UT applied for (vacancy)", g('vacancy_state')],
-    ["Official / local language of State/UT", g('official_lang')],
-    ["Proficient in the official language", g('lang_proficiency')]
+  // 9. State / UT & Local Language
+  sections.push(['State / UT Applied For', [
+    ["State/UT applied for (vacancy)", g('vacancy_state', 'exam_state', 'selExamState')],
+    ["Official / local language of State/UT", g('official_lang', 'opted_lang', 'selOptedLang')],
+    ["Proficient in official local language", g('lang_proficiency', 'lang_proficient_decl')],
+    ["10th standard mark sheet evidencing local language", g('lang_10th_cert')]
   ]]);
 
+  // 10. Exam Centre Details
   sections.push(['Exam Centre Details', [
-    ["State/UT/NCR of examination centre", g('exam_state')],
-    ["State code", g('state_code')],
-    ["Preliminary Exam — Preference I", g('prelim_i')],
-    ["Preliminary Exam — Preference II", g('prelim_ii')],
-    ["Main Exam — Preference I", g('main_i')],
-    ["Main Exam — Preference II", g('main_ii')]
+    ["State/UT/NCR of examination centre", g('exam_state', 'selExamState')],
+    ["State code", g('state_code', 'txtStateCode')],
+    ["Preliminary Exam — Preference I", g('prelim_i', 'selPrelimI')],
+    ["Preliminary Exam — Preference II", g('prelim_ii', 'selPrelimII')],
+    ["Main Exam — Preference I", g('main_i', 'selMainI')],
+    ["Main Exam — Preference II", g('main_ii', 'selMainII')]
   ]]);
 
+  // 11. ID Proof Details
   sections.push(['ID Proof Details', [
-    ["ID name-match declaration confirmed", g('confirm_id')],
-    ["ID Proof", g('id_proof')],
-    ["ID Proof No.", g('id_proof_no')]
+    ["ID name-match declaration confirmed", g('confirm_id', 'confirmID')],
+    ["ID Proof", g('id_proof', 'selIdProof')],
+    ["ID Proof No.", g('id_proof_no', 'txtIdProofNo')]
   ]]);
 
+  // 12. Personal Details
   var perRows = [
     ["Date of Birth", dob],
     ["Gender", g('gender')],
     ["Marital Status", g('marital')],
-    ["Aadhaar Card Number", g('aadhaar')],
-    ["PAN Card Number", g('pan')],
+    ["Aadhaar Card Number", g('aadhaar', 'aadhaar_no', 'txtAadhaar')],
+    ["PAN Card Number", g('pan', 'pan_no', 'txtPan')],
     ["Has twin/ triplet/ quadruplet", g('twin')]
   ];
   if(twinYes){
     perRows.push(
-      ["Twin type", g('twin_type')],
-      ["Sibling appearing in CRP CSA-XVI", g('twin_appearing')]
+      ["Gender of Twin", g('twin_gender')],
+      ["Name of Twin", g('twin_name', 'txtTwinName')]
     );
   }
   perRows.push(
-    ["Father's Name", g('father_name')],
-    ["Mother's Name", g('mother_name')],
-    ["Spouse's Name", g('spouse_name')],
-    ["Name-same-as-parent declaration", g('declare_name')]
+    ["Father's Name", g('father_name', 'txtFather')],
+    ["Mother's Name", g('mother_name', 'txtMother')],
+    ["Spouse's Name", g('spouse_name', 'txtSpouse')]
   );
   sections.push(['Personal Details', perRows]);
 
+  // 13. Address for Correspondence
   sections.push(['Address for Correspondence', [
     ["Address", corrAddr],
-    ["State", g('corr_state')],
-    ["District", g('corr_district')],
-    ["Pincode", g('corr_pincode')]
+    ["State", g('corr_state', 'selCorrState')],
+    ["District", g('corr_district', 'selCorrDistrict')],
+    ["Pincode", g('corr_pincode', 'txtCorrPincode')]
   ]]);
 
+  // 14. Permanent Address
   sections.push(['Permanent Address', [
-    ["Same as Correspondence address", g('same_addr')],
+    ["Same as Correspondence address", g('same_addr', 'chkSameAddr')],
     ["Address", permAddr],
-    ["State", g('perm_state')],
-    ["District", g('perm_district')],
-    ["Pincode", g('perm_pincode')]
+    ["State", g('perm_state', 'selPermState')],
+    ["District", g('perm_district', 'selPermDistrict')],
+    ["Pincode", g('perm_pincode', 'txtPermPincode')]
   ]]);
 
+  // 15. GST Invoicing
   sections.push(['GST Invoicing', [
-    ["Address chosen for GST invoicing", g('gst_address')]
+    ["Address chosen for GST invoicing", g('gst_address', 'selGst')]
   ]]);
 
-  sections.push(['Educational Qualifications', [
-    ["Graduation Stream", g('degree')],
-    ["Year of Passing", g('passing_year')],
-    ["Marks Obtained (%)", g('percentage') ? (g('percentage') + '%') : '']
-  ]]);
+  // 16. Educational Qualifications
+  var qualRows = [
+    ["Graduation Stream / Degree", g('degree', 'selDegree')],
+    ["Subject / Specialization", g('degree_subject', 'txtDegreeSubject')],
+    ["Date / Year of Passing", degDate || g('passing_year', 'txtDegreeYear', 'txtPassingDate')],
+    ["Marks Obtained (%)", g('percentage', 'txtPercentage') ? (g('percentage', 'txtPercentage') + '%') : ''],
+    ["Class / Grade", g('degree_class', 'selDegreeClass')],
+    ["Post Graduation Degree", g('pg_degree', 'txtPgDegree')],
+    ["PG Subject", g('pg_subject', 'txtPgSubject')],
+    ["PG Date of Passing", g('pg_date', 'txtPgDate')],
+    ["PG Marks Obtained (%)", g('pg_pct', 'txtPgPct') ? (g('pg_pct', 'txtPgPct') + '%') : ''],
+    ["PG Class / Grade", g('pg_class', 'selPgClass')],
+    ["Professional Qualification", g('prof_degree', 'txtProfDegree')],
+    ["10th / SSC Board Name", g('ssc_board', 'txtSscBoard')],
+    ["10th / SSC Date of Passing", sscDate],
+    ["10th / SSC Marks (%)", g('ssc_pct', 'txtSscPct') ? (g('ssc_pct', 'txtSscPct') + '%') : ''],
+    ["12th / HSC Board Name", g('hsc_board', 'txtHscBoard')],
+    ["12th / HSC Date of Passing", hscDate],
+    ["12th / HSC Marks (%)", g('hsc_pct', 'txtHscPct') ? (g('hsc_pct', 'txtHscPct') + '%') : ''],
+    ["Computer Knowledge Details", g('comp_details', 'txtCompDetails', 'comp_know')]
+  ];
+  sections.push(['Educational Qualifications', qualRows]);
 
+  // 17. Work Experience Details
   var qexpRows = [["Has work experience", g('has_experience')]];
   if(expYes){
     qexpRows.push(
-      ["Organisation / Company", g('org_name')],
-      ["Designation", g('designation')],
-      ["Total experience (years)", g('exp_years')],
-      ["Experience from", g('exp_from')],
-      ["Experience to", g('exp_to')],
-      ["Type of experience", g('exp_type')]
+      ["Organisation / Employer Name", g('org_name', 'txtOrgName')],
+      ["Designation", g('designation', 'txtDesignation')],
+      ["Total Experience (Years)", g('exp_years', 'txtExpYears')],
+      ["Experience From", g('exp_from', 'txtExpFrom')],
+      ["Experience To", g('exp_to', 'txtExpTo')],
+      ["Type / Nature of Duty", g('exp_type', 'txtNatureDuty')]
     );
   }
   sections.push(['Experience Details', qexpRows]);
 
-  // (Languages Known is rendered as its own Read/Write/Speak table below.)
+  // 18. Pre-Exam Training
+  if(petYes){
+    sections.push(['Pre-Exam Training (PET)', [
+      ["Opted for Pre-Exam Training", g('pet_opt')],
+      ["Training Centre", g('pet_center', 'selPetCenter')]
+    ]]);
+  }
 
-  // Render sections
+  // 19. Prosecution Details
+  if(prosYes){
+    sections.push(['Prosecution Details', [
+      ["Any prosecution / legal proceedings", g('prosecution')],
+      ["Details of Prosecution", g('prosecution_details', 'txtProsecutionDetails')]
+    ]]);
+  }
+
+  // Render all sections
   var html = '';
   sections.forEach(function(sec){
     var title = sec[0];
@@ -512,7 +566,7 @@ var $ = function(id){ return document.getElementById(id); };
     html += '</tbody></table></div>';
   });
 
-  // Participating Bank Preferences
+  // Participating Bank Preferences Table
   var bankList = [];
   try { bankList = JSON.parse(sessionStorage.getItem('ibps_banks') || '[]'); } catch(e){ bankList = []; }
   html += '<div class="preview-section-header">Participating Bank Preferences</div>';
@@ -526,13 +580,13 @@ var $ = function(id){ return document.getElementById(id); };
   }
   html += '</td></tr></tbody></table></div>';
 
-  // Languages Known — Read / Write / Speak table (matches the official preview)
-  function yn(v){ v=(''+(v||'')).trim().toLowerCase(); return (v==='yes'||v==='y')?'YES':'NO'; }
+  // Languages Known Table
+  function yn(v){ v=(''+(v||'')).trim().toLowerCase(); return (v==='yes'||v==='y'||v==='true')?'YES':'NO'; }
   var langRows = '';
   [['lang1','lang1_read','lang1_write','lang1_speak'],
    ['lang2','lang2_read','lang2_write','lang2_speak'],
    ['lang3','lang3_read','lang3_write','lang3_speak']].forEach(function(r){
-    var name = g(r[0]);
+    var name = g(r[0], 'sel' + r[0].charAt(0).toUpperCase() + r[0].slice(1));
     if(!name) return;
     langRows += '<tr><td class="text-center">' + esc(name) + '</td><td class="text-center">' + yn(g(r[1])) +
                 '</td><td class="text-center">' + yn(g(r[2])) + '</td><td class="text-center">' + yn(g(r[3])) + '</td></tr>';
