@@ -96,8 +96,32 @@ export default function AnswerKeyConfig() {
     if (!file) return;
     try {
       const text = await file.text();
-      const parsed = parseCsv(text, numQuestions);
-      setAnswers((prev) => ({ ...prev, ...parsed }));
+      const { answers: parsed, outOfRange } = parseCsv(text, numQuestions);
+      // The imported file *is* the key: it replaces whatever was there rather
+      // than merging into it. Merging left the two files interleaved — every
+      // question the new file didn't cover kept the old file's answer, so a
+      // second import silently produced a key matching neither.
+      const replaced = Object.keys(answers).length;
+      setAnswers(parsed);
+      // Say what landed. A key that runs past the exam's question count is the
+      // one import failure that otherwise looks like a success: the grid fills
+      // in as far as it goes and the rest of the file is simply gone.
+      const imported = Object.keys(parsed).length;
+      setError(
+        [
+          replaced
+            ? `Replaced the previous key (${replaced} answers) with ${imported} ` +
+              `from this file.`
+            : "",
+          outOfRange.length
+            ? `Skipped ${outOfRange.length} answers for questions past ` +
+              `${numQuestions} — raise "Number of Questions" to ` +
+              `${Math.max(...outOfRange)} and import again.`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
     } catch (err) {
       setError(`CSV import failed: ${err.message}`);
     } finally {
@@ -380,28 +404,72 @@ function range(a, b) {
   return Array.from({ length: b - a + 1 }, (_, i) => a + i);
 }
 
-// Accepts either "question,answer" rows (e.g. "1,A") or a single comma/newline
-// separated list of answers in question order (e.g. "A,B,C,D").
+// Parse an answer-key CSV. Returns ``{ answers, outOfRange }`` — the questions
+// beyond ``numQuestions`` are reported rather than dropped in silence, because
+// importing a 100-question key onto an exam still set to 50 would otherwise
+// look like a half-empty file.
+//
+// Accepted layouts:
+//   * one "question,answer" pair per row            ("1,A")
+//   * several pairs side by side on a row           ("1,A,26,B,51,C,76,D") —
+//     how a printed key of 100 questions fits on 25 rows, and the layout the
+//     exported Adda247 keys use
+//   * a bare list of answers in question order      ("A,B,C,D")
+//
+// Pairs are found by scanning each row for a question number followed by an
+// option, which is what makes the wide layout work without having to declare
+// the number of blocks. It also skips whatever else the row carries — a header,
+// a section name in a third column, the trailing all-comma line spreadsheets
+// leave behind — instead of counting those cells as answer positions. Counting
+// them is what went wrong before: a key laid out in four Q/Ans blocks fell
+// through to the bare-list branch, and every answer landed on the wrong
+// question (Q1's "D" was imported as Q10's).
 function parseCsv(text, numQuestions) {
   const rows = text
-    .trim()
+    .replace(/^\uFEFF/, "")     // Excel writes a BOM onto the first cell
     .split(/\r?\n/)
-    .map((r) => r.trim())
-    .filter(Boolean);
-  const out = {};
-  const isPairFormat = rows.every((r) => r.split(",").length === 2 && /^\d+$/.test(r.split(",")[0].trim()));
+    .map((line) => line.split(",").map((cell) => cell.trim().toUpperCase()))
+    .filter((cells) => cells.some(Boolean));
+  if (!rows.length) throw new Error("the file is empty");
 
-  if (isPairFormat) {
-    for (const r of rows) {
-      const [q, opt] = r.split(",").map((s) => s.trim().toUpperCase());
-      if (+q >= 1 && +q <= numQuestions && OPTIONS.includes(opt)) out[String(+q)] = opt;
+  const isNumber = (cell) => /^\d+$/.test(cell);
+  const answers = {};
+  const outOfRange = new Set();
+  const record = (q, opt) => {
+    const n = Number(q);
+    if (n < 1 || !OPTIONS.includes(opt)) return;
+    if (n > numQuestions) outOfRange.add(n);
+    else answers[String(n)] = opt;
+  };
+
+  let pairs = 0;
+  for (const cells of rows) {
+    for (let i = 0; i + 1 < cells.length; i += 1) {
+      if (!isNumber(cells[i]) || !OPTIONS.includes(cells[i + 1])) continue;
+      record(cells[i], cells[i + 1]);
+      pairs += 1;
+      i += 1;                        // consume the option cell as well
     }
-  } else {
-    const flat = rows.join(",").split(",").map((s) => s.trim().toUpperCase());
-    flat.forEach((opt, i) => {
-      if (i < numQuestions && OPTIONS.includes(opt)) out[String(i + 1)] = opt;
-    });
   }
-  if (Object.keys(out).length === 0) throw new Error("no valid answers found");
-  return out;
+
+  // No numbering anywhere: the file is a plain list of options in question
+  // order, so position *is* the question number. Rows carrying no option at all
+  // (a "Answer" label line) are dropped first; empty cells inside a row are
+  // kept, since they are unanswered questions holding their place.
+  if (!pairs) {
+    rows
+      .filter((cells) => cells.some((c) => OPTIONS.includes(c)))
+      .flat()
+      .forEach((opt, i) => record(String(i + 1), opt));
+  }
+
+  if (!Object.keys(answers).length) {
+    throw new Error(
+      outOfRange.size
+        ? `the key covers questions up to ${Math.max(...outOfRange)}, but this ` +
+          `exam is set to ${numQuestions} questions`
+        : "no valid answers found"
+    );
+  }
+  return { answers, outOfRange: [...outOfRange] };
 }
