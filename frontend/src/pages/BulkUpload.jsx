@@ -58,7 +58,7 @@ export default function BulkUpload() {
   // How many questions are PRINTED on the form. Distinct from the exam's
   // question count — a 50-question exam is often sat on a 200-question sheet,
   // and the reader needs the printed layout to number answers correctly.
-  const [sheetQuestions, setSheetQuestions] = useState(200);
+  const [sheetQuestions, setSheetQuestions] = useState(100);
   const [sheets, setSheets] = useState([]);
   const [summary, setSummary] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -192,8 +192,8 @@ export default function BulkUpload() {
               title="How many questions are printed on the OMR form — not the exam's question count"
               className="bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
             >
-              <option value={200}>200-question sheet</option>
               <option value={100}>100-question sheet</option>
+              <option value={200}>200-question sheet</option>
             </select>
           </label>
         </div>
