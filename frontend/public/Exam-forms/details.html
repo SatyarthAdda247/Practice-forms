@@ -93,9 +93,10 @@
   .form-control:disabled, .custom-select:disabled,
   .cond-field:not(.active-field) input,
   .cond-field:not(.active-field) select,
-  .cond-field:not(.active-field) textarea {
-    background-color: #e2e8f0 !important;
-    color: #94a3b8 !important;
+  .cond-field:not(.active-field) textarea,
+  .locked-field {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
     border-color: #cbd5e1 !important;
     cursor: not-allowed !important;
     pointer-events: none !important;
@@ -2874,6 +2875,33 @@ function openConfirmModal(onConfirm) {
   }
 }
 
+var isBasicVerified = false;
+
+function lockBasicInformation() {
+  isBasicVerified = true;
+  var basicTab = $('tab-basic');
+  if (!basicTab) return;
+
+  var banner = $('basicVerifiedBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'basicVerifiedBanner';
+    banner.className = 'alert alert-success d-flex align-items-center mb-3 shadow-sm';
+    banner.style.borderRadius = '8px';
+    banner.style.borderLeft = '4px solid #22c55e';
+    banner.innerHTML = '<i class="bi bi-shield-lock-fill text-success mr-2" style="font-size: 20px;"></i> <div><strong>Basic Information Verified &amp; Locked!</strong> Editing / changing basic details is no longer permitted post-verification.</div>';
+    basicTab.insertBefore(banner, basicTab.firstChild);
+  } else {
+    banner.style.display = 'flex';
+  }
+
+  basicTab.querySelectorAll('input, select, textarea').forEach(function(el) {
+    if (el.id === 'txtCodeBasic' || el.classList.contains('btnValidateDetails') || el.classList.contains('btnNext')) return;
+    el.setAttribute('disabled', 'disabled');
+    el.classList.add('locked-field');
+  });
+}
+
 function handleValidateClick(){
   var errors = validateAll();
   var result = $('result');
@@ -2883,11 +2911,12 @@ function handleValidateClick(){
     result.textContent = 'One or more error(s) found in page. Please correct the ' + errors.length + ' highlighted field(s).';
     focusFirstError(errors);
   } else {
+    lockBasicInformation();
     result.className = 'alert-box success show';
     result.style.display = 'block';
-    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
+    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! Basic Information verified & locked. You can now click "Save & Next" to proceed.';
     window.scrollTo({top:0, behavior:'smooth'});
-    alert("All fields are valid! You can now click Save & Next to proceed.");
+    alert("All fields are valid! Basic Information verified and locked. Editing is no longer permitted.");
   }
 }
 
