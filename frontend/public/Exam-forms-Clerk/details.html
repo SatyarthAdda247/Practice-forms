@@ -1181,15 +1181,33 @@
       <label for="selMedium">Kindly indicate Medium of Examination — how you would like the paper to be presented to you ? <sup class="error">*</sup></label>
       <select class="custom-select" name="medium_exam" id="selMedium">
         <option value="" selected>Select</option>
-        <option value="ENGLISH">English</option>
-        <option value="HINDI">Hindi</option>
-        <option value="ASSAMESE">Assamese</option><option value="BENGALI">Bengali</option>
-        <option value="GUJARATI">Gujarati</option><option value="KANNADA">Kannada</option>
-        <option value="KONKANI">Konkani</option><option value="MALAYALAM">Malayalam</option>
-        <option value="MANIPURI">Manipuri</option><option value="MARATHI">Marathi</option>
-        <option value="ODIA">Odia</option><option value="PUNJABI">Punjabi</option>
-        <option value="TAMIL">Tamil</option><option value="TELUGU">Telugu</option>
-        <option value="URDU">Urdu</option>
+        <option value="English and Hindi">English and Hindi</option>
+        <option value="English and Assamese">English and Assamese</option>
+        <option value="Hindi and Assamese">Hindi and Assamese</option>
+        <option value="English and Bengali">English and Bengali</option>
+        <option value="Hindi and Bengali">Hindi and Bengali</option>
+        <option value="English and Gujarati">English and Gujarati</option>
+        <option value="Hindi and Gujarati">Hindi and Gujarati</option>
+        <option value="English and Kannada">English and Kannada</option>
+        <option value="Hindi and Kannada">Hindi and Kannada</option>
+        <option value="English and Konkani">English and Konkani</option>
+        <option value="Hindi and Konkani">Hindi and Konkani</option>
+        <option value="English and Malayalam">English and Malayalam</option>
+        <option value="Hindi and Malayalam">Hindi and Malayalam</option>
+        <option value="English and Manipuri">English and Manipuri</option>
+        <option value="Hindi and Manipuri">Hindi and Manipuri</option>
+        <option value="English and Marathi">English and Marathi</option>
+        <option value="Hindi and Marathi">Hindi and Marathi</option>
+        <option value="English and Odia">English and Odia</option>
+        <option value="Hindi and Odia">Hindi and Odia</option>
+        <option value="English and Punjabi">English and Punjabi</option>
+        <option value="Hindi and Punjabi">Hindi and Punjabi</option>
+        <option value="English and Tamil">English and Tamil</option>
+        <option value="Hindi and Tamil">Hindi and Tamil</option>
+        <option value="English and Telugu">English and Telugu</option>
+        <option value="Hindi and Telugu">Hindi and Telugu</option>
+        <option value="English and Urdu">English and Urdu</option>
+        <option value="Hindi and Urdu">Hindi and Urdu</option>
       </select>
       <div class="field-hint">Note: Candidates should be careful in exercising this option of Medium of Examination.</div>
       <div class="invalid-feedback" id="err_medium_exam"></div>
@@ -2460,9 +2478,23 @@ $('selExamState').addEventListener('change', function(){
     var medSel = $('selMedium');
     if (!medSel) return;
 
-    var rawLangs = STATE_MEDIUM_LANGS[st] || ['English', 'Hindi'];
+    var selectedState = st || val('selExamState') || val('selVacancyState');
+    var rawLangs = STATE_MEDIUM_LANGS[selectedState];
     var combos = [];
-    if (rawLangs.length === 1) {
+
+    if (!selectedState || !rawLangs) {
+      combos = [
+        "English and Hindi", "English and Assamese", "Hindi and Assamese",
+        "English and Bengali", "Hindi and Bengali", "English and Gujarati",
+        "Hindi and Gujarati", "English and Kannada", "Hindi and Kannada",
+        "English and Konkani", "Hindi and Konkani", "English and Malayalam",
+        "Hindi and Malayalam", "English and Manipuri", "Hindi and Manipuri",
+        "English and Marathi", "Hindi and Marathi", "English and Odia",
+        "Hindi and Odia", "English and Punjabi", "Hindi and Punjabi",
+        "English and Tamil", "Hindi and Tamil", "English and Telugu",
+        "Hindi and Telugu", "English and Urdu", "Hindi and Urdu"
+      ];
+    } else if (rawLangs.length === 1) {
       combos = [rawLangs[0]];
     } else {
       for (var i = 0; i < rawLangs.length; i++) {
@@ -2476,15 +2508,14 @@ $('selExamState').addEventListener('change', function(){
     fillOptions(medSel, combos, 'Select');
     if (prevVal && combos.indexOf(prevVal) !== -1) {
       medSel.value = prevVal;
-    } else if (combos.length > 0) {
-      medSel.value = combos[0];
     }
   }
 
   updateMediumOptions(st);
 });
 
-updateMediumOptions($('selExamState') ? $('selExamState').value : '');
+if($('selVacancyState')) $('selVacancyState').addEventListener('change', function(){ updateMediumOptions(this.value); });
+updateMediumOptions();
 
 // ====== VACANCY STATE (Preference tab) -> Official / Local Language ======
 (function(){
