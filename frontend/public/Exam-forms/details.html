@@ -828,13 +828,13 @@
       <label for="selReligion">Religion of the applicant : <sup class="error">*</sup></label>
       <select class="custom-select" name="religion" id="selReligion">
         <option value="" selected>Select</option>
-        <option value="HINDU">HINDU</option>
-        <option value="MUSLIM">MUSLIM</option>
-        <option value="CHRISTIAN">CHRISTIAN</option>
-        <option value="SIKH">SIKH</option>
-        <option value="BUDDHIST">BUDDHIST</option>
-        <option value="JAIN">JAIN</option>
-        <option value="ZOROASTRIAN">ZOROASTRIAN (PARSI)</option>
+        <option value="HINDUISM">HINDUISM</option>
+        <option value="ISLAM">ISLAM</option>
+        <option value="CHRISTIANITY">CHRISTIANITY</option>
+        <option value="SIKHISM">SIKHISM</option>
+        <option value="BUDDHISM">BUDDHISM</option>
+        <option value="JAINISM">JAINISM</option>
+        <option value="ZORASTRIANISM">ZORASTRIANISM</option>
         <option value="OTHERS">OTHERS</option>
       </select>
       <div class="invalid-feedback" id="err_religion"></div>
@@ -1994,26 +1994,75 @@ toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
 toggleOnYes('prosecution', 'prosecutionSub');
 
-// ====== RELIGIOUS MINORITY vs RELIGION (HINDU HIDING LOGIC) ======
+// ====== RELIGIOUS MINORITY vs RELIGION LOGIC ======
 function updateReligionOptions() {
-  var isMinority = radioVal('minority') === 'Y';
+  var minVal = radioVal('minority');
   var relSelect = $('selReligion');
   if (!relSelect) return;
 
-  for (var i = 0; i < relSelect.options.length; i++) {
-    var opt = relSelect.options[i];
-    if (opt.value === 'HINDU') {
-      if (isMinority) {
-        opt.style.display = 'none';
-        opt.disabled = true;
-      } else {
-        opt.style.display = '';
-        opt.disabled = false;
-      }
+  var currentVal = relSelect.value;
+  relSelect.innerHTML = '<option value="">Select</option>';
+
+  if (minVal === 'N') {
+    // IF NO, ONLY DISPLAY HINDUISM AND OTHERS
+    var noList = [
+      { val: 'HINDUISM', text: 'HINDUISM' },
+      { val: 'OTHERS', text: 'OTHERS' }
+    ];
+    noList.forEach(function(r) {
+      var opt = document.createElement('option');
+      opt.value = r.val;
+      opt.textContent = r.text;
+      relSelect.appendChild(opt);
+    });
+    if (currentVal === 'HINDUISM' || currentVal === 'HINDU' || currentVal === 'OTHERS') {
+      relSelect.value = (currentVal === 'HINDU' ? 'HINDUISM' : currentVal);
+    } else {
+      relSelect.value = '';
     }
-  }
-  if (isMinority && relSelect.value === 'HINDU') {
-    relSelect.value = '';
+  } else if (minVal === 'Y') {
+    // IF YES, DISPLAY PROPER MINORITY RELIGION NAMES (ISLAM, CHRISTIANITY, SIKHISM, BUDDHISM, JAINISM, ZORASTRIANISM, OTHERS)
+    var yesList = [
+      { val: 'ISLAM', text: 'ISLAM' },
+      { val: 'CHRISTIANITY', text: 'CHRISTIANITY' },
+      { val: 'SIKHISM', text: 'SIKHISM' },
+      { val: 'BUDDHISM', text: 'BUDDHISM' },
+      { val: 'JAINISM', text: 'JAINISM' },
+      { val: 'ZORASTRIANISM', text: 'ZORASTRIANISM' },
+      { val: 'OTHERS', text: 'OTHERS' }
+    ];
+    yesList.forEach(function(r) {
+      var opt = document.createElement('option');
+      opt.value = r.val;
+      opt.textContent = r.text;
+      relSelect.appendChild(opt);
+    });
+    var mapLegacy = { 'MUSLIM': 'ISLAM', 'CHRISTIAN': 'CHRISTIANITY', 'SIKH': 'SIKHISM', 'BUDDHIST': 'BUDDHISM', 'JAIN': 'JAINISM', 'ZOROASTRIAN': 'ZORASTRIANISM' };
+    var target = mapLegacy[currentVal] || currentVal;
+    if (target && target !== 'HINDU' && target !== 'HINDUISM') {
+      relSelect.value = target;
+    } else {
+      relSelect.value = '';
+    }
+  } else {
+    // DEFAULT UNSELECTED: SHOW ALL PROPER RELIGION NAMES
+    var allList = [
+      { val: 'HINDUISM', text: 'HINDUISM' },
+      { val: 'ISLAM', text: 'ISLAM' },
+      { val: 'CHRISTIANITY', text: 'CHRISTIANITY' },
+      { val: 'SIKHISM', text: 'SIKHISM' },
+      { val: 'BUDDHISM', text: 'BUDDHISM' },
+      { val: 'JAINISM', text: 'JAINISM' },
+      { val: 'ZORASTRIANISM', text: 'ZORASTRIANISM' },
+      { val: 'OTHERS', text: 'OTHERS' }
+    ];
+    allList.forEach(function(r) {
+      var opt = document.createElement('option');
+      opt.value = r.val;
+      opt.textContent = r.text;
+      relSelect.appendChild(opt);
+    });
+    relSelect.value = currentVal;
   }
 }
 
