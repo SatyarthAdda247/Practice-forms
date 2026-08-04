@@ -423,36 +423,7 @@
     });
   });
 
-  // ====== CLEAR STATE ON TAB/VISIBILITY CHANGE ======
-  document.addEventListener('visibilitychange', function(){
-    if(document.hidden){
-      var allInputs = document.querySelectorAll('#reg_frm input:not([type="radio"]):not([type="checkbox"]):not([type="button"]):not([type="submit"]), #reg_frm select, #reg_frm textarea');
-      allInputs.forEach(function(el){
-        if(!el.disabled && !el.readOnly){
-          if(el.tagName === 'SELECT'){
-            el.selectedIndex = 0;
-          } else {
-            el.value = '';
-          }
-          el.classList.remove('is-valid','is-invalid');
-        }
-      });
-      // Uncheck radios and checkboxes
-      document.querySelectorAll('#reg_frm input[type="radio"], #reg_frm input[type="checkbox"]').forEach(function(el){
-        el.checked = false;
-      });
-      // Reset full name
-      $('fmlname').value = '';
-      // Hide conditional sections
-      ['div_fullname_updated','div_cfullname_updated','div_namechange_confirmation'].forEach(function(id){
-        $(id).classList.add('hide');
-      });
-      $('othdomain').classList.add('hide');
-      // Clear errors
-      var result = $('result');
-      if(result){ result.style.display = 'none'; }
-    }
-  });
+
 
   function genCaptcha(){
     var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
