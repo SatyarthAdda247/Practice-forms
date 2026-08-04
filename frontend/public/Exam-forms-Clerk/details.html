@@ -1483,6 +1483,11 @@
 
     <!-- ============ APPLICATION FEE ============ -->
     <div class="section-header">Application Fee / Intimation charges</div>
+    <div class="form-group">
+      <label class="mb-0">Amount : <strong id="feeAmount">-</strong></label>
+      <div class="field-hint" id="feeHint">Fee is computed from your selected category.</div>
+    </div>
+
     <!-- Security Captcha (Basic Details Tab) -->
     <div class="form-group security col-md-12 border-top pt-4 mt-4">
       <label for="txtCodeBasic" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
@@ -1501,6 +1506,13 @@
           <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Basic"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
         </div>
       </div>
+    </div>
+
+    <!-- Action Buttons below Captcha on Tab 1 -->
+    <div class="row justify-content-center mt-4 mb-4">
+      <a href="photo_signature.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn1 mr-3 btnValidateDetails" type="button" value="Validate your details">
+      <input class="btn sbtn btnNext" type="button" value="Save & Next">
     </div>
 
     </div><!-- end tab-basic -->
@@ -1829,6 +1841,8 @@
         </tr>
       </tbody>
     </table>
+    </div><!-- end overflow-x:auto -->
+
     <!-- Security Captcha (Qualification Tab) -->
     <div class="form-group security col-md-12 border-top pt-4 mt-4">
       <label for="txtCodeQual" class="font-weight-bold">Security Code <sup class="error">*</sup></label>
@@ -1847,6 +1861,13 @@
           <button type="button" class="btn btn-sm btn-outline-secondary btn-refresh-captcha" data-target="Qual"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
         </div>
       </div>
+    </div>
+
+    <!-- Action Buttons below Captcha on Tab 2 -->
+    <div class="row justify-content-center mt-4 mb-4">
+      <a href="photo_signature.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn1 mr-3 btnValidateDetails" type="button" value="Validate your details">
+      <input class="btn sbtn btnNext" type="button" value="Save & Next">
     </div>
 
     </div><!-- end tab-qual -->
@@ -1891,6 +1912,7 @@
             <p class="mb-2"><strong>3.</strong> On the Right Side box, with the populated Banks, just drag and drop to change the order of Bank as per your preference.</p>
             <p class="mb-0"><strong>4.</strong> All the banks under the box "Name of the Banks" should be given preferences</p>
           </div>
+        </div>
       </div>
     </div><!-- end row -->
 
@@ -1914,13 +1936,14 @@
       </div>
     </div>
 
-    </div><!-- end tab-pref -->
-
-    <div class="row justify-content-center mt-5 mb-5">
+    <!-- Action Buttons below Captcha on Tab 3 -->
+    <div class="row justify-content-center mt-4 mb-4">
       <a href="photo_signature.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
-      <input class="btn sbtn1 mr-3" type="button" id="btnValidateDetails" value="Validate your details">
-      <input class="btn sbtn" type="button" id="btnNext" value="Save & Next">
+      <input class="btn sbtn1 mr-3 btnValidateDetails" type="button" value="Validate your details">
+      <input class="btn sbtn btnNext" type="button" value="Save & Next">
     </div>
+
+    </div><!-- end tab-pref -->
   </form>
 </div>
 
@@ -2898,7 +2921,7 @@ function openConfirmModal(onConfirm) {
   }
 }
 
-$('btnValidateDetails').addEventListener('click', function(){
+function handleValidateClick(){
   var errors = validateAll();
   var result = $('result');
   if(errors.length){
@@ -2913,9 +2936,9 @@ $('btnValidateDetails').addEventListener('click', function(){
     window.scrollTo({top:0, behavior:'smooth'});
     alert("All fields are valid! You can now click Save & Next to proceed.");
   }
-});
+}
 
-$('btnNext').addEventListener('click', function() {
+function handleSaveNextClick() {
   var errors = validateAll();
   var result = $('result');
   if (errors.length) {
@@ -2990,7 +3013,13 @@ $('btnNext').addEventListener('click', function() {
 
     window.location.href = 'preview.html';
   });
-});
+}
+
+document.querySelectorAll('.btnValidateDetails').forEach(function(b){ b.addEventListener('click', handleValidateClick); });
+if($('btnValidateDetails')) $('btnValidateDetails').addEventListener('click', handleValidateClick);
+
+document.querySelectorAll('.btnNext').forEach(function(b){ b.addEventListener('click', handleSaveNextClick); });
+if($('btnNext')) $('btnNext').addEventListener('click', handleSaveNextClick);
 </script>
 
 
