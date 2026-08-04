@@ -191,81 +191,87 @@
     
     <div id="result" class="alert-box error" style="display:none"></div>
 
-    <!-- 3 Document Upload Fields Side-by-Side -->
-    <div class="row">
-      <!-- Field 1: Left Thumb Impression -->
-      <div class="col-md-4 mb-4">
-        <div class="file-upload-card">
-          <label class="font-weight-bold d-block mb-2" style="font-size: 13.5px; color: #1e293b;">
-            Left Thumb Impression <sup class="error text-danger">*</sup>
-          </label>
-          <div class="mb-1">
-            <input type="file" id="thumbFile" accept=".jpg,.jpeg" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
-          </div>
-          <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg)</small>
-          <div class="invalid-feedback" id="err_thumbFile"></div>
+    <!-- Document Upload List Table -->
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered align-middle upload-table bg-white">
+        <thead class="thead-light" style="background: #f1f5f9; color: #1e293b; font-size: 13.5px;">
+          <tr>
+            <th style="width: 35%;" class="py-3 px-3">Document Name</th>
+            <th style="width: 45%;" class="py-3 px-3">Upload File</th>
+            <th style="width: 20%; text-align: center;" class="py-3 px-3">Preview</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Field 1: Left Thumb Impression -->
+          <tr>
+            <td class="align-middle px-3 py-3">
+              <strong style="color: #1e293b; font-size: 13.5px;">1. Left Thumb Impression</strong> <sup class="error text-danger">*</sup>
+            </td>
+            <td class="align-middle px-3 py-3">
+              <input type="file" id="thumbFile" accept=".jpg,.jpeg" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
+              <small class="text-muted d-block mt-1" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg | size: 20KB to 50KB)</small>
+              <div class="invalid-feedback" id="err_thumbFile"></div>
+            </td>
+            <td class="align-middle text-center px-3 py-3">
+              <div id="thumbPreviewArea">
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 font-weight-bold" id="btnPreviewThumb" style="display:none; border-radius: 6px;">
+                  <i class="bi bi-eye-fill mr-1"></i> Preview
+                </button>
+                <span class="text-muted small" id="thumbPendingText">No file uploaded</span>
+              </div>
+              <div class="mt-2" id="thumbInlineBox" style="display:none;">
+                <img id="thumbInlineImg" src="" alt="Thumb Preview" style="max-height: 60px; max-width: 100px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px;">
+              </div>
+            </td>
+          </tr>
 
-          <!-- Inline Preview Card -->
-          <div class="preview-inline-box" id="thumbInlineBox">
-            <img id="thumbInlineImg" src="" alt="Thumb Preview">
-            <div class="mt-2">
-              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewThumb" style="font-size: 12px;">
-                <i class="bi bi-eye-fill"></i> Preview Document
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+          <!-- Field 2: Hand Written Declaration -->
+          <tr>
+            <td class="align-middle px-3 py-3">
+              <strong style="color: #1e293b; font-size: 13.5px;">2. Hand Written Declaration</strong> <sup class="error text-danger">*</sup>
+            </td>
+            <td class="align-middle px-3 py-3">
+              <input type="file" id="declFile" accept=".jpg,.jpeg" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
+              <small class="text-muted d-block mt-1" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg | size: 50KB to 100KB)</small>
+              <div class="invalid-feedback" id="err_declFile"></div>
+            </td>
+            <td class="align-middle text-center px-3 py-3">
+              <div id="declPreviewArea">
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 font-weight-bold" id="btnPreviewDecl" style="display:none; border-radius: 6px;">
+                  <i class="bi bi-eye-fill mr-1"></i> Preview
+                </button>
+                <span class="text-muted small" id="declPendingText">No file uploaded</span>
+              </div>
+              <div class="mt-2" id="declInlineBox" style="display:none;">
+                <img id="declInlineImg" src="" alt="Declaration Preview" style="max-height: 60px; max-width: 120px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px;">
+              </div>
+            </td>
+          </tr>
 
-      <!-- Field 2: Hand Written Declaration -->
-      <div class="col-md-4 mb-4">
-        <div class="file-upload-card">
-          <label class="font-weight-bold d-block mb-2" style="font-size: 13.5px; color: #1e293b;">
-            Hand Written Declaration <sup class="error text-danger">*</sup>
-          </label>
-          <div class="mb-1">
-            <input type="file" id="declFile" accept=".jpg,.jpeg" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
-          </div>
-          <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: jpg, jpeg)</small>
-          <div class="invalid-feedback" id="err_declFile"></div>
-
-          <!-- Inline Preview Card -->
-          <div class="preview-inline-box" id="declInlineBox">
-            <img id="declInlineImg" src="" alt="Declaration Preview">
-            <div class="mt-2">
-              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewDecl" style="font-size: 12px;">
-                <i class="bi bi-eye-fill"></i> Preview Document
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Field 3: SSC/SSLC/10th Standard/Equivalent Certificate (PDF) -->
-      <div class="col-md-4 mb-4">
-        <div class="file-upload-card">
-          <label class="font-weight-bold d-block mb-2" style="font-size: 13.5px; color: #1e293b;">
-            SSC/SSLC/10th Standard/Equivalent Certificate (PDF) <sup class="error text-danger">*</sup>
-          </label>
-          <div class="mb-1">
-            <input type="file" id="sscFile" accept=".pdf" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
-          </div>
-          <small class="text-muted d-block" style="font-size: 11.5px;">(allowed file extensions: pdf)</small>
-          <div class="invalid-feedback" id="err_sscFile"></div>
-
-          <!-- Inline Preview Card -->
-          <div class="preview-inline-box" id="sscInlineBox">
-            <div class="p-2 bg-light rounded text-primary font-weight-bold" style="font-size: 12.5px;">
-              <i class="bi bi-file-earmark-pdf-fill text-danger" style="font-size: 24px;"></i> SSC Certificate Document
-            </div>
-            <div class="mt-2">
-              <button type="button" class="btn btn-xs btn-outline-primary py-1 px-3 font-weight-bold" id="btnPreviewSsc" style="font-size: 12px;">
-                <i class="bi bi-eye-fill"></i> Preview Document
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+          <!-- Field 3: SSC/SSLC/10th Standard/Equivalent Certificate -->
+          <tr>
+            <td class="align-middle px-3 py-3">
+              <strong style="color: #1e293b; font-size: 13.5px;">3. SSC/SSLC/10th Standard Certificate (PDF)</strong> <sup class="error text-danger">*</sup>
+            </td>
+            <td class="align-middle px-3 py-3">
+              <input type="file" id="sscFile" accept=".pdf" class="form-control-file border rounded p-1 bg-white" style="font-size: 13px;">
+              <small class="text-muted d-block mt-1" style="font-size: 11.5px;">(allowed file extensions: pdf | max size: 500KB)</small>
+              <div class="invalid-feedback" id="err_sscFile"></div>
+            </td>
+            <td class="align-middle text-center px-3 py-3">
+              <div id="sscPreviewArea">
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 font-weight-bold" id="btnPreviewSsc" style="display:none; border-radius: 6px;">
+                  <i class="bi bi-eye-fill mr-1"></i> Preview
+                </button>
+                <span class="text-muted small" id="sscPendingText">No file uploaded</span>
+              </div>
+              <div class="mt-2" id="sscInlineBox" style="display:none;">
+                <span class="badge badge-light border text-danger p-1" style="font-size: 11px;"><i class="bi bi-file-earmark-pdf-fill"></i> PDF Ready</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Combined Confirmation Checkbox -->
@@ -408,6 +414,41 @@ $('refreshCaptcha').addEventListener('click', function(){
   clearError('txtCode');
 });
 
+function updateThumbUI(data) {
+  if (!data) return;
+  $('thumbInlineImg').src = data;
+  $('thumbInlineBox').style.display = 'block';
+  if($('btnPreviewThumb')) $('btnPreviewThumb').style.display = 'inline-block';
+  if($('thumbPendingText')) $('thumbPendingText').style.display = 'none';
+}
+
+function updateDeclUI(data) {
+  if (!data) return;
+  $('declInlineImg').src = data;
+  $('declInlineBox').style.display = 'block';
+  if($('btnPreviewDecl')) $('btnPreviewDecl').style.display = 'inline-block';
+  if($('declPendingText')) $('declPendingText').style.display = 'none';
+}
+
+function updateSscUI(name) {
+  if (!name) return;
+  $('sscInlineBox').style.display = 'block';
+  if($('btnPreviewSsc')) $('btnPreviewSsc').style.display = 'inline-block';
+  if($('sscPendingText')) $('sscPendingText').style.display = 'none';
+}
+
+// Restore previews on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function(){
+  var tData = sessionStorage.getItem('ibps_thumbImg');
+  if (tData) updateThumbUI(tData);
+
+  var dData = sessionStorage.getItem('ibps_declImg');
+  if (dData) updateDeclUI(dData);
+
+  var sName = sessionStorage.getItem('ibps_sscPdf');
+  if (sName) updateSscUI(sName);
+});
+
 // File upload listeners with instant preview modal popups
 $('thumbFile').addEventListener('change', function(e) {
   var file = e.target.files[0];
@@ -416,10 +457,8 @@ $('thumbFile').addEventListener('change', function(e) {
   reader.onload = function(evt) {
     var data = evt.target.result;
     sessionStorage.setItem('ibps_thumbImg', data);
-    $('thumbInlineImg').src = data;
-    $('thumbInlineBox').style.display = 'block';
+    updateThumbUI(data);
     clearError('thumbFile');
-    // Open preview popup immediately upon upload
     openDocModal('Preview - Left Thumb Impression', data, false);
   };
   reader.readAsDataURL(file);
@@ -432,10 +471,8 @@ $('declFile').addEventListener('change', function(e) {
   reader.onload = function(evt) {
     var data = evt.target.result;
     sessionStorage.setItem('ibps_declImg', data);
-    $('declInlineImg').src = data;
-    $('declInlineBox').style.display = 'block';
+    updateDeclUI(data);
     clearError('declFile');
-    // Open preview popup immediately upon upload
     openDocModal('Preview - Handwritten Declaration', data, false);
   };
   reader.readAsDataURL(file);
@@ -445,9 +482,8 @@ $('sscFile').addEventListener('change', function(e) {
   var file = e.target.files[0];
   if (!file) return;
   sessionStorage.setItem('ibps_sscPdf', file.name);
-  $('sscInlineBox').style.display = 'block';
+  updateSscUI(file.name);
   clearError('sscFile');
-  // Open preview popup immediately upon upload
   openDocModal('Preview - SSC 10th Certificate (PDF)', null, true, file.name);
 });
 
@@ -473,15 +509,13 @@ $('btnDemoUploads').addEventListener('click', function() {
   var demoDecl = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'><rect width='320' height='120' fill='%23ffffff'/><text x='15' y='30' font-family='sans-serif' font-size='13' fill='%230f172a'>I, SATYARTH SRIVASTAVA, hereby declare that all</text><text x='15' y='55' font-family='sans-serif' font-size='13' fill='%230f172a'>the information submitted by me in this application</text><text x='15' y='80' font-family='sans-serif' font-size='13' fill='%230f172a'>form is correct, true and valid.</text></svg>";
   
   sessionStorage.setItem('ibps_thumbImg', demoThumb);
-  $('thumbInlineImg').src = demoThumb;
-  $('thumbInlineBox').style.display = 'block';
+  updateThumbUI(demoThumb);
 
   sessionStorage.setItem('ibps_declImg', demoDecl);
-  $('declInlineImg').src = demoDecl;
-  $('declInlineBox').style.display = 'block';
+  updateDeclUI(demoDecl);
 
   sessionStorage.setItem('ibps_sscPdf', 'Demo_SSC_10th_Certificate.pdf');
-  $('sscInlineBox').style.display = 'block';
+  updateSscUI('Demo_SSC_10th_Certificate.pdf');
 
   $('confirmDocsValid').checked = true;
   $('digi_y').checked = true;
