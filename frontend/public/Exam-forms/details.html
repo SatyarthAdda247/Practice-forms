@@ -1988,6 +1988,34 @@ toggleOnYes('apprentice', 'apprenticeSub');
 toggleOnYes('twin', 'twinSub');
 toggleOnYes('prosecution', 'prosecutionSub');
 
+// ====== RELIGIOUS MINORITY vs RELIGION (HINDU HIDING LOGIC) ======
+function updateReligionOptions() {
+  var isMinority = radioVal('minority') === 'Y';
+  var relSelect = $('selReligion');
+  if (!relSelect) return;
+
+  for (var i = 0; i < relSelect.options.length; i++) {
+    var opt = relSelect.options[i];
+    if (opt.value === 'HINDU') {
+      if (isMinority) {
+        opt.style.display = 'none';
+        opt.disabled = true;
+      } else {
+        opt.style.display = '';
+        opt.disabled = false;
+      }
+    }
+  }
+  if (isMinority && relSelect.value === 'HINDU') {
+    relSelect.value = '';
+  }
+}
+
+document.getElementsByName('minority').forEach(function(r) {
+  r.addEventListener('change', updateReligionOptions);
+});
+updateReligionOptions();
+
 // ====== CAPTCHA GENERATOR LOGIC ======
 var CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 var captchaStore = { Basic: '', Qual: '', Pref: '' };
@@ -2474,6 +2502,9 @@ function validateAll(){
   if(!radioVal('exserviceman')) setErr('exserviceman','Please select an option.', errors);
   if(!radioVal('minority')) setErr('minority','Please choose Do you belong to Religious Minority Community ?', errors);
   if(!val('selReligion')) setErr('religion','Please select Religion of the applicant.', errors);
+  if(radioVal('minority') === 'Y' && val('selReligion') === 'HINDU'){
+    setErr('religion','Hindu candidates cannot select Yes for Religious Minority.', errors);
+  }
 
   if(!radioVal('cwe_appeared')) setErr('cwe_appeared','Please select an option.', errors);
 
