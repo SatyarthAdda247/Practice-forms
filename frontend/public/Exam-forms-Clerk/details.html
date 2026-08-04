@@ -2409,8 +2409,82 @@ $('selExamState').addEventListener('change', function(){
       langSel.classList.add('is-valid');
       langSel.classList.remove('is-invalid');
     }
+  var STATE_MEDIUM_LANGS = {
+    'ANDAMAN & NICOBAR ISLANDS': ['English', 'Hindi'],
+    'ANDAMAN AND NICOBAR ISLANDS': ['English', 'Hindi'],
+    'ANDHRA PRADESH': ['English', 'Hindi', 'Telugu'],
+    'ARUNACHAL PRADESH': ['English', 'Hindi'],
+    'ASSAM': ['English', 'Hindi', 'Assamese'],
+    'BIHAR': ['English', 'Hindi'],
+    'CHANDIGARH': ['English', 'Hindi'],
+    'CHHATTISGARH': ['English', 'Hindi'],
+    'DADRA & NAGAR HAVELI AND DAMAN & DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+    'DADRA AND NAGAR HAVELI AND DAMAN AND DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+    'DADRA & NAGAR HAVELI': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+    'DAMAN & DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+    'DELHI': ['English', 'Hindi'],
+    'DELHI (NCT)': ['English', 'Hindi'],
+    'DELHI / NCR': ['English', 'Hindi'],
+    'DELHI-NCR': ['English', 'Hindi'],
+    'GOA': ['English', 'Hindi', 'Konkani'],
+    'GUJARAT': ['English', 'Hindi', 'Gujarati'],
+    'HARYANA': ['English', 'Hindi'],
+    'HIMACHAL PRADESH': ['English', 'Hindi'],
+    'JAMMU & KASHMIR': ['English', 'Hindi', 'Urdu'],
+    'JAMMU AND KASHMIR': ['English', 'Hindi', 'Urdu'],
+    'JHARKHAND': ['English', 'Hindi'],
+    'KARNATAKA': ['English', 'Hindi', 'Kannada', 'Konkani'],
+    'KERALA': ['English', 'Hindi', 'Malayalam'],
+    'LADAKH': ['English', 'Hindi'],
+    'LAKSHADWEEP': ['English', 'Hindi', 'Malayalam'],
+    'MADHYA PRADESH': ['English', 'Hindi'],
+    'MAHARASHTRA': ['English', 'Hindi', 'Marathi', 'Konkani'],
+    'MANIPUR': ['English', 'Hindi', 'Manipuri'],
+    'MEGHALAYA': ['English', 'Hindi'],
+    'MIZORAM': ['English', 'Hindi'],
+    'NAGALAND': ['English', 'Hindi'],
+    'ODISHA': ['English', 'Hindi', 'Odia'],
+    'PUDUCHERRY': ['English', 'Hindi', 'Tamil', 'Telugu', 'Malayalam'],
+    'PUNJAB': ['English', 'Hindi', 'Punjabi'],
+    'RAJASTHAN': ['English', 'Hindi'],
+    'SIKKIM': ['English', 'Hindi'],
+    'TAMIL NADU': ['English', 'Hindi', 'Tamil'],
+    'TELANGANA': ['English', 'Hindi', 'Telugu', 'Urdu'],
+    'TRIPURA': ['English', 'Hindi', 'Bengali'],
+    'UTTAR PRADESH': ['English', 'Hindi', 'Urdu'],
+    'UTTARAKHAND': ['English', 'Hindi'],
+    'WEST BENGAL': ['English', 'Hindi', 'Bengali']
+  };
+
+  function updateMediumOptions(st) {
+    var medSel = $('selMedium');
+    if (!medSel) return;
+
+    var rawLangs = STATE_MEDIUM_LANGS[st] || ['English', 'Hindi'];
+    var combos = [];
+    if (rawLangs.length === 1) {
+      combos = [rawLangs[0]];
+    } else {
+      for (var i = 0; i < rawLangs.length; i++) {
+        for (var j = i + 1; j < rawLangs.length; j++) {
+          combos.push(rawLangs[i] + ' and ' + rawLangs[j]);
+        }
+      }
+    }
+
+    var prevVal = medSel.value;
+    fillOptions(medSel, combos, 'Select');
+    if (prevVal && combos.indexOf(prevVal) !== -1) {
+      medSel.value = prevVal;
+    } else if (combos.length > 0) {
+      medSel.value = combos[0];
+    }
   }
+
+  updateMediumOptions(st);
 });
+
+updateMediumOptions($('selExamState') ? $('selExamState').value : '');
 
 // ====== VACANCY STATE (Preference tab) -> Official / Local Language ======
 (function(){
@@ -2754,7 +2828,7 @@ $('btnDemoDetails').addEventListener('click', function() {
   if($('selOptedLang')) $('selOptedLang').value = "HINDI";
   if($('langProficientDecl')) $('langProficientDecl').checked = true;
   if($('lang10_y')) $('lang10_y').checked = true;
-  if($('selMedium')) $('selMedium').value = "ENGLISH & HINDI";
+  if($('selMedium')) $('selMedium').value = "English and Hindi";
 
   if($('txtCodeBasic')) $('txtCodeBasic').value = captchaStore.Basic;
   if($('txtCodeQual')) $('txtCodeQual').value = captchaStore.Qual;
