@@ -2440,7 +2440,7 @@ function updateMediumOptions(st) {
   var medSel = $('selMedium');
   if (!medSel) return;
 
-  var selectedState = st || val('selExamState') || val('selVacancyState');
+  var selectedState = (st || val('selExamState') || val('selVacancyState') || '').trim().toUpperCase();
   var rawLangs = STATE_MEDIUM_LANGS[selectedState];
   var combos = [];
 
@@ -2473,8 +2473,6 @@ function updateMediumOptions(st) {
 
   if (prevVal && combos.indexOf(prevVal) !== -1) {
     medSel.value = prevVal;
-  } else if (combos.length > 0) {
-    medSel.value = combos[0];
   }
 }
 
