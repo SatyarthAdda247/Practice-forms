@@ -3,6 +3,8 @@
 
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
+import { getPracticeUser } from "../../practiceUser.js";
+import { toolsApi } from "../../api.js";
 
 /**
  * @param {{ exam: import('./data').EXAMS[0] }} props
@@ -12,7 +14,20 @@ export default function ExamCard({ exam }) {
   const LogoComp = exam.LogoComponent;
 
   const handleClick = () => {
-    if (exam.isAvailable) navigate(exam.route);
+    if (!exam.isAvailable) return;
+    // Track the entry-button click (best-effort), keyed by the gate identity.
+    const u = getPracticeUser();
+    if (u && u.phone) {
+      try {
+        toolsApi.logExamFormEntry({
+          examId: exam.id,
+          identifier: u.phone,
+          step: "start-practice-click",
+          data: { name: u.name, phone: u.phone, event: "start-practice-click", exam: exam.id },
+        });
+      } catch { /* best-effort */ }
+    }
+    navigate(exam.route);
   };
 
   return (

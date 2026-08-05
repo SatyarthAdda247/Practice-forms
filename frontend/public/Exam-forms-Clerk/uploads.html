@@ -181,7 +181,6 @@
   <form class="basic_details_form p-4 bg-white rounded shadow-sm" id="uploads_frm" name="uploads_frm" autocomplete="off" novalidate>
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h2 class="m-0 font-weight-bold" style="font-size: 22px; color: #1e293b;">Documents Upload List</h2>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoUploads"><i class="bi bi-magic"></i> Auto Fill Demo Documents</button>
     </div>
 
     <div class="mb-4">
@@ -504,34 +503,6 @@ $('btnPreviewSsc').onclick = function() {
   openDocModal('Preview - SSC 10th Certificate (PDF)', null, true, pdfName);
 };
 
-// Demo data generator
-$('btnDemoUploads').addEventListener('click', function() {
-  var demoThumb = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' fill='%23e0f2fe'/><circle cx='60' cy='60' r='35' fill='none' stroke='%230369a1' stroke-width='4' stroke-dasharray='10 5'/><circle cx='60' cy='60' r='25' fill='none' stroke='%230369a1' stroke-width='3' stroke-dasharray='5 5'/><circle cx='60' cy='60' r='15' fill='none' stroke='%230369a1' stroke-width='2'/><text x='60' y='110' font-family='sans-serif' font-size='10' fill='%230369a1' text-anchor='middle'>DEMO THUMB IMPRESSION</text></svg>";
-  var demoDecl = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='120' viewBox='0 0 320 120'><rect width='320' height='120' fill='%23ffffff'/><text x='15' y='30' font-family='sans-serif' font-size='13' fill='%230f172a'>I, SATYARTH SRIVASTAVA, hereby declare that all</text><text x='15' y='55' font-family='sans-serif' font-size='13' fill='%230f172a'>the information submitted by me in this application</text><text x='15' y='80' font-family='sans-serif' font-size='13' fill='%230f172a'>form is correct, true and valid.</text></svg>";
-  
-  sessionStorage.setItem('ibps_thumbImg', demoThumb);
-  updateThumbUI(demoThumb);
-
-  sessionStorage.setItem('ibps_declImg', demoDecl);
-  updateDeclUI(demoDecl);
-
-  sessionStorage.setItem('ibps_sscPdf', 'Demo_SSC_10th_Certificate.pdf');
-  updateSscUI('Demo_SSC_10th_Certificate.pdf');
-
-  $('confirmDocsValid').checked = true;
-  $('digi_y').checked = true;
-  $('txtCode').value = currentCaptcha;
-
-  clearError('thumbFile');
-  clearError('declFile');
-  clearError('sscFile');
-  clearError('confirmDocsValid');
-  clearError('digilocker_agree');
-  clearError('txtCode');
-
-  // Automatically pop up document preview modal so user sees it right away
-  openDocModal('Preview - Left Thumb Impression', demoThumb, false);
-});
 
 function radioVal(name){
   var els = document.getElementsByName(name);
