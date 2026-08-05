@@ -266,12 +266,20 @@
     renderProgress();
 
     // Pass 1: restore simple fields and fire events so dependent selects
-    // (state → district, state → exam-centre) get populated.
+    // (state → district, state → exam-centre, minority → religion) populate.
     restoreAll(true);
     // Pass 2 & 3: re-restore after dependent selects have been populated by
     // the page's own change handlers (which may run synchronously or async).
-    setTimeout(function () { restoreAll(true); }, 60);
+    setTimeout(function () { restoreAll(true); }, 80);
     setTimeout(function () { restoreAll(true); }, 300);
+    // Pass 4 & 5: SILENT restore (no events fired) — catches values that were
+    // wiped by cascading rebuilds in earlier passes. e.g. when minority radio
+    // restoration triggers updateReligionOptions() which clears religion, or
+    // when state restoration triggers updateExamState() which clears centres.
+    // These passes just set .value/.checked without dispatching change/input,
+    // so dependent handlers do NOT re-run and wipe the values again.
+    setTimeout(function () { restoreAll(false); }, 600);
+    setTimeout(function () { restoreAll(false); }, 1000);
     bindAutosave();
 
     // Sync to the backend on load and (debounced) whenever a field changes.

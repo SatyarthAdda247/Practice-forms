@@ -76,10 +76,44 @@ function timeAgo(iso) {
   } catch { return ""; }
 }
 
+/* ── Admin Credentials ───────────────────────────────────────────────────── */
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "adda247@admin";
+const AUTH_KEY   = "adda_admin_authenticated";
+
 /* ── Component ───────────────────────────────────────────────────────────── */
 
 export default function ExamFormsAdmin() {
   const navigate = useNavigate();
+
+  // ── Login gate state ──
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try { return sessionStorage.getItem(AUTH_KEY) === "true"; } catch { return false; }
+  });
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [showPass, setShowPass] = useState(false);
+
+  function handleLogin(e) {
+    e.preventDefault();
+    if (loginUser.trim() === ADMIN_USER && loginPass === ADMIN_PASS) {
+      try { sessionStorage.setItem(AUTH_KEY, "true"); } catch { /* ignore */ }
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("Invalid username or password. Please try again.");
+    }
+  }
+
+  function handleLogout() {
+    try { sessionStorage.removeItem(AUTH_KEY); } catch { /* ignore */ }
+    setIsAuthenticated(false);
+    setLoginUser("");
+    setLoginPass("");
+  }
+
+  // ── Dashboard state (only used when authenticated) ──
   const [visitorCount, setVisitorCount] = useState(0);
   const [loginsHistory, setLoginsHistory] = useState([]);
   const [storeEntries, setStoreEntries] = useState([]);
