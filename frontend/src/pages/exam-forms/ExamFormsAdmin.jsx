@@ -416,6 +416,92 @@ export default function ExamFormsAdmin() {
 
   /* ── Render ────────────────────────────────────────────────────────────── */
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-red-600 px-6 py-8 text-white text-center relative overflow-hidden">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-3 backdrop-blur-md border border-white/20">
+              <Icon name="admin_panel_settings" size={32} />
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">Admin Portal Sign-In</h2>
+            <p className="text-xs text-white/80 mt-1">Enter your admin credentials to access the candidate analytics dashboard</p>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="p-6 space-y-4">
+            {loginError && (
+              <div className="p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs font-semibold flex items-center gap-2">
+                <Icon name="error" size={16} className="shrink-0 text-red-400" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Admin Username
+              </label>
+              <div className="relative">
+                <Icon name="person" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  placeholder="Enter admin username"
+                  autoFocus
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Password
+              </label>
+              <div className="relative">
+                <Icon name="lock" size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPass ? "text" : "password"}
+                  value={loginPass}
+                  onChange={(e) => setLoginPass(e.target.value)}
+                  placeholder="Enter admin password"
+                  required
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  <Icon name={showPass ? "visibility_off" : "visibility"} size={18} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 text-sm mt-2"
+            >
+              <Icon name="login" size={18} /> Log In to Dashboard
+            </button>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => navigate("/exam-forms")}
+                className="text-xs text-slate-400 hover:text-slate-200 transition-colors inline-flex items-center gap-1"
+              >
+                <Icon name="arrow_back" size={14} /> Back to Practice Portal
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 text-slate-800 flex flex-col font-sans antialiased">
 
@@ -458,10 +544,18 @@ export default function ExamFormsAdmin() {
             </button>
             <button
               onClick={() => navigate("/exam-forms")}
-              className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+              className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
             >
               <Icon name="arrow_back" size={14} />
               <span className="hidden sm:inline">Portal</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Sign out of Admin Portal"
+              className="bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-300 text-[11px] font-semibold px-3 py-2 rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5"
+            >
+              <Icon name="logout" size={14} />
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
