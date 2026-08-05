@@ -172,3 +172,47 @@ def save(exam_id, identifier, data, step=None, user_agent=None, referrer=None):
         raise Unavailable(f"DynamoDB write failed: {exc}")
 
     return {"PK": item["PK"], "SK": item["SK"]}
+
+
+def list_all(limit=2000):
+    """Scan the whole table and return submissions, newest-updated first.
+
+    Used by the admin dashboard so it can show every candidate across all
+    devices (localStorage is per-browser and cannot do this). Raises
+    Unavailable if DynamoDB isn't configured."""
+    table = _table()
+    items = []
+    kwargs = {}
+    try:
+        while True:
+            resp = table.scan(**kwargs)
+            items.extend(resp.get("Items", []))
+            lek = resp.get("LastEvaluatedKey")
+            if not lek or len(items) >= limit:
+                break
+            kwargs["ExclusiveStartKey"] = lek
+    except Unavailable:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise Unavailable(f"DynamoDB scan failed: {exc}")
+
+    def _num(v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
+    rows = []
+    for it in items:
+        rows.append({
+            "identifier": it.get("identifier", ""),
+            "examId": it.get("examId", ""),
+            "candidateName": it.get("candidateName", ""),
+            "candidatePhone": it.get("candidatePhone", ""),
+            "step": it.get("step", ""),
+            "createdAt": _num(it.get("createdAt")),
+            "updatedAt": _num(it.get("updatedAt")),
+            "data": it.get("data", {}) if isinstance(it.get("data"), dict) else {},
+        })
+    rows.sort(key=lambda r: r["updatedAt"], reverse=True)
+    return rows[:limit]

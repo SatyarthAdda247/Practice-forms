@@ -494,7 +494,6 @@
   <form class="basic_details_form" id="details_frm" name="details_frm" autocomplete="off" novalidate>
     <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
       <h1 class="m-0">Basic Qualification / Experience / Languages / Preference</h1>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoDetails"><i class="bi bi-magic"></i> Auto Fill Demo Details</button>
     </div>
     <p class="text-right error mb-0 mt-1" style="font-size:12px;font-weight:600;">* Mandatory Field</p>
 
@@ -2442,83 +2441,6 @@ validatePair('txtSpouse', 'txtConfirmSpouse', 'spouse_name', 'confirm_spouse', "
   if(el) el.addEventListener('click', function(){ alert(pair[1]); });
 });
 
-// ====== DEMO AUTOFILL ======
-$('btnDemoDetails').addEventListener('click', function() {
-  // Switch to basic tab first
-  document.querySelectorAll('.sub-progressbar .sub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
-  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelector('[data-tab="tab-basic"]').classList.add('active');
-  $('tab-basic').classList.add('active');
-
-  $('cat_general').checked = true; updateFee();
-  $('dis_n').checked = true; $('disabilitySub').classList.remove('show');
-  $('serving_n').checked = true;
-  $('exsvc_n').checked = true; $('exsvcSub').classList.remove('show');
-  $('minor_n').checked = true;
-  $('selReligion').value = "HINDU";
-  $('cwe_n').checked = true; $('cweSub').classList.remove('show');
-  $('appr_n').checked = true; $('apprenticeSub').classList.remove('show');
-  $('selNationality').value = "INDIAN";
-
-  $('selExamState').value = "DELHI-NCR";
-  $('selExamState').dispatchEvent(new Event('change'));
-  $('selPrelimI').value = "NEW DELHI";
-  $('selPrelimII').value = "NOIDA";
-  $('selMainI').value = "NEW DELHI";
-  $('selMainII').value = "GHAZIABAD";
-
-  $('confirmID').checked = true;
-  $('selIdProof').value = "AADHAAR";
-  $('txtIdProofNo').value = "9876 5432 1012";
-
-  $('dob_dd').value = "15";
-  $('dob_mm').value = "05";
-  $('dob_yyyy').value = "2001";
-  calculateAge();
-  $('gender_m').checked = true;
-  $('mar_unmarried').checked = true;
-  $('txtAadhaar').value = "987654321012";
-  $('txtPan').value = "ABCDE1234F";
-  $('twin_n').checked = true; $('twinSub').classList.remove('show');
-  $('txtFather').value = "RAMESH SRIVASTAVA";
-  $('txtMother').value = "SUSHMA SRIVASTAVA";
-  $('txtConfirmFather').value = "RAMESH SRIVASTAVA";
-  $('txtConfirmMother').value = "SUSHMA SRIVASTAVA";
-
-  $('txtCorrAddr1').value = "123/A, SECTOR-4";
-  $('txtCorrAddr2').value = "NEAR CITY PARK";
-  $('selCorrState').value = "UTTAR PRADESH";
-  fillDistricts('selCorrState','selCorrDistrict');
-  $('selCorrDistrict').value = "NOIDA";
-  $('txtCorrPincode').value = "201301";
-
-  $('chkSameAddr').checked = true;
-  $('chkSameAddr').dispatchEvent(new Event('change'));
-
-  $('selGst').value = "CORRESPONDENCE";
-
-  // Qualification tab demo
-  if($('txtSscBoard')) $('txtSscBoard').value = "CBSE";
-  if($('txtSscDate')) $('txtSscDate').value = "01/06/2018";
-  if($('txtSscPct')) $('txtSscPct').value = "85.00";
-  if($('txtGradBoard')) $('txtGradBoard').value = "DELHI UNIVERSITY";
-  if($('selDegree')) $('selDegree').value = "Engineering (B.E./B.Tech.)";
-  if($('selGradStream')) $('selGradStream').value = "Engineering";
-  if($('txtPassingDate')) $('txtPassingDate').value = "15/06/2023";
-  if($('txtPercentage')) $('txtPercentage').value = "78.45";
-  if($('comp_y')) $('comp_y').checked = true;
-  if($('exp_n')) $('exp_n').checked = true;
-  if($('pet_n')) $('pet_n').checked = true;
-  if($('pros_n')) $('pros_n').checked = true; setCondState('prosecutionSub', false);
-  if($('selLang1')) $('selLang1').value = "HINDI";
-  if($('selLang2')) $('selLang2').value = "ENGLISH";
-
-  if($('txtCodeBasic')) $('txtCodeBasic').value = captchaStore.Basic;
-  if($('txtCodeQual')) $('txtCodeQual').value = captchaStore.Qual;
-  if($('txtCodePref')) $('txtCodePref').value = captchaStore.Pref;
-
-  clearAllErrors();
-});
 
 function val(id){ return ($(id) && $(id).value || '').trim(); }
 function radioVal(name){

@@ -1266,6 +1266,39 @@ def exam_forms_save():
     return jsonify({"status": "ok", "key": key}), 201
 
 
+# Admin key gate for reading the tracking data. Set EXAM_FORMS_ADMIN_KEY in the
+# backend env; the admin dashboard sends it as ?key= or the X-Admin-Key header.
+# If unset, the read endpoint is disabled (403) so submissions are never public.
+EXAM_FORMS_ADMIN_KEY = os.environ.get("EXAM_FORMS_ADMIN_KEY", "").strip()
+
+
+@app.get("/api/exam-forms/submissions")
+def exam_forms_submissions():
+    """List all tracked exam-form submissions for the admin dashboard.
+
+    Guarded by EXAM_FORMS_ADMIN_KEY (query ?key= or X-Admin-Key header) so the
+    candidate list is not world-readable. Reads from DynamoDB, which is the only
+    place cross-device sign-ins are visible (localStorage is per-browser)."""
+    if _rate_limited(f"examforms-admin:{_client_ip()}", limit=60):
+        return error("too many requests; try again in a minute", 429)
+    if not EXAM_FORMS_ADMIN_KEY:
+        return error("admin reads are not configured", 403)
+    supplied = (request.args.get("key") or request.headers.get("X-Admin-Key") or "").strip()
+    if supplied != EXAM_FORMS_ADMIN_KEY:
+        return error("forbidden", 403)
+
+    try:
+        rows = exam_forms_store.list_all()
+    except exam_forms_store.Unavailable as exc:
+        app.logger.warning("exam-forms: submissions read unavailable: %s", exc)
+        return error("submissions store is not available", 503)
+    except Exception as exc:  # noqa: BLE001
+        app.logger.warning("exam-forms: submissions read failed: %s", exc)
+        return error("could not read submissions", 503)
+
+    return jsonify({"count": len(rows), "submissions": rows})
+
+
 # Uploaded photo/signature images are saved to the same on-disk store the OMR
 # uploads use (UPLOAD_DIR), under an exam-forms/ subfolder. They are only ever
 # written — never deleted — one file per (candidate, exam, kind), overwritten if

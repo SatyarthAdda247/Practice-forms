@@ -162,7 +162,6 @@
   <form class="basic_details_form" id="photo_sig_frm" name="photo_sig_frm" autocomplete="off" novalidate>
     <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
       <h1 class="m-0">Photo &amp; Signature</h1>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="btnDemoData"><i class="bi bi-magic"></i> Use Demo Photo &amp; Signature</button>
     </div>
 
     <!-- Advisory boxes (as on the official page) -->
@@ -546,31 +545,6 @@ $('camUse').addEventListener('click', function(){
 $('qrBox').addEventListener('click', function(){ alert('In the official portal this opens a QR code to capture your photo from a mobile phone. (Disabled in this practice copy.)'); });
 $('btnSigScan').addEventListener('click', function(){ alert('In the official portal this lets you scan your signature. Use "Browse" to upload a JPG in this practice copy.'); });
 
-// Demo data
-$('btnDemoData').addEventListener('click', function() {
-  var demoPhoto = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23e2e8f0'/><circle cx='75' cy='70' r='30' fill='%2394a3b8'/><path d='M35,140 C35,110 115,110 115,140 L115,180 L35,180 Z' fill='%2394a3b8'/><text x='75' y='160' font-family='sans-serif' font-size='12' fill='%23475569' text-anchor='middle'>DEMO PHOTO</text></svg>";
-  var demoLive = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='180' viewBox='0 0 150 180'><rect width='150' height='180' fill='%23dbeafe'/><circle cx='75' cy='68' r='30' fill='%2360a5fa'/><path d='M32,142 C32,110 118,110 118,142 L118,180 L32,180 Z' fill='%2360a5fa'/><text x='75' y='168' font-family='sans-serif' font-size='11' fill='%231e3a8a' text-anchor='middle'>LIVE CAPTURE</text></svg>";
-  var demoSig = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='80' viewBox='0 0 200 80'><rect width='200' height='80' fill='%23f1f5f9'/><path d='M20,40 Q40,10 60,40 T100,40 T140,40 T180,30' fill='none' stroke='%230f172a' stroke-width='2'/><text x='100' y='68' font-family='sans-serif' font-size='10' fill='%2364748b' text-anchor='middle'>Demo Signature</text></svg>";
-
-  $('photoImg').src = demoPhoto; $('photoImg').style.display='block'; $('photoPlaceholder').style.display='none';
-  $('photoFileName').textContent = 'demo_photo.jpg';
-  sessionStorage.setItem('ibps_photoImg', demoPhoto);
-  saveImageToServer('photo', demoPhoto);
-
-  $('liveImg').src = demoLive; $('liveImg').style.display='block'; $('livePlaceholder').style.display='none';
-  sessionStorage.setItem('ibps_liveImg', demoLive);
-  saveImageToServer('live', demoLive);
-
-  $('sigImg').src = demoSig; $('sigImg').style.display='block'; $('sigPlaceholder').style.display='none';
-  $('sigFileName').textContent = 'demo_sig.jpg';
-  sessionStorage.setItem('ibps_sigImg', demoSig);
-  saveImageToServer('signature', demoSig);
-
-  $('confirmRecent').checked = true;
-  $('confirmCaptured').checked = true;
-  $('confirmSig').checked = true;
-  clearError('confirmRecent'); clearError('confirmCaptured'); clearError('confirmSig');
-});
 
 function showError(field, msg){
   var err = $('err_' + field);

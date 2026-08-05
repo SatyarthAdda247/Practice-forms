@@ -17,8 +17,28 @@ import Icon from "../../components/Icon.jsx";
 import { Adda247Logo } from "../../components/GovtLogos.jsx";
 import { getVisitorCount, getPortalLoginsHistory } from "../../practiceUser.js";
 import { practiceStore } from "../../tools/lib/practiceStore.js";
+import { EXAM_ADMIN_KEY, examApiBase } from "../../examFormsConfig.js";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+// Backend API origin + admin key come from the shared frontend config, with a
+// localStorage override (set from the admin login password).
+async function fetchBackendSubmissions() {
+  let key = "";
+  try { key = localStorage.getItem("adda_exam_admin_key") || ""; } catch { /* */ }
+  if (!key) key = EXAM_ADMIN_KEY; // fall back to the configured key
+  if (!key) return null;
+  try {
+    const res = await fetch(`${examApiBase()}/exam-forms/submissions?key=${encodeURIComponent(key)}`, {
+      headers: { "X-Admin-Key": key },
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return Array.isArray(body.submissions) ? body.submissions : [];
+  } catch {
+    return null;
+  }
+}
 
 /** Normalise a name for fuzzy comparison: lowercase, only a-z, no spaces. */
 function normName(s) {
@@ -99,8 +119,12 @@ export default function ExamFormsAdmin() {
     e.preventDefault();
     if (loginUser.trim() === ADMIN_USER && loginPass === ADMIN_PASS) {
       try { sessionStorage.setItem(AUTH_KEY, "true"); } catch { /* ignore */ }
+      // Use the admin password as the backend read key (backend must set
+      // EXAM_FORMS_ADMIN_KEY to the same value). Enables central cross-device data.
+      try { localStorage.setItem("adda_exam_admin_key", loginPass); } catch { /* ignore */ }
       setIsAuthenticated(true);
       setLoginError("");
+      loadData();
     } else {
       setLoginError("Invalid username or password. Please try again.");
     }
@@ -126,6 +150,7 @@ export default function ExamFormsAdmin() {
   const [sortBy, setSortBy] = useState("recent"); // recent | name | status
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toISOString());
+  const [backendRows, setBackendRows] = useState([]); // central (cross-device) DynamoDB data
 
   const loadData = useCallback(() => {
     setVisitorCount(getVisitorCount());
@@ -134,6 +159,9 @@ export default function ExamFormsAdmin() {
     setFormPersistPO(readFormPersistKeys("IBPS-PO"));
     setFormPersistClerk(readFormPersistKeys("IBPS-CLERK"));
     setLastRefreshed(new Date().toISOString());
+    // Central backend tracking (shows sign-ins from ALL devices, not just this
+    // browser). Best-effort: falls back to the localStorage-only view.
+    fetchBackendSubmissions().then((rows) => { if (rows) setBackendRows(rows); });
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -268,6 +296,35 @@ export default function ExamFormsAdmin() {
       });
     });
 
+    // 3b. Central backend (DynamoDB) rows — sign-ins/form data from ALL devices.
+    // This is what makes the dashboard work on prod (localStorage is per-browser).
+    backendRows.forEach((row) => {
+      const d = row.data || {};
+      const phone = normPhone(row.candidatePhone || row.identifier || d["id:txtmobile"] || d.phone || "");
+      const email = normEmail(d["id:txtemail"] ? (d["id:txtemail"] + "@" + (d["id:seldomain"] || "")) : "");
+      const key = phone || email || row.identifier || "";
+      if (!key) return;
+      const existing = map.get(key) || {};
+      const name = row.candidateName || d.name || [d["id:fullname"], d["id:middlename"], d["id:lastname"]].filter(Boolean).join(" ");
+      const tsIso = row.updatedAt ? new Date(row.updatedAt * 1000).toISOString() : (existing.lastActive || "");
+      map.set(key, {
+        ...existing,
+        id: existing.id || stableId(key),
+        loginName: existing.loginName || name || "",
+        loginPhone: existing.loginPhone || row.candidatePhone || (phone || ""),
+        loginEmail: existing.loginEmail || (email || ""),
+        loginTimestamp: existing.loginTimestamp || tsIso,
+        lastActive: tsIso || existing.lastActive || "",
+        basicName: name || existing.basicName || "",
+        basicPhone: (row.candidatePhone || d["id:txtmobile"] || phone || "") || existing.basicPhone || "",
+        basicEmail: email || existing.basicEmail || "",
+        examId: row.examId || existing.examId || "",
+        currentStep: row.step ? String(row.step) : (existing.currentStep || "Portal Login"),
+        isSubmitted: /payment|complete/i.test(row.step || "") || existing.isSubmitted || false,
+        source: "backend",
+      });
+    });
+
     // 4. Compute field-level match flags and overall verification status
     const results = Array.from(map.values()).map((rec) => {
       const hasBasic = rec.basicName || rec.basicPhone || rec.basicEmail;
@@ -306,7 +363,7 @@ export default function ExamFormsAdmin() {
     });
 
     return results;
-  }, [loginsHistory, formPersistPO, formPersistClerk, storeEntries, sortBy]);
+  }, [loginsHistory, formPersistPO, formPersistClerk, storeEntries, backendRows, sortBy]);
 
   /* ── Filtering ────────────────────────────────────────────────────────── */
 
