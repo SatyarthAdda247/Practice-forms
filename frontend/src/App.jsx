@@ -14,6 +14,7 @@ import ImageResizer from "./pages/ImageResizer.jsx";
 import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
 import GovtExamForm from "./pages/GovtExamForm.jsx";
 import ExamFormsLanding from "./pages/ExamFormsLanding.jsx";
+import ExamFormsAdmin from "./pages/exam-forms/ExamFormsAdmin.jsx";
 
 // Auth gate: redirects to /login when there is no signed-in user.
 function RequireAuth() {
@@ -95,6 +96,10 @@ export default function App() {
             />
           }
         />
+        <Route path="/exam-forms/admin" element={<ExamFormsAdmin />} />
+        <Route path="/exam-forms/Admin" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms/admin" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms/Admin" element={<ExamFormsAdmin />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />
