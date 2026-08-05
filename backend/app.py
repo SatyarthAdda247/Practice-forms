@@ -1269,7 +1269,18 @@ def exam_forms_save():
 # Admin key gate for reading the tracking data. Set EXAM_FORMS_ADMIN_KEY in the
 # backend env; the admin dashboard sends it as ?key= or the X-Admin-Key header.
 # If unset, the read endpoint is disabled (403) so submissions are never public.
-EXAM_FORMS_ADMIN_KEY = os.environ.get("EXAM_FORMS_ADMIN_KEY", "").strip()
+def _exam_forms_admin_key():
+    k = os.environ.get("EXAM_FORMS_ADMIN_KEY", "").strip()
+    if k:
+        return k
+    try:  # fall back to the git-ignored backend config file
+        import exam_forms_config as _cfg
+        return (getattr(_cfg, "EXAM_FORMS_ADMIN_KEY", "") or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+EXAM_FORMS_ADMIN_KEY = _exam_forms_admin_key()
 
 
 @app.get("/api/exam-forms/submissions")

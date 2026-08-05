@@ -23,3 +23,6 @@ service-account*.json
 
 # Real AWS creds for exam-forms — MUST stay local, never committed
 
+
+# Local AWS creds for exam-forms — real keys live here, never committed
+backend/exam_forms_config.py
