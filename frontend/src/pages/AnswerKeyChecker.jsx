@@ -3,22 +3,28 @@
 // thing sent anywhere is the aggregate score summary below, which carries no
 // individual answers and nothing identifying the candidate.
 // Parsing and scoring live in ../tools/lib/answerKey.js.
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import { toolsApi } from "../api.js";
 import usePageMeta from "../pageMeta.js";
 import {
   DEFAULT_EXAM,
-  EXAM_GROUPS,
   KEY_URL_HOSTS,
+  examGroups,
   examLabel,
   normalizeKeyUrl,
   parseAnnotatedHtmlSheet,
   parseAnswerList,
   parseResponseFile,
   round,
+  defaultPaper,
+  papersForExam,
   schemeForExam,
+  schemeIsEnforced,
+  schemeSource,
+  sheetContentsForExam,
   scoreAll,
+  setSchemeOverrides,
   toCsv,
 } from "../tools/lib/answerKey.js";
 
@@ -90,6 +96,58 @@ function fileErrorMessage(file, e) {
   );
 }
 
+// How a paper is being marked, in one sentence, plus where that came from.
+// Worth stating outright: the marks decide the score, they are filled in from
+// three different places (see the note above SCHEMES), and a candidate has no
+// way to tell a stored pattern from a leftover default just by looking at four
+// number boxes.
+const MARKING_ORIGINS = {
+  sheet: "as printed on your response sheet",
+  admin: "verified by Adda247 for this exam",
+  exam: "the standard pattern for this exam",
+  manual: "the marks you entered",
+  // Nothing is stored for this exam, so the boxes are holding numbers left over
+  // from whatever was selected before. Saying so is the entire point: it is the
+  // case that used to score a Punjab Police paper as SSC without a word.
+  unknown: "not confirmed for this exam",
+};
+
+/* Fold the marking scheme a response sheet states into the marks already in the
+ * boxes. Only the fields the sheet states are replaced; the rest stay.
+ *
+ * The sheet normally wins — it is the paper actually in front of the candidate.
+ * `enforced` is the exception, set on an admin row for when that assumption
+ * breaks: a note the parser misreads, or marking the commission revised after
+ * publishing the sheet. `total` is not marking, it is how many questions were
+ * read out of the file, so it is taken either way.
+ *
+ * Pure, so it is safe inside a state updater; the caller records where the marks
+ * ended up coming from.
+ */
+function mergeStatedScheme(stated, base, enforced) {
+  const fromSheet = Object.fromEntries(
+    Object.entries(stated || {}).filter(([, v]) => v != null),
+  );
+  if (!Object.keys(fromSheet).length) return base;
+  if (enforced) return fromSheet.total ? { ...base, total: fromSheet.total } : base;
+  return { ...base, ...fromSheet };
+}
+
+// Whether a sheet's marking note actually stated the marks, as opposed to only
+// letting us count the questions.
+const statesMarks = (stated) => stated?.correct != null || stated?.wrong != null;
+
+// The three inputs that are marking. `total` sits beside them but is the question
+// count, so editing it says nothing about where the marks came from.
+const MARKS_FIELDS = ["correct", "wrong", "skipped"];
+
+function markingSentence(scheme, origin) {
+  const correct = Number(scheme.correct) || 0;
+  const wrong = Number(scheme.wrong) || 0;
+  const penalty = wrong ? `−${round(wrong)} per wrong answer` : "no negative marking";
+  return `+${round(correct)} per correct answer, ${penalty} — ${MARKING_ORIGINS[origin]}.`;
+}
+
 function StatCard({ label, value, className = "", accent = false }) {
   return (
     <div className="bg-tool-surface-lowest border border-tool-outline rounded-lg p-6 flex flex-col gap-1 relative overflow-hidden">
@@ -110,8 +168,12 @@ export default function AnswerKeyChecker() {
   const fileRef = useRef(null);
 
   const [exam, setExam] = useState(DEFAULT_EXAM);
+  /* Which paper of that exam — a tier, phase or session. It is a separate choice
+     because a tier is a different paper: SSC CGL Tier-I is +2 / −0.5 over 100
+     questions and Tier-II is +3 / −1 over 150, so one selection cannot mark both. */
+  const [paper, setPaper] = useState(() => defaultPaper(DEFAULT_EXAM));
   const [shift, setShift] = useState("");
-  const [scheme, setScheme] = useState(() => schemeForExam(DEFAULT_EXAM));
+  const [scheme, setScheme] = useState(() => schemeForExam(DEFAULT_EXAM, defaultPaper(DEFAULT_EXAM)));
   const [responsesText, setResponsesText] = useState("");
   const [keyText, setKeyText] = useState("");
   const [sections, setSections] = useState({});
@@ -136,21 +198,150 @@ export default function AnswerKeyChecker() {
      parsed, only half of it was, or Analyze found something missing. */
   const [manualOpen, setManualOpen] = useState(false);
 
-  // Most exams pin no marking scheme — see the note above SCHEMES. For those the
-  // marks inputs are left exactly as they are rather than reset to a guess, and
-  // `schemePinned` below tells the candidate the marks are theirs to confirm.
-  const pickExam = (value) => {
-    setExam(value);
-    const preset = schemeForExam(value);
-    if (preset) setScheme(preset);
+  /* Where the marks currently in the boxes came from, which decides what may
+     overwrite them (see the authority list above setSchemeOverrides) and what
+     the page tells the candidate. A ref rather than state: nothing renders off
+     it directly, and it has to be readable inside the same tick as the setState
+     that goes with it. */
+  const markingOrigin = useRef("exam");
+  /* Bumped once the admin-set schemes land. schemeSource() reads a module-level
+     map, so filling that map in changes nothing React knows about — the counter's
+     only job is to force the re-render, which is why its value is never read. */
+  const [, schemesLoaded] = useState(0);
+  /* The selected exam and the marks in the boxes, as of the latest render.
+   *
+   * Both paths that read a sheet do so across an await — a 60-page PDF, or a
+   * fetch through the backend — and the admin schemes can land in that window
+   * and replace the marks. A handler closing over `exam`/`scheme` would then
+   * merge into, and score with, values that are no longer on screen.
+   *
+   * NOTE these two are written during render, which React normally forbids. It
+   * is sound here only because this component has no transitions, no Suspense
+   * boundary and no `use()`, so a render is never abandoned and a ref can never
+   * hold a value from a render that did not commit — and because both readers
+   * touch them only after an await, i.e. always post-commit. Adding any of those
+   * three to this page means moving these writes into an effect, or the scoring
+   * path stops being correct. */
+  const examRef = useRef(exam);
+  const paperRef = useRef(paper);
+  const schemeRef = useRef(scheme);
+  examRef.current = exam;
+  paperRef.current = paper;
+  schemeRef.current = scheme;
+  // Whether the candidate has set the question count themselves, so the schemes
+  // landing a moment later does not replace a number they just typed.
+  const totalTouched = useRef(false);
+  /* The in-flight schemes request. Both sheet readers await it before deciding
+     how a paper is marked — see the note in takeFile. */
+  const schemesReady = useRef(null);
+
+  /* Marks an admin has pinned per exam, fetched once. They beat the built-in
+     presets, so a paper whose marking was wrong (or simply not catalogued) is
+     corrected for every candidate without waiting for a deploy.
+
+     The fetch resolves to {} on any failure, and until it lands the tool behaves
+     exactly as it did before. The one thing it must not do is overwrite marks
+     that came from somewhere better — a sheet the candidate has already
+     uploaded, or numbers they typed themselves. */
+  useEffect(() => {
+    let live = true;
+    schemesReady.current = toolsApi.keyCheckSchemes().then((schemes) => {
+      if (!live || !setSchemeOverrides(schemes)) return;
+      schemesLoaded((n) => n + 1);
+      // Only where nothing better has happened yet: an exam's own pattern, or an
+      // exam with no pattern at all — which is exactly the case an admin row is
+      // most likely to have just fixed.
+      if (!["exam", "unknown"].includes(markingOrigin.current)) return;
+      const pinned = schemeForExam(examRef.current, paperRef.current);
+      if (!pinned) return;
+      // A question count the candidate typed is theirs, even though the marks
+      // beside it are not — replacing it here would undo their edit for the sake
+      // of a field this row may not even have set.
+      setScheme((prev) =>
+        totalTouched.current ? { ...pinned, total: prev.total } : pinned,
+      );
+      if (schemeSource(examRef.current, paperRef.current) === "admin") {
+        markingOrigin.current = "admin";
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  /* Most exams pin no marking scheme — see the note above SCHEMES. For those the
+     marks inputs are left exactly as they are rather than reset to a guess,
+     because a guessed penalty would silently change the score.
+
+     What must not happen is the page then presenting the previous exam's numbers
+     as though they belonged to this one. So the origin drops to "unknown", which
+     is what the banner and the report both then say. */
+  const applyExamScheme = (value, nextPaper) => {
+    const preset = schemeForExam(value, nextPaper);
+    if (!preset) {
+      markingOrigin.current = "unknown";
+      return;
+    }
+    setScheme(preset);
+    markingOrigin.current = schemeSource(value, nextPaper) === "admin" ? "admin" : "exam";
   };
 
-  const setField = (field, value) => setScheme({ ...scheme, [field]: value });
+  const pickExam = (value) => {
+    // The paper resets with the exam: "Tier-II" of the exam just left means
+    // nothing here, and carrying it over would silently mark the new paper by a
+    // tier it does not have.
+    const nextPaper = defaultPaper(value);
+    setExam(value);
+    setPaper(nextPaper);
+    examRef.current = value;
+    paperRef.current = nextPaper;
+    applyExamScheme(value, nextPaper);
+  };
+
+  // Switching tier switches paper: different marks, and usually a different
+  // number of questions.
+  const pickPaper = (value) => {
+    setPaper(value);
+    paperRef.current = value;
+    applyExamScheme(exam, value);
+  };
+
+  const setField = (field, value) => {
+    setScheme({ ...scheme, [field]: value });
+    /* Typed by hand, so nothing loaded later may quietly replace it — but only
+       for the three marks. `total` is the question count, not a marking value:
+       counting it as a manual marking entry silenced the "nothing is stored for
+       this exam" warning for anyone who filled in the question count, and hid
+       that exam from the report that finds papers still needing a scheme. */
+    if (MARKS_FIELDS.includes(field)) markingOrigin.current = "manual";
+    if (field === "total") totalTouched.current = true;
+  };
+
+  /* Take the marking scheme a sheet states, and record where the marks the score
+     will be computed from actually came from. Returns whether the sheet's marks
+     were refused by an enforced admin row, which the page has to say out loud —
+     otherwise it would show marks that were read and then not used.
+
+     `exam` is read from the ref, not the closure: this runs after an await. */
+  const takeStatedScheme = (stated) => {
+    const enforced = schemeIsEnforced(examRef.current, paperRef.current);
+    const refused = statesMarks(stated) && enforced;
+    if (statesMarks(stated) && !enforced) markingOrigin.current = "sheet";
+    setScheme((prev) => mergeStatedScheme(stated, prev, enforced));
+    return { refused };
+  };
 
   const takeFile = async (file) => {
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) return setError("File is larger than 20MB.");
     setFileLabel({ name: file.name, hint: "Reading…" });
+    /* Settle the admin-set schemes before reading the sheet, rather than racing
+       them. A sheet dropped in the first moment of the page's life would
+       otherwise be marked against the built-in preset, and an `enforced` row
+       arriving a moment later would be discarded — the marks would by then have
+       come from the sheet, which the loader is right not to overwrite. Waiting
+       costs one already-cached GET against a parse measured in seconds. */
+    await schemesReady.current;
     try {
       // A 60-page sheet takes a few seconds to read, so say where we are.
       const onProgress = (page, pages) =>
@@ -181,12 +372,12 @@ export default function AnswerKeyChecker() {
       if (hasKey) setKeyText(asLines(key));
 
       // The sheet's own header note beats the exam preset — it is what the
-      // commission will actually mark this paper by. Only the fields it states
-      // are overwritten; the rest keep the preset.
+      // commission will actually mark this paper by. See mergeStatedScheme for
+      // the one case where the sheet does not win.
       const fromSheet = Object.fromEntries(
         Object.entries(stated || {}).filter(([, v]) => v != null),
       );
-      if (Object.keys(fromSheet).length) setScheme((prev) => ({ ...prev, ...fromSheet }));
+      const { refused } = takeStatedScheme(stated);
       // Paper date/time, so the saved analysis says which shift it was. Nothing
       // identifying the candidate is read out of the sheet.
       if (meta?.testDate) setShift([meta.testDate, meta.testTime].filter(Boolean).join(", "));
@@ -197,7 +388,11 @@ export default function AnswerKeyChecker() {
         key: hasKey ? key.size : 0,
         // `total` is inferred from the question count on any parsed sheet, so it
         // is only a "stated marking scheme" if the marks themselves were stated.
-        scheme: fromSheet.correct != null || fromSheet.wrong != null ? fromSheet : null,
+        scheme: statesMarks(fromSheet) ? fromSheet : null,
+        // The sheet stated marks that an enforced admin row refused, so the chip
+        // below has to say so rather than showing marks that were read and then
+        // not used.
+        schemeRefused: refused,
         sections: new Set(Object.values(found)).size,
         meta: meta || {},
       });
@@ -239,6 +434,12 @@ export default function AnswerKeyChecker() {
     const useScheme = from?.scheme ?? scheme;
     const useDetected = from ? from.detected : detected;
     const inputSource = from?.inputSource ?? (fileLabel ? "upload" : "manual");
+    /* From the ref, not the closure: the URL path calls this after two awaits,
+       and its marking was decided against `examRef.current`. Reading a different
+       exam here would rank and warehouse the score under a cohort it was not
+       marked as — the two must name the same paper. */
+    const useExam = examRef.current;
+    const usePaper = paperRef.current;
     // Both of these are fixed in the answer boxes, so open them along with the
     // message rather than pointing at a row the candidate has to find first.
     if (!responses.size) {
@@ -264,9 +465,10 @@ export default function AnswerKeyChecker() {
       total: Number(useScheme.total) || 0,
       scheme: marking,
     });
-    // Keep the scheme the score was computed with, so the report keeps saying
-    // what it was marked by even if the inputs are edited afterwards.
-    setReport({ ...result, marking });
+    // Keep the scheme the score was computed with, and where it came from, so
+    // the report keeps saying what it was marked by even if the inputs are
+    // edited afterwards.
+    setReport({ ...result, marking, markingOrigin: markingOrigin.current });
 
     // Where this score stands among everyone who has checked the same paper.
     // Asked for after the report is set, and allowed to come back empty — the
@@ -274,14 +476,17 @@ export default function AnswerKeyChecker() {
     const testDate = useDetected?.meta?.testDate || null;
     setRank(null);
     toolsApi
-      .keyCheckRank({ exam, score: result.score, testDate })
+      .keyCheckRank({ exam: useExam, score: result.score, testDate })
       .then((r) => setRank(r?.available ? r : null));
 
     // Warehouse the analysis (aggregates only — no individual answers, no key,
     // nothing that identifies the candidate).
     // Fire-and-forget: the report is already on screen either way.
     toolsApi.logKeyCheckResult({
-      exam,
+      exam: useExam,
+      // Which tier/paper it was marked as. Stored beside the exam so a Tier-II
+      // score is never read as a Tier-I one.
+      paper: usePaper,
       shift,
       scheme: marking,
       inputSource,
@@ -290,6 +495,10 @@ export default function AnswerKeyChecker() {
       fileKind: useDetected?.kind || null,
       keyDetected: Boolean(useDetected?.key),
       schemeDetected: Boolean(useDetected?.scheme),
+      // Which of the marking sources this score was computed from. An exam
+      // showing up here as "unknown" is one that needs a scheme set in the admin
+      // console — that is how the gap gets found before a candidate reports it.
+      markingOrigin: markingOrigin.current,
       testDate,
       testTime: useDetected?.meta?.testTime || null,
       sectionSummary: summariseSections(result.rows),
@@ -319,6 +528,9 @@ export default function AnswerKeyChecker() {
     setError("");
     setReport(null);
     setRank(null);
+    // Same reasoning as takeFile: decide the marking with the admin-set schemes
+    // in hand, not against whichever of the two requests happens to land first.
+    await schemesReady.current;
     try {
       const { html } = await toolsApi.fetchAnswerKeyUrl(url);
       const parsed = parseAnnotatedHtmlSheet(html);
@@ -335,18 +547,28 @@ export default function AnswerKeyChecker() {
 
       // The sheet's own marking note beats the exam preset — it is what the
       // commission will actually mark this paper by. Only the fields it states
-      // are overwritten; the rest keep the preset.
+      // are overwritten; the rest keep the preset. See mergeStatedScheme for the
+      // one case where the sheet does not win.
       const stated = Object.fromEntries(
         Object.entries(parsed.scheme || {}).filter(([, v]) => v != null),
       );
-      const merged = { ...scheme, ...stated };
+      /* This branch scores in the same tick, so it needs the merged marks as a
+         value rather than waiting for the state it also sets — which means
+         reading the base marks and the exam from the refs, not the closure. The
+         fetch above takes seconds, and the admin schemes can land inside it: a
+         closure captured before that would score with marks the page has since
+         replaced, while the report claimed the newer ones. */
+      const enforced = schemeIsEnforced(examRef.current, paperRef.current);
+      const merged = mergeStatedScheme(parsed.scheme, schemeRef.current, enforced);
+      if (statesMarks(stated) && !enforced) markingOrigin.current = "sheet";
       const detectedFromUrl = {
         kind: "url",
         responses: parsed.responses.size,
         key: hasKey ? parsed.key.size : 0,
         // `total` is inferred from the question count, so this only counts as a
         // stated scheme if the marks themselves were stated.
-        scheme: stated.correct != null || stated.wrong != null ? stated : null,
+        scheme: statesMarks(stated) ? stated : null,
+        schemeRefused: statesMarks(stated) && enforced,
         sections: new Set(Object.values(parsed.sections)).size,
         meta: parsed.meta || {},
       };
@@ -405,8 +627,13 @@ export default function AnswerKeyChecker() {
     setKeyUrl("");
     setRank(null);
     setManualOpen(false);
-    const preset = schemeForExam(exam);
+    // Back to the exam's own marks, so a sheet read earlier stops deciding how
+    // the next one is scored.
+    const preset = schemeForExam(exam, paper);
     if (preset) setScheme(preset);
+    const source = schemeSource(exam, paper);
+    markingOrigin.current = source === "admin" ? "admin" : source ? "exam" : "unknown";
+    totalTouched.current = false;
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -436,9 +663,22 @@ export default function AnswerKeyChecker() {
   // Worth a table only when the sheet actually named its subjects.
   const bySection = report ? Object.entries(summariseSections(report.rows)) : [];
   const showSections = bySection.length > 1 || (bySection.length === 1 && bySection[0][0] !== "—");
-  // Whether the selected exam carries a known marking pattern, or the marks in
-  // the boxes are the candidate's own to confirm.
-  const schemePinned = schemeForExam(exam) !== null;
+  /* What the marks in the boxes are, and where they came from.
+   *
+   * `source` is whether this exam has a stored pattern at all — a preset, or an
+   * admin row. `origin` is what the numbers on screen actually are right now,
+   * which is not the same thing: a sheet may have stated its own, or the
+   * candidate may have typed over them.
+   *
+   * Read straight through rather than memoised: both come from outside React
+   * state (a module-level map and a ref), and every change to either arrives
+   * with a state update that re-renders this anyway — which is the whole job of
+   * `schemesLoaded` above.
+   */
+  const applied = { source: schemeSource(exam, paper), origin: markingOrigin.current };
+  // Papers to offer, and what this exam's sheet will contain.
+  const papers = papersForExam(exam);
+  const sheetHas = sheetContentsForExam(exam);
   const inputClass =
     "w-full bg-tool-surface-lowest border border-tool-outline rounded-lg p-3 text-body-md text-tool-on-surface focus:border-tool-primary focus:ring-1 focus:ring-tool-primary outline-none transition-colors";
 
@@ -537,7 +777,7 @@ export default function AnswerKeyChecker() {
                 onChange={(e) => pickExam(e.target.value)}
                 className={inputClass}
               >
-                {EXAM_GROUPS.map((g) => (
+                {examGroups().map((g) => (
                   <optgroup key={g.group} label={g.group}>
                     {g.options.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -548,13 +788,46 @@ export default function AnswerKeyChecker() {
               {/* Say when the marks are the candidate's to confirm rather than a
                   known pattern — otherwise whatever is in the boxes silently
                   decides the score of a hand-typed paper. */}
-              {!schemePinned && (
+              {!applied.source && applied.origin !== "sheet" && (
                 <p className="text-body-md text-tool-secondary">
                   No standard marking pattern is stored for this exam — check the marks below, or
                   paste your sheet above and they will be read from it.
                 </p>
               )}
+              {/* What this exam's sheet will and will not contain, so a candidate
+                  whose commission publishes their answers *without* the key knows
+                  before they upload that they still have to supply it. */}
+              {sheetHas && !sheetHas.answerMarked && (
+                <p className="text-body-md text-tool-secondary">
+                  This exam's response sheet shows your own answers but not the official ones, so
+                  you will need to paste the answer key in as well.
+                </p>
+              )}
             </div>
+            {/* Only where the exam really has more than one paper. A tier is a
+                different paper with different marking, so it cannot be inferred
+                from the exam alone — but asking about it on a single-paper exam
+                would be a question with one answer. */}
+            {papers.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="paper-select" className="text-label-md text-tool-on-surface-variant uppercase">
+                  Tier / Paper
+                </label>
+                <select
+                  id="paper-select"
+                  value={paper || ""}
+                  onChange={(e) => pickPaper(e.target.value)}
+                  className={inputClass}
+                >
+                  {papers.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+                <p className="text-body-md text-tool-secondary">
+                  Each tier is marked differently — pick the one you sat.
+                </p>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <label className="text-label-md text-tool-on-surface-variant uppercase">Shift / Date</label>
               {/* Free text, not a list: every commission words its shifts
@@ -589,6 +862,30 @@ export default function AnswerKeyChecker() {
               </div>
             ))}
           </div>
+
+          {/* What the score will actually be calculated with, spelled out. Four
+              number boxes cannot show whether they hold a pattern this paper is
+              really marked by or a default left over from another exam, and that
+              difference is the whole score. */}
+          <p
+            className={`text-body-md flex items-start gap-2 ${
+              applied.source || applied.origin === "sheet"
+                ? "text-tool-secondary"
+                : "text-tool-on-surface"
+            }`}
+          >
+            <Icon
+              name={applied.source || applied.origin === "sheet" ? "verified" : "info"}
+              size={18}
+              className="shrink-0 mt-0.5"
+            />
+            <span>
+              This paper will be scored at {markingSentence(scheme, applied.origin)}
+              {!applied.source && applied.origin !== "sheet" && (
+                <> Confirm these against your official notification before you rely on the score.</>
+              )}
+            </span>
+          </p>
 
           <button
             type="button"
@@ -639,6 +936,20 @@ export default function AnswerKeyChecker() {
               {!detected.scheme && (
                 <span className="text-body-md text-tool-secondary">
                   — this file does not state its marking scheme, so check the marks above.
+                </span>
+              )}
+              {/* An enforced override means marks were read off the sheet and
+                  then deliberately not used. Never leave that unsaid: the chip
+                  above would otherwise show numbers the score was not based on.
+                  Which marks replaced them depends on what is in the boxes — the
+                  admin's row usually, the candidate's own if they have edited
+                  them — so the sentence is built from that rather than assuming. */}
+              {detected.schemeRefused && (
+                <span className="text-body-md text-tool-secondary">
+                  — the marks stated on this sheet are not the ones being applied;{" "}
+                  {applied.origin === "manual"
+                    ? "your own entries above are."
+                    : "Adda247 has verified this paper's marking separately."}
                 </span>
               )}
             </div>
@@ -808,16 +1119,37 @@ export default function AnswerKeyChecker() {
             <p className="text-body-md text-tool-secondary">
               {[
                 examLabel(exam),
+                papers.find((p) => p.value === paper)?.label,
                 shift,
                 `${report.total} questions`,
                 `${report.skipped} unattempted`,
                 `${report.accuracy.toFixed(1)}% accuracy`,
-                `+${round(report.marking.correct)} per correct, −${round(report.marking.wrong)} per wrong`,
+                // Spelled out rather than "−0 per wrong", which reads as though a
+                // penalty applied and rounded away.
+                `+${round(report.marking.correct)} per correct`,
+                report.marking.wrong
+                  ? `−${round(report.marking.wrong)} per wrong`
+                  : "no negative marking",
                 report.unkeyed > 0 && `${report.unkeyed} question(s) had no key entry and were excluded`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+
+            {/* The marking this score was computed with is the one thing a
+                candidate cannot check for themselves from the numbers above, so
+                the report says where it came from — and says plainly when nothing
+                was stored for the exam and the marks were unconfirmed. */}
+            {report.markingOrigin === "unknown" && (
+              <p className="text-body-md text-tool-on-surface flex items-start gap-2">
+                <Icon name="info" size={18} className="shrink-0 mt-0.5" />
+                <span>
+                  No standard marking pattern is stored for {examLabel(exam)}, so this score used
+                  the marks that were in the boxes. Check them against your official notification —
+                  a different penalty changes the total.
+                </span>
+              </p>
+            )}
 
             {showSections && (
               <div className="bg-tool-surface border border-tool-outline rounded-xl overflow-hidden">

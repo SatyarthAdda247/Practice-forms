@@ -223,6 +223,7 @@ livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, periodSeconds: 30, ti
 | `GOOGLE_APPLICATION_CREDENTIALS` | yes | path to mounted SA key file |
 | `BQ_PROJECT` | yes | `adda247-dev` |
 | `BQ_DATASET` | no | `Aspirant_portal` (default) |
+| `BQ_KEYCHECK_SCHEME_TTL` | no | seconds the Answer Key Checker's marking schemes are cached, server-side and in `Cache-Control` (default 120) |
 
 #### Handwritten-name OCR (`OMR_NAME_OCR`)
 
@@ -258,6 +259,14 @@ pod a memory limit of ~4Gi. Never rely on a runtime download —
 2. **BigQuery** — `users` table in `adda247-dev.Aspirant_portal`
    (schema: `backend/schema/bigquery_users.sql`). Service-account key with
    BigQuery read/write on the dataset → mounted at `GOOGLE_APPLICATION_CREDENTIALS`.
+
+   The public tools' own tables need no migration: `tools_store.init()`
+   creates them on startup and additively adds any new column
+   (`tool_image_resizer`, `tool_image_resizer_leads`, `tool_answerkey_checker`,
+   `tool_keycheck_schemes`, `tool_lead_access`, `tool_marking_access`). It never
+   raises — a permission problem there logs a warning and leaves the tools
+   degraded rather than stopping the API from booting, so check the startup log
+   after granting a new environment's dataset access.
 3. **Google OAuth client** — add each frontend origin to "Authorized JavaScript
    origins":
    - Prod: `https://tools.adda247.com`

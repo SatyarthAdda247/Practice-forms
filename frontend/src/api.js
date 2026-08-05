@@ -53,16 +53,114 @@ export function setUnauthorizedHandler(fn) {
   onUnauthorized = fn;
 }
 
-// --- Lightweight GET cache -------------------------------------------------
-// Caches successful GET responses in memory for a short window so revisiting a
-// page renders instantly instead of waiting on a network round-trip. Any write
-// (POST/PUT/PATCH/DELETE) or a 401 clears the cache so data never goes stale
-// after a change.
-const GET_CACHE_TTL = 30_000; // ms
+// --- GET cache (stale-while-revalidate, survives a reload) -----------------
+// Every screen here is backed by BigQuery, where even a tiny read costs a query
+// job — so a cache miss is ~1s of staring at a spinner, twice over on a page
+// that loads two things. The cache is what makes the app feel instant, so it
+// works on three levels:
+//
+//   * fresh (< FRESH_TTL)  -> returned from memory, no request at all
+//   * stale (< STALE_TTL)  -> returned *immediately*, and refreshed in the
+//                             background so the next visit is up to date
+//   * older / absent       -> fetched, with concurrent callers for the same
+//                             path sharing one request instead of racing
+//
+// Entries are mirrored into sessionStorage, so a reload or a second tab paints
+// from cache instead of starting from an empty screen. That store dies with the
+// tab, is scoped to the session token, and is dropped wholesale by any write or
+// a 401 — the same rules the in-memory cache has always had.
+const FRESH_TTL = 30_000; // ms — serve without touching the network
+const STALE_TTL = 10 * 60_000; // ms — serve, but refresh behind the scenes
+
 const getCache = new Map(); // path -> { ts, body }
+const inflight = new Map(); // path -> Promise, so callers share one request
+const revalidating = new Set(); // paths being refreshed in the background
+
+// Where the mirror lives, and what must never go into it.
+const STORE_PREFIX = "omr_cache:";
+const STORE_OWNER = "omr_cache_owner";
+// sessionStorage is user-editable, and /auth/me is what decides which admin
+// routes render. It stays memory-only: a doctored entry must not be able to
+// unlock a screen, even briefly. (The API enforces access regardless.)
+const NO_PERSIST = ["/auth/me"];
+// Big payloads (a full results table, a long leads export) would blow the ~5 MB
+// sessionStorage budget and start throwing. They stay in memory only.
+const MAX_PERSIST_BYTES = 512 * 1024;
+
+// sessionStorage is unavailable in private-mode Safari and inside some embeds,
+// and every call here is an optimisation — never let one break a request.
+function store(fn, fallback = null) {
+  try {
+    return fn(window.sessionStorage);
+  } catch {
+    return fallback;
+  }
+}
+
+// The cached data belongs to whoever was signed in when it was fetched. If the
+// token has changed (another tab signed in, or impersonation swapped identity)
+// the mirror is not ours to read.
+function ownsStore(ss) {
+  return ss.getItem(STORE_OWNER) === (tokenStore.get() || "");
+}
+
+function readPersisted(path) {
+  return store((ss) => {
+    if (!ownsStore(ss)) {
+      purgePersisted(ss);
+      return null;
+    }
+    const raw = ss.getItem(STORE_PREFIX + path);
+    if (!raw) return null;
+    const entry = JSON.parse(raw);
+    return typeof entry?.ts === "number" ? entry : null;
+  });
+}
+
+function writePersisted(path, entry) {
+  if (NO_PERSIST.includes(path)) return;
+  store((ss) => {
+    const raw = JSON.stringify(entry);
+    if (raw.length > MAX_PERSIST_BYTES) return;
+    if (!ownsStore(ss)) purgePersisted(ss);
+    ss.setItem(STORE_OWNER, tokenStore.get() || "");
+    ss.setItem(STORE_PREFIX + path, raw);
+  });
+}
+
+function purgePersisted(ss) {
+  // Collect first, then remove: removing while walking by index reindexes the
+  // store and would skip half the entries.
+  const doomed = [];
+  for (let i = 0; i < ss.length; i++) {
+    const key = ss.key(i);
+    if (key?.startsWith(STORE_PREFIX)) doomed.push(key);
+  }
+  doomed.forEach((key) => ss.removeItem(key));
+  ss.removeItem(STORE_OWNER);
+}
+
+// Memory first; fall back to the mirror on a cold start (reload / new tab) and
+// promote the hit so later reads skip the parse.
+function readCache(path) {
+  const hit = getCache.get(path);
+  if (hit) return hit;
+  const stored = readPersisted(path);
+  if (stored) getCache.set(path, stored);
+  return stored;
+}
+
+function writeCache(path, body) {
+  const entry = { ts: Date.now(), body };
+  getCache.set(path, entry);
+  writePersisted(path, entry);
+}
 
 export function clearApiCache() {
   getCache.clear();
+  inflight.clear();
+  revalidating.clear();
+  store((ss) => purgePersisted(ss));
 }
 
 // --- Diagnosing a thrown fetch ---------------------------------------------
@@ -162,15 +260,46 @@ async function request(path, options = {}) {
   const method = (init.method || "GET").toUpperCase();
   const isGet = method === "GET";
 
-  // `fresh` skips the cache read — used when the answer has to reflect a write
-  // that may or may not have landed (see uploadSheets' duplicate check).
+  // `fresh` skips the cache read *and* the shared-request path — used when the
+  // answer has to reflect a write that may or may not have landed (see
+  // uploadSheets' duplicate check), which a request started before that write
+  // could not tell it.
   if (isGet && !fresh) {
-    const hit = getCache.get(path);
-    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
-      return hit.body; // instant — served from cache
+    const hit = readCache(path);
+    if (hit) {
+      const age = Date.now() - hit.ts;
+      if (age < FRESH_TTL) return hit.body; // instant — served from cache
+      if (age < STALE_TTL) {
+        revalidate(path, init); // instant now, fresh for the next visit
+        return hit.body;
+      }
     }
+    // No usable entry: if an identical GET is already on the wire, wait on it
+    // rather than opening a second one (two components mounting at once).
+    const pending = inflight.get(path);
+    if (pending) return pending;
+
+    const p = send(path, init, method).finally(() => inflight.delete(path));
+    inflight.set(path, p);
+    return p;
   }
 
+  return send(path, init, method);
+}
+
+// Refresh a stale entry out of band. The caller already has its data, so a
+// failure here is not theirs to handle — it just leaves the stale entry in
+// place to be retried on the next read. A 401 still signs out, via send().
+function revalidate(path, init) {
+  if (inflight.has(path) || revalidating.has(path)) return;
+  revalidating.add(path);
+  send(path, init, "GET")
+    .catch(() => {})
+    .finally(() => revalidating.delete(path));
+}
+
+async function send(path, init, method) {
+  const isGet = method === "GET";
   const token = tokenStore.get();
   const headers = { ...(init.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -216,7 +345,7 @@ async function request(path, options = {}) {
   }
 
   if (isGet) {
-    getCache.set(path, { ts: Date.now(), body });
+    writeCache(path, body);
   } else {
     clearApiCache(); // writes invalidate cached reads
   }
@@ -240,7 +369,10 @@ const sheetKey = (name) =>
 
 async function listSheetsFresh(examId) {
   try {
-    return (await request(`/exams/${examId}/sheets`, { fresh: true })) || [];
+    // `fresh` skips the browser cache; `?fresh=1` skips the server's read cache
+    // too. Both matter here: a stale list would say a file never landed and the
+    // retry would upload it twice.
+    return (await request(`/exams/${examId}/sheets?fresh=1`, { fresh: true })) || [];
   } catch {
     return []; // best-effort: the caller falls back to re-sending the file
   }
@@ -286,6 +418,20 @@ export const api = {
   adminRevokeLeadAccess: (email) =>
     request(`/admin/lead-access/${encodeURIComponent(email)}`, { method: "DELETE" }),
   leads: (days = 30) => request(`/tools/leads?days=${days}`),
+
+  // Answer-key checker marking schemes. Editable by super admins and by anyone
+  // they have approved via adminGrantMarkingAccess; the public tool reads the
+  // same rows through toolsApi.keyCheckSchemes.
+  adminListKeycheckSchemes: () => request("/admin/keycheck-schemes"),
+  // PUT, because the exam slug is the key — saving twice leaves one row.
+  adminSetKeycheckScheme: (data) => request("/admin/keycheck-schemes", json("PUT", data)),
+  adminClearKeycheckScheme: (exam) =>
+    request(`/admin/keycheck-schemes/${encodeURIComponent(exam)}`, { method: "DELETE" }),
+  adminListMarkingAccess: () => request("/admin/marking-access"),
+  adminGrantMarkingAccess: (email) =>
+    request("/admin/marking-access", json("POST", { email })),
+  adminRevokeMarkingAccess: (email) =>
+    request(`/admin/marking-access/${encodeURIComponent(email)}`, { method: "DELETE" }),
 
   // Exams + answer keys
   listExams: () => request("/exams"),
@@ -501,6 +647,20 @@ export const toolsApi = {
     } catch (err) {
       console.warn("face check failed:", err.message);
       return null;
+    }
+  },
+
+  // Marking schemes an admin has pinned per exam. Read once when the checker
+  // loads. Resolves to {} on any failure rather than throwing: the tool then
+  // uses its built-in presets, which is what it did before this existed — a
+  // warehouse blip must never stop a candidate scoring their paper.
+  keyCheckSchemes: async () => {
+    try {
+      const body = await toolCall("/tools/answerkey-checker/schemes");
+      return body?.schemes || {};
+    } catch (err) {
+      console.warn("marking schemes lookup failed:", err.message);
+      return {};
     }
   },
 

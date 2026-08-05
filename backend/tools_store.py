@@ -35,6 +35,7 @@ Configuration (environment variables)::
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -122,7 +123,9 @@ def _table_specs():
     from google.cloud import bigquery
     F = bigquery.SchemaField
     return (
-        _access_spec(),
+        _lead_access.spec(),
+        _marking_access.spec(),
+        _scheme_spec(),
         (_RESIZER_ID, [
             F("id", "STRING", mode="REQUIRED"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
@@ -174,6 +177,11 @@ def _table_specs():
             F("id", "STRING", mode="REQUIRED"),
             F("created_at", "TIMESTAMP", mode="REQUIRED"),
             F("exam", "STRING"),
+            # Which paper of that exam — a tier, phase or session. Stored beside
+            # the exam because a tier is a different paper with different marking
+            # (SSC CGL Tier-I is +2 / -0.5 over 100 questions, Tier-II is +3 / -1
+            # over 150), so a Tier-II score read as a Tier-I one is meaningless.
+            F("paper", "STRING"),
             F("shift", "STRING"),
             F("marks_correct", "FLOAT64"),
             F("marks_wrong", "FLOAT64"),
@@ -196,6 +204,14 @@ def _table_specs():
             F("file_kind", "STRING"),
             F("key_detected", "BOOL"),
             F("scheme_detected", "BOOL"),
+            # Where the marks that produced this score came from: 'sheet' (the
+            # response sheet's own note), 'admin' (a row in
+            # tool_keycheck_schemes), 'exam' (the built-in preset), 'manual'
+            # (typed in), or 'unknown' — nothing was stored for the exam, so the
+            # score used whatever was in the boxes. Counting the 'unknown' rows
+            # per exam is how we know which papers still need a marking scheme
+            # set, instead of waiting for a candidate to notice.
+            F("marking_origin", "STRING"),
             # The paper's own date/time as printed on the sheet. Nothing that
             # identifies the candidate (roll number, name, centre) is ever read
             # out of the sheet, let alone sent here.
@@ -322,6 +338,7 @@ def save_keycheck_result(payload, user_agent=None, referrer=None):
         "id": str(uuid.uuid4()),
         "created_at": _now_iso(),
         "exam": _text(payload.get("exam"), 64),
+        "paper": _text(payload.get("paper"), 32),
         "shift": _text(payload.get("shift")),
         "marks_correct": _float(scheme.get("correct")),
         "marks_wrong": _float(scheme.get("wrong")),
@@ -339,6 +356,7 @@ def save_keycheck_result(payload, user_agent=None, referrer=None):
         "file_kind": _text(payload.get("fileKind"), 16),
         "key_detected": _bool(payload.get("keyDetected")),
         "scheme_detected": _bool(payload.get("schemeDetected")),
+        "marking_origin": _text(payload.get("markingOrigin"), 16),
         "test_date": _text(payload.get("testDate"), 32),
         "test_time": _text(payload.get("testTime"), 64),
         "section_summary": _json_text(payload.get("sectionSummary")),
@@ -437,24 +455,415 @@ def keycheck_rank(exam, score, test_date=None, days=KEYCHECK_RANK_DAYS):
 
 
 # --------------------------------------------------------------------------- #
-# Leads: read access + listing
+# Answer-key checker: marking schemes an admin can change without a deploy
 # --------------------------------------------------------------------------- #
-# Who may see candidate contact details. Held in its own app-owned table rather
-# than as a column on the shared `users` table, which other products also read —
-# this keeps a permission that is specific to this app out of shared schema.
-# A super admin grants and revokes; nobody else can read or write it.
-ACCESS_TABLE = os.environ.get("BQ_TOOL_LEAD_ACCESS_TABLE", "tool_lead_access")
-_ACCESS_ID = f"{PROJECT}.{DATASET}.{ACCESS_TABLE}"
+# The problem this solves. How a paper is marked is decided in three places, in
+# this order of authority:
+#
+#   1. the marking note printed on the response sheet itself (read in the
+#      browser — see parseMarkingNote in answerKey.js);
+#   2. a row in THIS table, keyed by exam slug;
+#   3. the built-in per-exam preset shipped in answerKey.js.
+#
+# Plenty of commissions print no marking note at all, and the built-in presets
+# deliberately cover only long-standing patterns — so for a new paper there was
+# nothing to score by but whatever preset happened to be selected, which is how
+# a Punjab Police paper (+1, no penalty) came to be scored as SSC (+2, −0.5).
+# Waiting for a frontend deploy to correct that is far too slow: a wrong score
+# is live for every candidate who checks that shift in the meantime.
+#
+# So a row here pins the marks for one exam, takes effect on the next page load,
+# and is auditable (who changed it, when, and why). ``enforced`` is the escape
+# hatch for the rare case where the sheet's own note is wrong or unparseable:
+# normally the sheet wins, and with ``enforced`` this row wins instead.
+#
+# Written by super admins and by anyone they have added to `tool_marking_access`.
+# Read by the *public* tool, so nothing here may carry personal data.
+SCHEMES_TABLE = os.environ.get("BQ_TOOL_KEYCHECK_SCHEMES_TABLE",
+                               "tool_keycheck_schemes")
+_SCHEMES_ID = f"{PROJECT}.{DATASET}.{SCHEMES_TABLE}"
+
+# A public endpoint serves these on every page load of the tool, and they change
+# a few times a week at most — so one query per worker per window, not per
+# visitor. Short enough that an admin sees their own change go live promptly.
+SCHEME_TTL = int(os.environ.get("BQ_KEYCHECK_SCHEME_TTL", "120"))  # seconds
+_scheme_cache = {"at": 0.0, "rows": []}
+
+# Sanity bounds. Not the marking rules of any particular commission — just wide
+# enough for every real pattern (JEE's +4, UPSC's −0.66, a 500-question paper)
+# and narrow enough that a slipped decimal point or a pasted phone number is
+# rejected rather than silently applied to thousands of scores.
+MAX_MARKS = 100
+MAX_QUESTIONS = 500
+
+# Mirrors SLUG in frontend/src/tools/lib/answerKey.js — keep the two in step.
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,63}$")
 
 
-def _access_spec():
+def _scheme_spec():
     from google.cloud import bigquery
     F = bigquery.SchemaField
-    return (_ACCESS_ID, [
-        F("email", "STRING", mode="REQUIRED"),
-        F("granted_by", "STRING"),
-        F("granted_at", "TIMESTAMP"),
-    ], ["email"])
+    return (_SCHEMES_ID, [
+        # The exam slug from EXAM_OPTIONS in answerKey.js. Slugs are permanent
+        # (see the note on CATALOGUE there), which is what makes it safe to use
+        # one as a storage key.
+        F("exam", "STRING", mode="REQUIRED"),
+        # The exam's display name as it was when the row was saved. Denormalised
+        # on purpose: the admin list and the audit trail should still read
+        # sensibly for a slug that has since been retired from the catalogue.
+        #
+        # It also does real work for an exam the admin console *created* — a paper
+        # announced after the frontend bundle was built, which is the common case
+        # in the weeks around a new recruitment. Such a slug is in no catalogue,
+        # so this label is the only name the tool has for it, and the public
+        # endpoint serves it in order to render the dropdown.
+        F("label", "STRING"),
+        # Which <optgroup> an admin-created exam appears under — the conducting
+        # body, normally. Ignored for an exam that is already in the catalogue,
+        # which carries its own grouping.
+        F("group_name", "STRING"),
+        F("marks_correct", "FLOAT64"),
+        F("marks_wrong", "FLOAT64"),
+        F("marks_skipped", "FLOAT64"),
+        F("total_questions", "INT64"),
+        # True: use these marks even when the response sheet states its own.
+        F("enforced", "BOOL"),
+        # Why this row exists — a link to the notification, usually. Shown to
+        # admins only, never to candidates.
+        F("note", "STRING"),
+        F("updated_by", "STRING"),
+        F("updated_at", "TIMESTAMP"),
+    ], ["exam"])
+
+
+def _bust_scheme_cache():
+    _scheme_cache["at"] = 0.0
+
+
+def _marks_number(raw):
+    """A marks value as a float, or None. Accepts "1/3" as well as "0.3333".
+
+    Commissions state penalties as fractions ("one-third of a mark"), so that is
+    how an admin reading a notification will type one. Rounded to 4dp to match
+    the frontend's own reader (marksValue in answerKey.js) — the difference over
+    a 200-question paper is far below a printed mark.
+    """
+    text = str(raw).strip()
+    parts = text.split("/")
+    if len(parts) == 2:
+        num, den = (_float(p) for p in parts)
+        if num is None or not den:
+            return None
+        return round(num / den, 4)
+    return _float(text)
+
+
+def _scheme_row(r):
+    return {
+        "exam": r["exam"],
+        "label": r["label"],
+        "group": r["group_name"],
+        "correct": r["marks_correct"],
+        "wrong": r["marks_wrong"],
+        "skipped": r["marks_skipped"],
+        "total": r["total_questions"],
+        "enforced": bool(r["enforced"]),
+        "note": r["note"],
+        "updatedBy": r["updated_by"],
+        "updatedAt": r["updated_at"].isoformat() if r["updated_at"] else None,
+    }
+
+
+def list_keycheck_schemes(cached=False):
+    """Every marking-scheme override, newest change first.
+
+    ``cached=True`` is for the public read path; the admin screen passes False
+    so an admin always sees what is actually stored.
+    """
+    import time as _time
+
+    if cached:
+        now = _time.monotonic()
+        if now - _scheme_cache["at"] < SCHEME_TTL:
+            return _scheme_cache["rows"]
+
+    rows = [_scheme_row(r) for r in _q(
+        f"""SELECT exam, label, group_name, marks_correct, marks_wrong,
+                   marks_skipped, total_questions, enforced, note, updated_by,
+                   updated_at
+              FROM `{_SCHEMES_ID}`
+             ORDER BY updated_at DESC""")]
+    if cached:
+        _scheme_cache["rows"] = rows
+        _scheme_cache["at"] = _time.monotonic()
+    return rows
+
+
+def public_keycheck_schemes():
+    """The overrides the public tool needs, keyed by exam slug.
+
+    The marks, plus the exam's name and grouping — which the browser needs to
+    render an exam the console created and this bundle has never heard of.
+    ``note``, ``updatedBy`` and ``updatedAt`` are internal and are not served to
+    candidates. Never raises: the tool falls back to its built-in presets, which
+    is exactly what it did before this table existed.
+    """
+    try:
+        rows = list_keycheck_schemes(cached=True)
+    except Exception:
+        log.exception("could not read marking schemes; using built-in presets")
+        return {}
+    return {
+        r["exam"]: {
+            "correct": r["correct"],
+            "wrong": r["wrong"],
+            "skipped": r["skipped"],
+            "total": r["total"],
+            "enforced": r["enforced"],
+            "label": r["label"],
+            "group": r["group"],
+        }
+        for r in rows if r["exam"]
+    }
+
+
+def upsert_keycheck_scheme(payload, updated_by):
+    """Create or replace one exam's marking scheme. Returns the stored row.
+
+    Values are coerced and bounds-checked here rather than trusted from the
+    request, because this is the one table in the app whose contents change a
+    number every candidate sees.
+    """
+    # Not _text(): that truncates, and a silently shortened slug is a different
+    # exam — a new row rather than an edit to the one the admin meant. The length
+    # cap lives in the pattern instead, so an over-long slug is refused.
+    exam = str(payload.get("exam") or "").strip()
+    if not exam:
+        raise ValueError("exam is required")
+    # A slug is a permanent storage key, the cohort key the warehouse groups by,
+    # and something the public endpoint hands to every browser — so its shape is
+    # enforced rather than assumed. Every catalogue slug already matches.
+    if not _SLUG_RE.match(exam):
+        raise ValueError("exam must be a slug: lowercase letters, digits and "
+                         "hyphens, e.g. punjab-police-constable")
+
+    def marks(field, *, signed=False, required=False):
+        raw = payload.get(field)
+        if raw is None or raw == "":
+            if required:
+                raise ValueError(f"{field} is required")
+            return None
+        value = _marks_number(raw)
+        if value is None:
+            raise ValueError(f"{field} must be a number, e.g. 0.33 or 1/3")
+        if abs(value) > MAX_MARKS:
+            raise ValueError(f"{field} must be between "
+                             f"{-MAX_MARKS if signed else 0} and {MAX_MARKS}")
+        if not signed and value < 0:
+            # The penalty is stored as a magnitude, so a minus sign here is
+            # nearly always someone copying "−1/3" off a notification.
+            hint = (" — enter a penalty as a positive number, e.g. 0.33"
+                    if field == "wrong" else "")
+            raise ValueError(f"{field} cannot be negative{hint}")
+        return value
+
+    # `wrong` is the size of the penalty, not a signed adjustment: 0.33 means a
+    # third of a mark is deducted. 0 means the paper has no negative marking,
+    # and is stored as 0 rather than left null — "no penalty" is a decision an
+    # admin makes, and it has to be distinguishable from "not filled in".
+    correct = marks("correct", required=True)
+    if not correct:
+        raise ValueError("correct must be greater than 0 — a scheme awarding "
+                         "nothing for a right answer would score every "
+                         "candidate zero")
+    wrong = marks("wrong")
+    # Skipped is signed: a handful of papers dock a mark for an unattempted
+    # question, and one or two award part of one.
+    skipped = marks("skipped", signed=True)
+
+    raw_total = payload.get("total")
+    total = None
+    if raw_total not in (None, ""):
+        total = _int(raw_total)
+        # Rejected rather than truncated: _int would quietly turn a paper of
+        # "12.5 questions" into one of 12, and a silently altered question count
+        # is the denominator of every score on that paper.
+        if total is None or float(raw_total) != total:
+            raise ValueError("total must be a whole number of questions")
+        if not 0 < total <= MAX_QUESTIONS:
+            raise ValueError(f"total must be between 1 and {MAX_QUESTIONS}")
+
+    row = {
+        "exam": exam,
+        "label": _text(payload.get("label")),
+        "group_name": _text(payload.get("group"), 64),
+        "marks_correct": correct,
+        "marks_wrong": 0.0 if wrong is None else wrong,
+        "marks_skipped": 0.0 if skipped is None else skipped,
+        "total_questions": total,
+        "enforced": bool(payload.get("enforced")),
+        "note": _text(payload.get("note"), 500),
+        "updated_by": _text(updated_by),
+    }
+
+    _q(f"""MERGE `{_SCHEMES_ID}` T
+           USING (SELECT @exam AS exam) S ON T.exam = S.exam
+           WHEN MATCHED THEN UPDATE SET
+             label = @label, group_name = @group, marks_correct = @correct,
+             marks_wrong = @wrong, marks_skipped = @skipped,
+             total_questions = @total, enforced = @enforced, note = @note,
+             updated_by = @by, updated_at = CURRENT_TIMESTAMP()
+           WHEN NOT MATCHED THEN
+             INSERT (exam, label, group_name, marks_correct, marks_wrong,
+                     marks_skipped, total_questions, enforced, note, updated_by,
+                     updated_at)
+             VALUES (@exam, @label, @group, @correct, @wrong, @skipped, @total,
+                     @enforced, @note, @by, CURRENT_TIMESTAMP())""",
+       [
+           _sp("exam", "STRING", row["exam"]),
+           _sp("label", "STRING", row["label"]),
+           _sp("group", "STRING", row["group_name"]),
+           _sp("correct", "FLOAT64", row["marks_correct"]),
+           _sp("wrong", "FLOAT64", row["marks_wrong"]),
+           _sp("skipped", "FLOAT64", row["marks_skipped"]),
+           _sp("total", "INT64", row["total_questions"]),
+           _sp("enforced", "BOOL", row["enforced"]),
+           _sp("note", "STRING", row["note"]),
+           _sp("by", "STRING", row["updated_by"]),
+       ])
+    _bust_scheme_cache()
+    # Deliberately noisy: this changes the score every candidate sitting this
+    # paper is shown, so an audit needs to be able to reconstruct it later.
+    log.warning("KEYCHECK SCHEME SET exam=%s correct=%s wrong=%s skipped=%s "
+                "total=%s enforced=%s by=%s",
+                row["exam"], row["marks_correct"], row["marks_wrong"],
+                row["marks_skipped"], row["total_questions"], row["enforced"],
+                row["updated_by"])
+    return _scheme_row({**row, "updated_at": None})
+
+
+def delete_keycheck_scheme(exam, deleted_by=None):
+    """Drop one exam's override, so it falls back to its built-in preset."""
+    exam = _text(exam, 64)
+    if not exam:
+        raise ValueError("exam is required")
+    _q(f"DELETE FROM `{_SCHEMES_ID}` WHERE exam = @exam",
+       [_sp("exam", "STRING", exam)])
+    _bust_scheme_cache()
+    log.warning("KEYCHECK SCHEME CLEARED exam=%s by=%s", exam, deleted_by)
+    return exam
+
+
+# --------------------------------------------------------------------------- #
+# Per-feature email allowlists
+# --------------------------------------------------------------------------- #
+# Two permissions in this app are held as their own tiny tables rather than as
+# columns on the shared `users` table, which other products also read — this
+# keeps permissions specific to this app out of shared schema. A super admin
+# grants and revokes; nobody else can read or write them.
+#
+#   tool_lead_access      may see candidate contact details
+#   tool_marking_access   may edit the answer-key checker's marking schemes
+#
+# Both behave identically, so the machinery lives in one class and each
+# permission is an instance of it. The module-level lead_* functions below are
+# kept as-is because app.py calls them by name.
+ACCESS_TABLE = os.environ.get("BQ_TOOL_LEAD_ACCESS_TABLE", "tool_lead_access")
+MARKING_ACCESS_TABLE = os.environ.get("BQ_TOOL_MARKING_ACCESS_TABLE",
+                                      "tool_marking_access")
+
+
+class _AccessList:
+    """An email allowlist table: grant, revoke, list and check membership.
+
+    The list is tiny and changes rarely, but a check runs on every
+    /api/auth/me — i.e. every page load. Querying BigQuery there cost every
+    non-super-admin 600-1300ms per request (measured), so the whole list is
+    held in-process for a short window instead. Per worker and busted on
+    grant/revoke, so a change is live immediately in the worker that made it
+    and within :data:`ACCESS_TTL` everywhere else.
+    """
+
+    def __init__(self, table):
+        self.table_id = f"{PROJECT}.{DATASET}.{table}"
+        self._cache = {"at": 0.0, "emails": frozenset()}
+
+    def spec(self):
+        from google.cloud import bigquery
+        F = bigquery.SchemaField
+        return (self.table_id, [
+            F("email", "STRING", mode="REQUIRED"),
+            F("granted_by", "STRING"),
+            F("granted_at", "TIMESTAMP"),
+        ], ["email"])
+
+    def _emails(self, force=False):
+        import time as _time
+
+        now = _time.monotonic()
+        if not force and now - self._cache["at"] < ACCESS_TTL:
+            return self._cache["emails"]
+        rows = _q(f"SELECT LOWER(email) AS email FROM `{self.table_id}`")
+        self._cache["emails"] = frozenset(r["email"] for r in rows if r["email"])
+        self._cache["at"] = now
+        return self._cache["emails"]
+
+    def bust(self):
+        self._cache["at"] = 0.0
+
+    def allows(self, user, cached=True):
+        """True if ``user`` is on this list.
+
+        Super admins always are; anyone else needs an explicit grant. Never
+        raises — a warehouse problem denies access rather than opening it.
+
+        ``cached=True`` is for the cosmetic flags on /api/auth/me, which only
+        decide whether a nav link is drawn and run on every page load. The
+        endpoints that actually serve or mutate data pass ``cached=False`` so a
+        revoked grant takes effect on the next request rather than up to
+        ACCESS_TTL later — the cache must never be what keeps a door open."""
+        if not user:
+            return False
+        if user.get("role") == "super_admin":
+            return True
+        try:
+            return (user.get("email") or "").lower() in self._emails(force=not cached)
+        except Exception:
+            log.exception("access check failed for %s; denying", self.table_id)
+            return False
+
+    def list(self):
+        rows = _q(f"SELECT email, granted_by, granted_at FROM `{self.table_id}` "
+                  f"ORDER BY granted_at DESC")
+        return [{
+            "email": r["email"],
+            "grantedBy": r["granted_by"],
+            "grantedAt": r["granted_at"].isoformat() if r["granted_at"] else None,
+        } for r in rows]
+
+    def grant(self, email, granted_by):
+        email = (email or "").strip().lower()
+        if not email:
+            raise ValueError("email is required")
+        _q(f"""MERGE `{self.table_id}` T
+               USING (SELECT @e AS email) S ON LOWER(T.email) = S.email
+               WHEN NOT MATCHED THEN
+                 INSERT (email, granted_by, granted_at)
+                 VALUES (@e, @by, CURRENT_TIMESTAMP())""",
+           [_sp("e", "STRING", email), _sp("by", "STRING", granted_by)])
+        self.bust()   # the granting worker sees it at once
+        return email
+
+    def revoke(self, email):
+        email = (email or "").strip().lower()
+        _q(f"DELETE FROM `{self.table_id}` WHERE LOWER(email) = @e",
+           [_sp("e", "STRING", email)])
+        self.bust()
+        return email
+
+
+_lead_access = _AccessList(ACCESS_TABLE)
+_marking_access = _AccessList(MARKING_ACCESS_TABLE)
 
 
 def _q(sql, params=None):
@@ -473,84 +882,42 @@ def _sp(name, type_, value):
     return bigquery.ScalarQueryParameter(name, type_, value)
 
 
-# The grant list is tiny and changes rarely, but the check runs on every
-# /api/auth/me — i.e. every page load. Querying BigQuery there cost every
-# non-super-admin 600-1300ms per request (measured), so the whole list is held
-# in-process for a short window instead. Per worker and busted on grant/revoke,
-# so a change is live immediately in the worker that made it and within
-# ACCESS_TTL everywhere else.
+# How long a cached allowlist is trusted for. See _AccessList.
 ACCESS_TTL = 60  # seconds
-_access_cache = {"at": 0.0, "emails": frozenset()}
 
 
-def _access_emails(force=False):
-    import time as _time
-
-    now = _time.monotonic()
-    if not force and now - _access_cache["at"] < ACCESS_TTL:
-        return _access_cache["emails"]
-    rows = _q(f"SELECT LOWER(email) AS email FROM `{_ACCESS_ID}`")
-    _access_cache["emails"] = frozenset(r["email"] for r in rows if r["email"])
-    _access_cache["at"] = now
-    return _access_cache["emails"]
-
-
-def _bust_access_cache():
-    _access_cache["at"] = 0.0
-
-
+# Leads: candidate contact details.
 def can_view_leads(user, cached=True):
-    """True if ``user`` may see candidate contact details.
-
-    Super admins always may; anyone else needs an explicit grant. Never raises —
-    a warehouse problem denies access rather than opening it.
-
-    ``cached=True`` is for the cosmetic flag on /api/auth/me, which only decides
-    whether a nav link is drawn and runs on every page load. The endpoint that
-    actually serves the data passes ``cached=False`` so a revoked grant takes
-    effect on the next request rather than up to ACCESS_TTL later — the cache
-    must never be what keeps a door open."""
-    if not user:
-        return False
-    if user.get("role") == "super_admin":
-        return True
-    try:
-        return (user.get("email") or "").lower() in _access_emails(force=not cached)
-    except Exception:
-        log.exception("lead-access check failed; denying")
-        return False
+    return _lead_access.allows(user, cached=cached)
 
 
 def list_lead_access():
-    rows = _q(f"SELECT email, granted_by, granted_at FROM `{_ACCESS_ID}` "
-              f"ORDER BY granted_at DESC")
-    return [{
-        "email": r["email"],
-        "grantedBy": r["granted_by"],
-        "grantedAt": r["granted_at"].isoformat() if r["granted_at"] else None,
-    } for r in rows]
+    return _lead_access.list()
 
 
 def grant_lead_access(email, granted_by):
-    email = (email or "").strip().lower()
-    if not email:
-        raise ValueError("email is required")
-    _q(f"""MERGE `{_ACCESS_ID}` T
-           USING (SELECT @e AS email) S ON LOWER(T.email) = S.email
-           WHEN NOT MATCHED THEN
-             INSERT (email, granted_by, granted_at)
-             VALUES (@e, @by, CURRENT_TIMESTAMP())""",
-       [_sp("e", "STRING", email), _sp("by", "STRING", granted_by)])
-    _bust_access_cache()   # the granting worker sees it at once
-    return email
+    return _lead_access.grant(email, granted_by)
 
 
 def revoke_lead_access(email):
-    email = (email or "").strip().lower()
-    _q(f"DELETE FROM `{_ACCESS_ID}` WHERE LOWER(email) = @e",
-       [_sp("e", "STRING", email)])
-    _bust_access_cache()
-    return email
+    return _lead_access.revoke(email)
+
+
+# Marking schemes: who may change how the answer-key checker scores a paper.
+def can_edit_marking(user, cached=True):
+    return _marking_access.allows(user, cached=cached)
+
+
+def list_marking_access():
+    return _marking_access.list()
+
+
+def grant_marking_access(email, granted_by):
+    return _marking_access.grant(email, granted_by)
+
+
+def revoke_marking_access(email):
+    return _marking_access.revoke(email)
 
 
 def list_leads(days=30, limit=500):
@@ -567,7 +934,7 @@ def list_leads(days=30, limit=500):
     cutoff = midnight - timedelta(days=days - 1)
     rows = _q(
         f"""SELECT created_at, name, phone, exam, tool, preset_label
-              FROM `{_ACCESS_ID.rsplit('.', 1)[0]}.{LEADS_TABLE}`
+              FROM `{_LEADS_ID}`
              WHERE created_at >= @cutoff
              ORDER BY created_at DESC
              LIMIT {limit}""",

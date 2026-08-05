@@ -47,6 +47,13 @@ super-admin cannot be removed, and no one can demote/revoke their own account.
 | GET | `/api/exams/{id}/validation` | Upload validation summary |
 | POST | `/api/exams/{id}/grade` | Grade all validated sheets |
 | GET | `/api/exams/{id}/results` | Results dashboard data |
+| GET | `/api/tools/answerkey-checker/schemes` | Admin-set exam marking schemes (public) |
+| GET | `/api/admin/keycheck-schemes` | List marking-scheme overrides |
+| PUT | `/api/admin/keycheck-schemes` | Set one exam's marking scheme, or add an exam |
+| DELETE | `/api/admin/keycheck-schemes/{exam}` | Clear one exam's marking scheme |
+| GET | `/api/admin/marking-access` | Who may edit marking (super admin) |
+| POST | `/api/admin/marking-access` | Approve a marking editor (super admin) |
+| DELETE | `/api/admin/marking-access/{email}` | Revoke a marking editor (super admin) |
 
 ---
 
@@ -304,6 +311,102 @@ Full dashboard payload:
 ```
 Rows are sorted by score descending. `passRate` uses a 40%-of-maxScore
 threshold. → `200` · `404`.
+
+---
+
+## Answer Key Checker — marking schemes
+
+The public Answer Key Checker (`/answerkey-checker`) decides how to score a paper
+from three sources, in this order of authority:
+
+1. the marking note printed on the candidate's own response sheet, read in the
+   browser;
+2. a row set through the endpoints below;
+3. the built-in per-exam preset in `frontend/src/tools/lib/answerKey.js`.
+
+Sources 2 and 3 exist because plenty of commissions print no marking note at
+all. Without one, the tool falls back to a preset — and if the exam has none, to
+whatever marks were already in the boxes. That is how a Punjab Police paper
+(+1, no negative marking) came to be scored as SSC (+2, −0.5). A row set here is
+live within a couple of minutes (see `SCHEME_TTL`), with no frontend deploy.
+
+**Who may change marking.** Super admins always, plus anyone a super admin has
+approved via `/api/admin/marking-access`. Granting that permission is
+super-admin-only. A change alters the score shown to every candidate who checks
+that paper, so it is deliberately not open to all admins. `GET /api/auth/me`
+returns `canEditMarking` so the UI can hide what would `403`.
+
+### `GET /api/tools/answerkey-checker/schemes`
+**Public** — the tool that reads it is. Returns the marks only; the internal
+fields (`note`, `updatedBy`, `updatedAt`) are stripped. Cached server-side and
+sent with a matching `Cache-Control`. Never fails the caller: a warehouse
+problem answers `{ "schemes": {} }` and the tool uses its built-in presets.
+
+→ `200 { "schemes": { "<exam-slug>": { "correct", "wrong", "skipped", "total", "enforced", "label", "group" } } }`
+
+`label` and `group` are served because they do real work in the browser: a slug
+the shipped bundle has never heard of is an exam **added** through the console
+(see below), and these two are the only name and grouping the tool has for it.
+
+### `GET /api/admin/keycheck-schemes`
+Every override, with who set it and why, newest change first.
+→ `200 { "schemes": [ { "exam", "label", "correct", "wrong", "skipped", "total", "enforced", "note", "updatedBy", "updatedAt" } ] }` · `403`.
+
+### `PUT /api/admin/keycheck-schemes`
+Create or replace one exam's scheme. `PUT` because the exam slug is the key —
+sending the same body twice leaves one row.
+
+This is also how an exam is **added**. A slug that is in no shipped catalogue
+creates a new exam rather than overriding one: it appears in the candidate-facing
+dropdown as soon as the row exists, is rankable like any other, and needs no
+deploy — which is what makes a recruitment announced after the last release
+usable the same day. Such a row must carry a `label` (nothing else names it) and
+should carry a `group`. Clearing it removes the exam again.
+
+Body: `{ "exam", "label"?, "correct", "wrong"?, "skipped"?, "total"?, "enforced"?, "note"?, "group"? }`
+
+* `exam` — the row's permanent id: lowercase letters, digits and hyphens, 2–64
+  characters (`^[a-z0-9][a-z0-9-]{1,63}$`). For an existing exam it is the slug
+  from the checker's list (`EXAM_OPTIONS`); for a new one it is whatever the
+  console generated from the name. Never reuse or rename one — it is the cohort
+  key every score is filed under, so a rename orphans the rows already recorded.
+
+  For an exam with **tiers** the id is `<exam>#<paper>` — `ssc-cgl#tier-2` is
+  Tier-II of SSC CGL. Both halves must be slugs. A tier is a different paper with
+  different marking (Tier-I is +2 / −0.5 over 100 questions, Tier-II is +3 / −1
+  over 150), so each is stored and corrected separately, and a per-tier row never
+  creates a new exam. The tiers an exam has come from `papersForExam()` in
+  `answerKey.js`; `POST /api/tools/answerkey-checker/results` records the paper in
+  its own column beside the exam.
+* `label` — the exam's display name. Required in practice for a new exam.
+* `group` — the `<optgroup>` a new exam appears under, normally the conducting
+  body. An existing group name files it alongside those papers; blank puts it
+  under "Recently added". Ignored for an exam already in the catalogue.
+* `correct` — marks per correct answer. Required, must be `> 0`.
+* `wrong` — the penalty as a **positive** number. `0` means no negative
+  marking. `"1/3"` is accepted as well as `0.3333`.
+* `skipped` — marks per unattempted question; may be negative.
+* `total` — optional. Only extends the question count; a parsed sheet's own
+  count still wins where it is higher.
+* `enforced` — `true` makes this row beat a marking note printed on the
+  response sheet. Leave it off unless that note is wrong or unreadable: the
+  sheet is normally the better source, being the paper in front of the
+  candidate.
+
+→ `200 { …the stored row… }` · `400` on failed validation · `403`.
+
+### `DELETE /api/admin/keycheck-schemes/{exam}`
+Clear one exam's override. A catalogue exam falls back to its built-in preset; an
+exam that was *added* here has no preset behind it, so it disappears from the
+checker (scores already recorded against it are kept). → `204` · `403`.
+
+### `GET|POST|DELETE /api/admin/marking-access`
+List / approve / revoke the people who may edit marking schemes.
+**Super admins only** (`403` otherwise). `POST` body: `{ "email": "..." }`.
+Super admins always have access and need no grant.
+
+Both writes are logged at WARNING with the actor, the exam and the marks, since
+they change a published number.
 
 ---
 

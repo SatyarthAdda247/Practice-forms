@@ -10,6 +10,7 @@ import Results from "./pages/Results.jsx";
 import Admin from "./pages/Admin.jsx";
 import Usage from "./pages/Usage.jsx";
 import Leads from "./pages/Leads.jsx";
+import MarkingSchemes from "./pages/MarkingSchemes.jsx";
 import ImageResizer from "./pages/ImageResizer.jsx";
 import AnswerKeyChecker from "./pages/AnswerKeyChecker.jsx";
 import GovtExamForm from "./pages/GovtExamForm.jsx";
@@ -46,6 +47,17 @@ function RequireAdmin({ children }) {
 function RequireLeadAccess({ children }) {
   const { user } = useAuth();
   if (!(user?.role === "super_admin" || user?.canViewLeads)) {
+    return <Navigate to="/exams" replace />;
+  }
+  return children;
+}
+
+// Marking schemes decide the score every candidate is shown in the public Answer
+// Key Checker, so the same rule as leads: super admins always, others only once a
+// super admin approves them (canEditMarking comes from /api/auth/me).
+function RequireMarkingAccess({ children }) {
+  const { user } = useAuth();
+  if (!(user?.role === "super_admin" || user?.canEditMarking)) {
     return <Navigate to="/exams" replace />;
   }
   return children;
@@ -107,6 +119,10 @@ export default function App() {
           <Route path="/admin" element={<RequireAdmin><Admin /></RequireAdmin>} />
           <Route path="/admin/usage" element={<RequireSuperAdmin><Usage /></RequireSuperAdmin>} />
           <Route path="/leads" element={<RequireLeadAccess><Leads /></RequireLeadAccess>} />
+          <Route
+            path="/admin/marking"
+            element={<RequireMarkingAccess><MarkingSchemes /></RequireMarkingAccess>}
+          />
           <Route path="*" element={<Navigate to="/exams" replace />} />
         </Route>
       </Routes>
