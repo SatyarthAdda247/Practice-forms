@@ -2392,23 +2392,29 @@ var STATE_LANG = {
 var STATE_MEDIUM_LANGS = {
   'ANDAMAN & NICOBAR ISLANDS': ['English', 'Hindi'],
   'ANDAMAN AND NICOBAR ISLANDS': ['English', 'Hindi'],
+  'ANDAMAN & NICOBAR': ['English', 'Hindi'],
   'ANDHRA PRADESH': ['English', 'Hindi', 'Telugu'],
   'ARUNACHAL PRADESH': ['English', 'Hindi'],
   'ASSAM': ['English', 'Hindi', 'Assamese'],
   'BIHAR': ['English', 'Hindi'],
-  'CHANDIGARH': ['English', 'Hindi'],
+  'CHANDIGARH': ['English', 'Hindi', 'Punjabi'],
   'CHHATTISGARH': ['English', 'Hindi'],
+
   'DADRA & NAGAR HAVELI AND DAMAN & DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
   'DADRA AND NAGAR HAVELI AND DAMAN AND DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+  'DADRA & NAGAR HAVELI & DAMAN & DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
   'DADRA & NAGAR HAVELI': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+  'DADRA AND NAGAR HAVELI': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
   'DAMAN & DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+  'DAMAN AND DIU': ['English', 'Hindi', 'Gujarati', 'Marathi', 'Konkani'],
+
   'DELHI': ['English', 'Hindi'],
   'DELHI (NCT)': ['English', 'Hindi'],
   'DELHI / NCR': ['English', 'Hindi'],
   'DELHI-NCR': ['English', 'Hindi'],
   'GOA': ['English', 'Hindi', 'Konkani'],
   'GUJARAT': ['English', 'Hindi', 'Gujarati'],
-  'HARYANA': ['English', 'Hindi'],
+  'HARYANA': ['English', 'Hindi', 'Punjabi'],
   'HIMACHAL PRADESH': ['English', 'Hindi'],
   'JAMMU & KASHMIR': ['English', 'Hindi', 'Urdu'],
   'JAMMU AND KASHMIR': ['English', 'Hindi', 'Urdu'],
@@ -2436,12 +2442,25 @@ var STATE_MEDIUM_LANGS = {
   'WEST BENGAL': ['English', 'Hindi', 'Bengali']
 };
 
+function getRawMediumLangsForState(st) {
+  if (!st) return null;
+  var key = st.toString().toUpperCase().replace(/&AMP;/g, '&').replace(/ AND /g, ' & ').replace(/\s+/g, ' ').trim();
+  if (STATE_MEDIUM_LANGS[key]) return STATE_MEDIUM_LANGS[key];
+
+  for (var k in STATE_MEDIUM_LANGS) {
+    if (key.indexOf(k) !== -1 || k.indexOf(key) !== -1) {
+      return STATE_MEDIUM_LANGS[k];
+    }
+  }
+  return null;
+}
+
 function updateMediumOptions(st) {
   var medSel = $('selMedium');
   if (!medSel) return;
 
-  var selectedState = (st || val('selExamState') || val('selVacancyState') || '').trim().toUpperCase();
-  var rawLangs = STATE_MEDIUM_LANGS[selectedState];
+  var selectedState = st || val('selExamState') || val('selVacancyState');
+  var rawLangs = getRawMediumLangsForState(selectedState);
   var combos = [];
 
   if (!selectedState || !rawLangs) {
