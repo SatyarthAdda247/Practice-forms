@@ -61,8 +61,17 @@ export default function ExamFormsNavbar({ searchQuery, onSearchChange }) {
           />
         </div>
 
-        {/* ── Right: Practice user (Name + Phone identity) ── */}
+        {/* ── Right: Practice user + Admin button ── */}
         <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => navigate("/Exam-forms/Admin")}
+            title="Open Admin Analytics & Verification Dashboard"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-300 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors focus:outline-none"
+          >
+            <Icon name="admin_panel_settings" size={16} className="text-red-600" />
+            <span className="hidden sm:inline">Admin</span>
+          </button>
+
           {practiceUser && (
             <div className="flex items-center gap-2.5 bg-slate-100 border border-slate-200 pl-3 pr-2 py-1.5 rounded-full">
               <span className="w-6 h-6 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center uppercase shrink-0">
