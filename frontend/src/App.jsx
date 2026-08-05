@@ -100,6 +100,12 @@ export default function App() {
         <Route path="/exam-forms/Admin" element={<ExamFormsAdmin />} />
         <Route path="/Exam-forms/admin" element={<ExamFormsAdmin />} />
         <Route path="/Exam-forms/Admin" element={<ExamFormsAdmin />} />
+        <Route path="/exam-forms/admin.html" element={<ExamFormsAdmin />} />
+        <Route path="/exam-forms/Admin.html" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms/admin.html" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms/Admin.html" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms-Clerk/admin" element={<ExamFormsAdmin />} />
+        <Route path="/Exam-forms-Clerk/admin.html" element={<ExamFormsAdmin />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<Navigate to="/exams" replace />} />
           <Route path="/exams" element={<ExamsList />} />

@@ -947,8 +947,81 @@
     }
     if(sessionStorage.getItem('ibps_email_verified')==='Y'){
       badge('label[for="txtemail"]'); lock(['txtemail','seldomain','txtcemail']);
+<script>
+(function(){
+  var u;
+  try { u = JSON.parse(localStorage.getItem('adda_practice_user')); } catch(e){}
+  if(!u) return;
+
+  function setIfEmpty(id, val){
+    if (!val) return;
+    var el = document.getElementById(id);
+    if(el && !el.value){
+      el.value = val;
+      el.dispatchEvent(new Event('input', {bubbles:true}));
+      el.dispatchEvent(new Event('change', {bubbles:true}));
+      el.dispatchEvent(new Event('blur', {bubbles:true}));
     }
-  }catch(e){}
+  }
+
+  // Mobile
+  if(u.phone && /^\d{10}$/.test(u.phone)){
+    setIfEmpty('txtmobile', u.phone);
+    setIfEmpty('txtcmobile', u.phone);
+  }
+
+  // Name
+  if(u.name){
+    var clean = u.name.trim().toUpperCase().replace(/[^A-Z '.-]/g, '');
+    var parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length > 0) {
+      setIfEmpty('fullname', parts[0]);
+      setIfEmpty('cfullname', parts[0]);
+      setIfEmpty('txtfirstname', parts[0]);
+      setIfEmpty('txtcfirstname', parts[0]);
+    }
+    if (parts.length > 2) {
+      var mid = parts.slice(1, -1).join(' ');
+      setIfEmpty('middlename', mid);
+      setIfEmpty('cmiddlename', mid);
+      setIfEmpty('txtmiddlename', mid);
+      setIfEmpty('txtcmiddlename', mid);
+    }
+    if (parts.length > 1) {
+      var last = parts[parts.length - 1];
+      setIfEmpty('lastname', last);
+      setIfEmpty('clastname', last);
+      setIfEmpty('txtlastname', last);
+      setIfEmpty('txtclastname', last);
+    }
+  }
+
+  // Email
+  if(u.email && u.email.indexOf('@') !== -1){
+    var eParts = u.email.trim().toLowerCase().split('@');
+    var local = eParts[0];
+    var dom = eParts[1];
+
+    setIfEmpty('txtemail', local);
+    setIfEmpty('txtcemail', u.email.trim().toLowerCase());
+
+    var selDom = document.getElementById('seldomain');
+    if(selDom && !selDom.value && dom){
+      var exists = Array.prototype.some.call(selDom.options, function(o){ return o.value === dom; });
+      if(exists){
+        selDom.value = dom;
+      } else {
+        selDom.value = 'Others';
+        var oth = document.getElementById('txtothdomain');
+        if(oth) {
+          oth.value = dom;
+          var othDiv = document.getElementById('othdomain');
+          if(othDiv) othDiv.classList.remove('hide');
+        }
+      }
+      selDom.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  }
 })();
 </script>
 
