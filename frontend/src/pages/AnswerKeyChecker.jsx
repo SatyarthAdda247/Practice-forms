@@ -73,7 +73,9 @@ function detectedChips(detected) {
     if (scheme.wrong != null) marks.push(`−${round(scheme.wrong)} per wrong`);
     chips.push(marks.join(" · "));
   }
-  if (sections) chips.push(`${sections} section${sections > 1 ? "s" : ""}`);
+  if (sections?.length) {
+    chips.push(`${sections.length} section${sections.length > 1 ? "s" : ""}`);
+  }
   if (meta?.testDate) chips.push([meta.testDate, meta.testTime].filter(Boolean).join(" · "));
   return chips;
 }
@@ -296,11 +298,19 @@ export default function AnswerKeyChecker() {
     examRef.current = value;
     paperRef.current = nextPaper;
     applyExamScheme(value, nextPaper);
+    /* And the shift/date goes with it. It is the date of one particular sitting —
+       read off a sheet, or typed by the candidate — so once the exam changes it
+       belongs to a paper that is no longer selected. Leaving it made every exam
+       look as though it were pre-set to the same sitting, which is worse than
+       empty: it is the field that says *which* shift this score is for, and it
+       goes to the warehouse under that claim. */
+    setShift("");
   };
 
   // Switching tier switches paper: different marks, and usually a different
-  // number of questions.
+  // number of questions. The sitting changes with it, so the shift clears here too.
   const pickPaper = (value) => {
+    setShift("");
     setPaper(value);
     paperRef.current = value;
     applyExamScheme(exam, value);
@@ -393,7 +403,7 @@ export default function AnswerKeyChecker() {
         // below has to say so rather than showing marks that were read and then
         // not used.
         schemeRefused: refused,
-        sections: new Set(Object.values(found)).size,
+        sections: [...new Set(Object.values(found))],
         meta: meta || {},
       });
 
@@ -569,7 +579,7 @@ export default function AnswerKeyChecker() {
         // stated scheme if the marks themselves were stated.
         scheme: statesMarks(stated) ? stated : null,
         schemeRefused: statesMarks(stated) && enforced,
-        sections: new Set(Object.values(parsed.sections)).size,
+        sections: [...new Set(Object.values(parsed.sections))],
         meta: parsed.meta || {},
       };
       const shiftFromSheet = [parsed.meta?.testDate, parsed.meta?.testTime]
@@ -936,6 +946,16 @@ export default function AnswerKeyChecker() {
               {!detected.scheme && (
                 <span className="text-body-md text-tool-secondary">
                   — this file does not state its marking scheme, so check the marks above.
+                </span>
+              )}
+              {/* The count on its own reads as a surprise — a candidate thinks in
+                  the paper's *parts* (RRB JE CBT-2 is Part A of 100 and Part B of
+                  50, so "two"), while the sheet prints a heading per *subject*
+                  (Part A's five plus Part B, so six). Naming them settles it at a
+                  glance instead of inviting a bug report. */}
+              {detected.sections?.length > 1 && (
+                <span className="text-body-md text-tool-secondary">
+                  — {detected.sections.join(" · ")}
                 </span>
               )}
               {/* An enforced override means marks were read off the sheet and
