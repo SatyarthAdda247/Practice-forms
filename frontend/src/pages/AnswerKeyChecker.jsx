@@ -185,6 +185,12 @@ export default function AnswerKeyChecker() {
   const [detected, setDetected] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState("");
+  /* Separate from `error`, because "read fine, now do the next thing" is not a
+     failure and must not be painted as one. An official answer key uploaded on
+     its own is the case: every answer in it was read, and the only thing left is
+     the candidate's own responses — printing that in error red told people the
+     upload had failed, and they retried the same file instead of typing. */
+  const [notice, setNotice] = useState("");
   const [report, setReport] = useState(null);
   const [filter, setFilter] = useState("all");
   // The emailed response-sheet link, and how far the fetch has got.
@@ -344,6 +350,7 @@ export default function AnswerKeyChecker() {
   const takeFile = async (file) => {
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) return setError("File is larger than 20MB.");
+    setNotice("");
     setFileLabel({ name: file.name, hint: "Reading…" });
     /* Settle the admin-set schemes before reading the sheet, rather than racing
        them. A sheet dropped in the first moment of the page's life would
@@ -416,16 +423,21 @@ export default function AnswerKeyChecker() {
       // Half a sheet means typing the other half, so put the boxes in reach.
       // A complete one needs neither, so fold them away again.
       setManualOpen(!responses.size || !hasKey);
-      // A key without responses is not an error, but nothing can be scored until
-      // the candidate supplies theirs, so say so where the errors are read.
-      setError(
+      /* Nothing failed here, so nothing goes in `error`. A file holding only the
+         official key — which is what a commission publishes after the paper, and
+         what candidates upload most often — has been read completely; the score
+         is simply waiting on answers only the candidate has. Said as the next
+         step rather than as a fault with their file. */
+      setError("");
+      setNotice(
         responses.size
           ? ""
-          : "That file holds the official answer key but not your own answers. Paste your " +
-              "responses on the left and press Analyze.",
+          : `Read the official answer key for all ${key.size} questions. Add your own answers ` +
+              "on the left — type them, or upload your response sheet — then press Analyze.",
       );
     } catch (e) {
       console.warn("response sheet parse failed:", e);
+      setNotice("");
       setError(fileErrorMessage(file, e));
       setFileLabel(null);
       setDetected(null);
@@ -450,6 +462,8 @@ export default function AnswerKeyChecker() {
        marked as — the two must name the same paper. */
     const useExam = examRef.current;
     const usePaper = paperRef.current;
+    // Whatever the upload had to say has been superseded by this run.
+    setNotice("");
     // Both of these are fixed in the answer boxes, so open them along with the
     // message rather than pointing at a row the candidate has to find first.
     if (!responses.size) {
@@ -536,6 +550,7 @@ export default function AnswerKeyChecker() {
 
     setUrlBusy(true);
     setError("");
+    setNotice("");
     setReport(null);
     setRank(null);
     // Same reasoning as takeFile: decide the marking with the admin-set schemes
@@ -634,6 +649,7 @@ export default function AnswerKeyChecker() {
     setShift("");
     setReport(null);
     setError("");
+    setNotice("");
     setKeyUrl("");
     setRank(null);
     setManualOpen(false);
@@ -1031,6 +1047,14 @@ export default function AnswerKeyChecker() {
 
           <div className="flex flex-wrap justify-between items-center gap-3">
             {error && <p className="text-body-md text-tool-error">{error}</p>}
+            {/* Not an error — the file was read. Green tick, not red text, so a
+                candidate can tell "done, one thing left" from "that failed". */}
+            {!error && notice && (
+              <p className="text-body-md text-tool-secondary flex items-start gap-2">
+                <Icon name="check_circle" size={18} className="shrink-0 mt-0.5" />
+                <span>{notice}</span>
+              </p>
+            )}
             <div className="flex gap-3 ml-auto">
               <button
                 type="button"
