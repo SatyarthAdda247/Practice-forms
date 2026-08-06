@@ -194,6 +194,11 @@ except Exception as exc:
 # Provisions the two public-tool tables. Never raises — a problem there must
 # not stop the portal API from booting (see tools_store.init).
 tools_store.init()
+# Provisions the exam-forms tracking table (BigQuery, same dataset). Never raises.
+try:
+    exam_forms_store.init()
+except Exception as exc:  # noqa: BLE001
+    print(f"[app] Warning: exam-forms table init skipped ({exc})")
 
 
 # --------------------------------------------------------------------------- #
@@ -1273,11 +1278,16 @@ def _exam_forms_admin_key():
     k = os.environ.get("EXAM_FORMS_ADMIN_KEY", "").strip()
     if k:
         return k
-    try:  # fall back to the git-ignored backend config file
+    try:  # optional git-ignored backend config file
         import exam_forms_config as _cfg
-        return (getattr(_cfg, "EXAM_FORMS_ADMIN_KEY", "") or "").strip()
+        v = (getattr(_cfg, "EXAM_FORMS_ADMIN_KEY", "") or "").strip()
+        if v:
+            return v
     except Exception:  # noqa: BLE001
-        return ""
+        pass
+    # Default so the admin dashboard works out-of-the-box on a plain deploy.
+    # Matches the frontend EXAM_ADMIN_KEY; override via env for stronger security.
+    return "adda247@admin"
 
 
 EXAM_FORMS_ADMIN_KEY = _exam_forms_admin_key()

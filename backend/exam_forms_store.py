@@ -1,218 +1,231 @@
-"""Persist practice exam-form submissions to DynamoDB.
+"""BigQuery storage for practice exam-form submission tracking.
 
-The exam-form replicas (IBPS PO / IBPS Clerk / …) are static, client-side
-practice forms. This module is the ONLY place their captured data touches a
-server: the frontend POSTs a snapshot to /api/exam-forms/save and this writes
-it to DynamoDB.
+Reuses the SAME BigQuery project/dataset/credentials as the standalone tools
+(tools_store) — which are already configured in production — so tracking works
+after a normal deploy with no extra secrets, env vars, or AWS/DynamoDB setup.
 
-Credentials never reach the browser. boto3 resolves AWS credentials from the
-standard chain (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars, a shared
-profile, or an IAM role) — configure them server-side only.
+Append-only event log (one row per save/sign-in/click). The admin dashboard
+reads the latest row per (identifier, exam_id). Day-partitioned on created_at
+and clustered, so reads stay cheap as it grows.
 
-Single-table design (matches the frontend practiceStore convention):
-    PK = STUDENT#<identifier>      (identifier = mobile or email)
-    SK = EXAM#<examId>            (e.g. EXAM#IBPS-CLERK)
-An upsert overwrites the same item as the candidate progresses, so the table
-holds one current row per (candidate, exam).
+Public API (kept stable for app.py):
+    save(exam_id, identifier, data, step=, user_agent=, referrer=) -> {"id": ...}
+    list_all(limit=, days=) -> [ {identifier, examId, candidateName, ...}, ... ]
+    Unavailable  — raised when BigQuery is not reachable/configured.
+
+Config (env, all optional — defaults match the rest of the app):
+    BQ_PROJECT               default 'adda247-dev'
+    BQ_DATASET               default 'Aspirant_portal'
+    BQ_EXAM_FORMS_TABLE      default 'exam_form_submissions'
 """
 
+import json
+import logging
 import os
-import time
+import uuid
+from datetime import datetime, timedelta, timezone
+
+log = logging.getLogger(__name__)
+
+PROJECT = os.environ.get("BQ_PROJECT", "adda247-dev")
+DATASET = os.environ.get("BQ_DATASET", "Aspirant_portal")
+TABLE = os.environ.get("BQ_EXAM_FORMS_TABLE", "exam_form_submissions")
+_TABLE_ID = f"{PROJECT}.{DATASET}.{TABLE}"
+
+MAX_JSON = 40_000
 
 
 class Unavailable(RuntimeError):
-    """Raised when DynamoDB writes are not configured/available.
+    """Raised when the submissions store is not reachable/configured.
 
-    The endpoint maps this to a 503 so a storage outage never breaks the
-    candidate's practice run (the frontend ignores the response)."""
-
-
-# Lazily-created boto3 table handle, cached across requests.
-_TABLE = None
-_INIT_ERROR = None
+    Endpoints map this to 503 so a storage outage never breaks a practice run
+    (the frontend ignores the response)."""
 
 
-def _table():
-    """Return a cached DynamoDB Table resource, or raise Unavailable."""
-    global _TABLE, _INIT_ERROR
-    if _TABLE is not None:
-        return _TABLE
-    if _INIT_ERROR is not None:
-        raise Unavailable(_INIT_ERROR)
+_client_singleton = None
 
-    # Credentials/config resolve from the backend config file first
-    # (exam_forms_config.py), then fall back to standard AWS env vars.
-    cfg = {}
+
+def _client():
+    global _client_singleton
+    if _client_singleton is None:
+        from google.cloud import bigquery
+        _client_singleton = bigquery.Client(project=PROJECT)
+    return _client_singleton
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _text(value, limit=256):
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s[:limit] if s else None
+
+
+def _json_text(value, limit=MAX_JSON):
     try:
-        import exam_forms_config as _cfg  # server-side only; never reaches the browser
-        cfg = {
-            "table": (getattr(_cfg, "EXAM_FORMS_DDB_TABLE", "") or "").strip(),
-            "region": (getattr(_cfg, "AWS_REGION", "") or "").strip(),
-            "key": (getattr(_cfg, "AWS_ACCESS_KEY_ID", "") or "").strip(),
-            "secret": (getattr(_cfg, "AWS_SECRET_ACCESS_KEY", "") or "").strip(),
-        }
-    except Exception:  # noqa: BLE001 — config file optional
-        cfg = {}
+        s = json.dumps(value, separators=(",", ":"))
+    except (TypeError, ValueError):
+        return None
+    return s[:limit]
 
-    table_name = cfg.get("table") or os.environ.get("EXAM_FORMS_DDB_TABLE", "").strip()
-    if not table_name:
-        _INIT_ERROR = "EXAM_FORMS_DDB_TABLE is not set (backend config or env)"
-        raise Unavailable(_INIT_ERROR)
 
+# --------------------------------------------------------------------------- #
+# Schema / init
+# --------------------------------------------------------------------------- #
+def init():
+    """Create the submissions table if absent (idempotent, additive). Never
+    raises — a provisioning problem must not stop the API from booting; writes
+    then fail individually and are logged."""
+    from google.cloud import bigquery
+    F = bigquery.SchemaField
+    schema = [
+        F("id", "STRING", mode="REQUIRED"),
+        F("created_at", "TIMESTAMP", mode="REQUIRED"),
+        F("exam_id", "STRING"),
+        F("identifier", "STRING"),          # mobile or email — the candidate key
+        F("candidate_name", "STRING"),
+        F("candidate_phone", "STRING"),
+        F("step", "STRING"),
+        F("event", "STRING"),               # portal-entry / start-practice-click / form-save
+        F("data", "STRING"),                # JSON snapshot of the form fields
+        F("user_agent", "STRING"),
+        F("referrer", "STRING"),
+    ]
     try:
-        import boto3  # imported lazily so the backend runs without boto3 installed
-    except ImportError:
-        _INIT_ERROR = "boto3 is not installed"
-        raise Unavailable(_INIT_ERROR)
-
-    region = (
-        cfg.get("region")
-        or os.environ.get("AWS_REGION")
-        or os.environ.get("AWS_DEFAULT_REGION")
-        or "ap-south-1"
-    )
-    # Pass explicit keys only when the config file provides them; otherwise let
-    # boto3's default chain (env vars / shared profile / IAM role) supply them.
-    boto_kwargs = {"region_name": region}
-    if cfg.get("key") and cfg.get("secret"):
-        boto_kwargs["aws_access_key_id"] = cfg["key"]
-        boto_kwargs["aws_secret_access_key"] = cfg["secret"]
-
-    try:
-        resource = boto3.resource("dynamodb", **boto_kwargs)
-        _TABLE = resource.Table(table_name)
-    except Exception as exc:  # noqa: BLE001
-        _INIT_ERROR = f"could not initialise DynamoDB: {exc}"
-        raise Unavailable(_INIT_ERROR)
-    return _TABLE
+        client = _client()
+        table = bigquery.Table(_TABLE_ID, schema=schema)
+        table.time_partitioning = bigquery.TimePartitioning(
+            type_=bigquery.TimePartitioningType.DAY, field="created_at"
+        )
+        table.clustering_fields = ["exam_id", "identifier"]
+        created = client.create_table(table, exists_ok=True)
+        have = {f.name for f in created.schema}
+        missing = [f for f in schema if f.name not in have and f.mode != "REQUIRED"]
+        if missing:
+            created.schema = list(created.schema) + missing
+            client.update_table(created, ["schema"])
+    except Exception as exc:  # noqa: BLE001 — auxiliary table, never fatal
+        log.warning("exam_forms_store: could not provision %s: %s", _TABLE_ID, exc)
 
 
-def _sanitize(value):
-    """DynamoDB rejects empty strings inside some contexts and cannot store
-    floats via the resource API; keep values to JSON-safe str/num/bool/dict."""
-    if isinstance(value, dict):
-        return {k: _sanitize(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_sanitize(v) for v in value]
-    if isinstance(value, float):
-        # Dynamo resource wants Decimal for numbers; store floats as strings.
-        return str(value)
-    return value
-
-
+# --------------------------------------------------------------------------- #
+# Write
+# --------------------------------------------------------------------------- #
 def save(exam_id, identifier, data, step=None, user_agent=None, referrer=None):
-    """Upsert one candidate's current exam-form snapshot. Returns the PK/SK.
+    """Append one submission/event row. Returns {"id": ...}.
 
-    Raises Unavailable if DynamoDB is not configured (endpoint -> 503)."""
+    Raises ValueError on bad input, Unavailable if BigQuery rejects the write."""
     exam_id = str(exam_id or "").strip()
     identifier = str(identifier or "").strip()
     if not exam_id or not identifier:
         raise ValueError("examId and identifier are required")
 
-    table = _table()
-    now = int(time.time())
-    clean = _sanitize(data if isinstance(data, dict) else {})
-    item = {
-        "PK": f"STUDENT#{identifier}",
-        "SK": f"EXAM#{exam_id}",
-        "examId": exam_id,
-        "identifier": identifier,
-        "data": clean,
-        "updatedAt": now,
-    }
-    if step is not None:
-        item["step"] = str(step)
-
-    # Promote the candidate's name/phone to top-level attributes so the table is
-    # directly readable (count users, list names) without parsing the data blob.
-    cand_name = clean.get("name") or clean.get("id:fullname") or ""
-    cand_phone = (
-        clean.get("phone")
-        or clean.get("id:txtmobile")
-        or (identifier if str(identifier).isdigit() else "")
+    d = data if isinstance(data, dict) else {}
+    cand_name = _text(d.get("name") or d.get("id:fullname"))
+    cand_phone = _text(
+        d.get("phone") or d.get("id:txtmobile")
+        or (identifier if identifier.isdigit() else None),
+        32,
     )
-    if cand_name:
-        item["candidateName"] = str(cand_name)[:128]
-    if cand_phone:
-        item["candidatePhone"] = str(cand_phone)[:20]
-    if user_agent:
-        item["userAgent"] = str(user_agent)[:512]
-    if referrer:
-        item["referrer"] = str(referrer)[:512]
-
+    row = {
+        "id": str(uuid.uuid4()),
+        "created_at": _now_iso(),
+        "exam_id": exam_id[:64],
+        "identifier": identifier[:128],
+        "candidate_name": cand_name,
+        "candidate_phone": cand_phone,
+        "step": _text(step, 64),
+        "event": _text(d.get("event"), 64),
+        "data": _json_text(d),
+        "user_agent": _text(user_agent, 400),
+        "referrer": _text(referrer, 400),
+    }
     try:
-        # Preserve the first-seen timestamp without an extra read.
-        table.update_item(
-            Key={"PK": item["PK"], "SK": item["SK"]},
-            UpdateExpression=(
-                "SET #d = :d, examId = :e, identifier = :i, updatedAt = :u"
-                + (", step = :s" if step is not None else "")
-                + (", candidateName = :cn" if "candidateName" in item else "")
-                + (", candidatePhone = :cp" if "candidatePhone" in item else "")
-                + (", userAgent = :ua" if user_agent else "")
-                + (", referrer = :r" if referrer else "")
-                + ", createdAt = if_not_exists(createdAt, :u)"
-            ),
-            ExpressionAttributeNames={"#d": "data"},
-            ExpressionAttributeValues={
-                ":d": item["data"],
-                ":e": exam_id,
-                ":i": identifier,
-                ":u": now,
-                **({":s": item["step"]} if step is not None else {}),
-                **({":cn": item["candidateName"]} if "candidateName" in item else {}),
-                **({":cp": item["candidatePhone"]} if "candidatePhone" in item else {}),
-                **({":ua": item["userAgent"]} if user_agent else {}),
-                **({":r": item["referrer"]} if referrer else {}),
-            },
-        )
-    except Unavailable:
-        raise
-    except Exception as exc:  # noqa: BLE001 — surface as Unavailable (503)
-        raise Unavailable(f"DynamoDB write failed: {exc}")
-
-    return {"PK": item["PK"], "SK": item["SK"]}
-
-
-def list_all(limit=2000):
-    """Scan the whole table and return submissions, newest-updated first.
-
-    Used by the admin dashboard so it can show every candidate across all
-    devices (localStorage is per-browser and cannot do this). Raises
-    Unavailable if DynamoDB isn't configured."""
-    table = _table()
-    items = []
-    kwargs = {}
-    try:
-        while True:
-            resp = table.scan(**kwargs)
-            items.extend(resp.get("Items", []))
-            lek = resp.get("LastEvaluatedKey")
-            if not lek or len(items) >= limit:
-                break
-            kwargs["ExclusiveStartKey"] = lek
+        errors = _client().insert_rows_json(_TABLE_ID, [row])
+        if errors:
+            raise RuntimeError(f"BigQuery rejected the row: {errors}")
     except Unavailable:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise Unavailable(f"DynamoDB scan failed: {exc}")
+        raise Unavailable(f"BigQuery write failed: {exc}")
+    return {"id": row["id"]}
 
-    def _num(v):
+
+# --------------------------------------------------------------------------- #
+# Read (admin dashboard) — latest row per (identifier, exam_id)
+# --------------------------------------------------------------------------- #
+def list_all(limit=2000, days=365):
+    """Every candidate's latest submission, newest-updated first.
+
+    Collapses the append-only log to one row per (identifier, exam_id) — the
+    most recent — plus each candidate's first-seen time. Raises Unavailable on a
+    warehouse problem."""
+    limit = max(1, min(int(limit), 5000))
+    days = max(1, min(int(days), 730))
+    midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff = midnight - timedelta(days=days - 1)
+
+    from google.cloud import bigquery
+    params = [
+        bigquery.ScalarQueryParameter("cutoff", "TIMESTAMP", cutoff),
+        bigquery.ScalarQueryParameter("lim", "INT64", limit),
+    ]
+    sql = f"""
+        SELECT identifier, exam_id, candidate_name, candidate_phone, step, event,
+               data, first_seen, updated_at
+          FROM (
+            SELECT identifier, exam_id, candidate_name, candidate_phone, step, event, data,
+                   ROW_NUMBER() OVER (PARTITION BY identifier, exam_id ORDER BY created_at DESC) AS rn,
+                   MIN(created_at) OVER (PARTITION BY identifier, exam_id) AS first_seen,
+                   MAX(created_at) OVER (PARTITION BY identifier, exam_id) AS updated_at
+              FROM `{_TABLE_ID}`
+             WHERE created_at >= @cutoff
+          )
+         WHERE rn = 1
+         ORDER BY updated_at DESC
+         LIMIT @lim
+    """
+    cfg = bigquery.QueryJobConfig(query_parameters=params, use_query_cache=True)
+    try:
+        import db as _db
+        if getattr(_db, "MAX_BYTES_BILLED", 0) > 0:
+            cfg.maximum_bytes_billed = _db.MAX_BYTES_BILLED
+    except Exception:  # noqa: BLE001
+        pass
+
+    try:
+        rows = list(_client().query(sql, job_config=cfg).result())
+    except Exception as exc:  # noqa: BLE001
+        raise Unavailable(f"BigQuery read failed: {exc}")
+
+    def _epoch(ts):
         try:
-            return int(v)
-        except (TypeError, ValueError):
+            return int(ts.timestamp())
+        except Exception:  # noqa: BLE001
             return 0
 
-    rows = []
-    for it in items:
-        rows.append({
-            "identifier": it.get("identifier", ""),
-            "examId": it.get("examId", ""),
-            "candidateName": it.get("candidateName", ""),
-            "candidatePhone": it.get("candidatePhone", ""),
-            "step": it.get("step", ""),
-            "createdAt": _num(it.get("createdAt")),
-            "updatedAt": _num(it.get("updatedAt")),
-            "data": it.get("data", {}) if isinstance(it.get("data"), dict) else {},
+    out = []
+    for r in rows:
+        data = {}
+        if r["data"]:
+            try:
+                parsed = json.loads(r["data"])
+                if isinstance(parsed, dict):
+                    data = parsed
+            except (TypeError, ValueError):
+                data = {}
+        out.append({
+            "identifier": r["identifier"] or "",
+            "examId": r["exam_id"] or "",
+            "candidateName": r["candidate_name"] or "",
+            "candidatePhone": r["candidate_phone"] or "",
+            "step": r["step"] or "",
+            "event": r["event"] or "",
+            "createdAt": _epoch(r["first_seen"]),
+            "updatedAt": _epoch(r["updated_at"]),
+            "data": data,
         })
-    rows.sort(key=lambda r: r["updatedAt"], reverse=True)
-    return rows[:limit]
+    return out
