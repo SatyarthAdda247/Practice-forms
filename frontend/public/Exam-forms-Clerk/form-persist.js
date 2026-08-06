@@ -337,15 +337,23 @@
     setTimeout(function () { restoreAll(false); }, 1000);
     bindAutosave();
 
-    // Sync to the backend on load and (debounced) whenever a field changes.
-    setTimeout(syncNow, 800);
+    // Sync to the backend on load and whenever a field changes or loses focus.
+    setTimeout(syncNow, 400);
     document.addEventListener("input", function (e) {
-      if (e.target && e.target.matches("input, select, textarea")) scheduleSync();
+      if (e.target && e.target.matches("input, select, textarea")) { save(e.target); scheduleSync(); }
     }, true);
     document.addEventListener("change", function (e) {
-      if (e.target && e.target.matches("input, select, textarea")) scheduleSync();
+      if (e.target && e.target.matches("input, select, textarea")) { save(e.target); scheduleSync(); }
     }, true);
-    // Flush once more as the page is being left.
+    document.addEventListener("blur", function (e) {
+      if (e.target && e.target.matches("input, select, textarea")) { save(e.target); syncNow(); }
+    }, true);
+    document.addEventListener("click", function (e) {
+      if (e.target && (e.target.matches("button, input[type='button'], input[type='submit'], a") || e.target.closest("button, .btn, a"))) {
+        allFields().forEach(save);
+        syncNow();
+      }
+    }, true);
     window.addEventListener("pagehide", syncNow);
 
     // Expose a manual clear (used after final submission if desired).
