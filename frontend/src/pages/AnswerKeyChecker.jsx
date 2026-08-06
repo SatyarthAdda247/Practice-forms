@@ -1047,8 +1047,9 @@ export default function AnswerKeyChecker() {
 
           <div className="flex flex-wrap justify-between items-center gap-3">
             {error && <p className="text-body-md text-tool-error">{error}</p>}
-            {/* Not an error — the file was read. Green tick, not red text, so a
-                candidate can tell "done, one thing left" from "that failed". */}
+            {/* Not an error — the file was read. A tick in ordinary body colour
+                rather than error red, so a candidate can tell "done, one thing
+                left" from "that failed" without reading the sentence twice. */}
             {!error && notice && (
               <p className="text-body-md text-tool-secondary flex items-start gap-2">
                 <Icon name="check_circle" size={18} className="shrink-0 mt-0.5" />
