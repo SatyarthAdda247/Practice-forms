@@ -13,6 +13,7 @@ import {
   looksLikeAnswerList,
   parseAnnotatedSheet,
   parseAnswerKeyPaper,
+  parseCandidateAnswerKey,
   parseAnswerList,
   parseMarksValue,
   slugifyExam,
@@ -81,12 +82,125 @@ console.log("published answer key (key only, no Chosen Option rows):");
   check("labels aligned", r.labels, { 1: "1", 2: "2", 3: "3" });
 }
 
+/* Options labelled with letters instead of numbers — RRB NTPC and Bihar STET
+   both print them this way, and reading digits only meant no option row ever
+   matched, so no question closed and the whole file came back empty. The
+   candidate's own pick is stated as a letter on these sheets too. */
+console.log("options labelled A. B. C. D. rather than 1. 2. 3. 4.:");
+{
+  const lettered = (n, rightOpt, chosen) => [
+    L(`Q.${n} Question ${n}?`),
+    ...["A", "B", "C", "D"].map((o) =>
+      L(`${o}. Option ${o}`, { green: o === rightOpt }),
+    ),
+    ...(chosen === undefined ? [] : [L(`Chosen Option : ${chosen}`)]),
+  ];
+  const r = parseAnnotatedSheet([
+    ...header(),
+    ...lettered(1, "C", "A"),
+    ...lettered(2, "B", "--"),
+    ...lettered(3, "D"),
+  ]);
+  check("key read from lettered options", [...r.key], [[1, "C"], [2, "B"], [3, "D"]]);
+  check("responses read from lettered picks", [...r.responses], [[1, "A"], [2, ""]]);
+  check("counted once each", r.scheme.total, 3);
+}
+
+console.log("a sheet whose ticks are images, with lettered options:");
+{
+  // No colour signal at all — the tick is the mark that appears exactly once in
+  // the block, which is how the scanned-to-PDF sheets have to be read.
+  const opt = (letter, mark) => L(`${letter}. Option ${letter}`, { marks: [mark] });
+  const r = parseAnnotatedSheet([
+    ...header(),
+    L("Q.1 Question 1?"),
+    opt("A", "cross"), opt("B", "tick"), opt("C", "cross"), opt("D", "cross"),
+    L("Chosen Option : B"),
+  ]);
+  check("tick wins without colour", [...r.key], [[1, "B"]]);
+  check("response", [...r.responses], [[1, "B"]]);
+}
+
+/* Options that are pictures themselves — a fraction, a formula, a figure. Each
+   carries its own unique image alongside the ✔/✘, so "the image that appears
+   once in the block" is no longer the tick, and the block has to be read from
+   the ✘ instead. Verified against RRB NTPC Q5 and two AIIMS figure questions. */
+console.log("options that are images of their own (maths / figure questions):");
+{
+  const opt = (letter, mark, picture) =>
+    L(`${letter}.`, { marks: [mark, picture] });
+  const r = parseAnnotatedSheet([
+    ...header(),
+    L("Q.1 If a triangle has sides a, b, c, then the maximum area is"),
+    opt("A", "cross", "formula-1"),
+    opt("B", "cross", "formula-2"),
+    opt("C", "tick", "formula-3"),
+    opt("D", "cross", "formula-4"),
+  ]);
+  check("answer read from the ✘ pattern", [...r.key], [[1, "C"]]);
+}
+
+console.log("two accepted answers stay unkeyed rather than guessed:");
+{
+  const opt = (letter, mark) => L(`${letter}.`, { marks: [mark, `pic-${letter}`] });
+  const r = parseAnnotatedSheet([
+    ...header(),
+    L("Q.1 Question?"),
+    opt("A", "tick"), opt("B", "tick"), opt("C", "cross"), opt("D", "cross"),
+  ]);
+  check("abstains", [...r.key], []);
+}
+
 console.log("mixed: one block loses its Chosen Option row:");
 {
   const lines = [...header(), ...question(1, 3, 3), ...question(2, 1), ...question(3, 2, 2)];
   const r = parseAnnotatedSheet(lines);
   check("later answers stay aligned", [...r.responses], [[1, "C"], [3, "B"]]);
   check("key complete", [...r.key], [[1, "C"], [2, "A"], [3, "B"]]);
+}
+
+/* The "Candidate Answer Key and Grievance Submission" layout — OSSSC and
+   others. Both answers are stated in words, which is why it survives being
+   flattened to images and read back by OCR. Lines below are real Tesseract
+   output from the 37-page OSSSC Pharmacist scan, mis-reads included ("Both!"
+   for "Both I"), to pin that the parser leans only on the digits. */
+console.log("candidate answer key layout, as OCR reads it:");
+{
+  const r = parseCandidateAnswerKey([
+    L("Candidate Answer Key and Grievance Submission"),
+    L("QID : 1 - Which of the following statements describes the advantage of aerosols?"),
+    L("Options:"),
+    L("1) Oxidation of drug is prevented as no air is present in the aerosol container."),
+    L("Correct Answer: 1) Oxidation of drug is prevented as no air is present in the container."),
+    L("Candidate Answer: [ NOT ANSWERED ]"),
+    L("QID : 2 - Which size reduction method uses a mortar and pestle?"),
+    L("Correct Answer: 3) Trituration"),
+    L("Candidate Answer: 3) Trituration"),
+    L("QID : 7 - Which factors affect the dose and action of a drug?"),
+    L("Correct Answer: 3) Both! and II"),
+    L("Candidate Answer: [ NOT ANSWERED ]"),
+    L("QID : 8 - ______ are clear, pleasantly flavoured preparations."),
+    L("Correct Answer: 1) Elixirs"),
+    L("Candidate Answer: 3) Liniments"),
+  ]);
+  check("key by printed QID", [...r.key], [[1, "A"], [2, "C"], [7, "C"], [8, "A"]]);
+  check("responses, unattempted included", [...r.responses], [[1, ""], [2, "C"], [7, ""], [8, "C"]]);
+  check("total", r.total, 4);
+}
+
+console.log("candidate answer key: a clipped line is left unattempted, not guessed:");
+{
+  // QID 25 of the OSSSC scan sits across a page break and its Candidate Answer
+  // line is cut in half in the file itself, so OCR never sees it.
+  const r = parseCandidateAnswerKey([
+    L("QID : 25 - Which drug is NOT mentioned as a narcotic drug?"),
+    L("Correct Answer: 4) Dabigatran"),
+    L("QID : 26 - Which pharmaceutical aid belongs to the emulsifying agents?"),
+    L("Correct Answer: 3) Agar"),
+    L("Candidate Answer: 3) Agar"),
+  ]);
+  check("key still complete", [...r.key], [[25, "D"], [26, "C"]]);
+  check("no response invented for 25", [...r.responses], [[26, "C"]]);
 }
 
 console.log("question paper with the key printed under it:");

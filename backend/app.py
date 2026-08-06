@@ -92,6 +92,7 @@ from auth import (
 import exam_forms_store
 import face_check
 import omr_pipeline
+import pdf_ocr
 import tools_store
 from grading import grade
 
@@ -272,6 +273,7 @@ def api_index():
             {"method": "POST", "path": "/api/tools/image-resizer/face-check", "desc": "Detect faces in a resized photograph (public)"},
             {"method": "POST", "path": "/api/tools/answerkey-checker/results", "desc": "Log an answer-key analysis (public)"},
             {"method": "POST", "path": "/api/tools/answerkey-checker/fetch", "desc": "Fetch a response-sheet URL for parsing (public)"},
+            {"method": "POST", "path": "/api/tools/answerkey-checker/ocr", "desc": "Read the text off an image-only response sheet (public)"},
             {"method": "GET", "path": "/api/tools/answerkey-checker/rank", "desc": "Cohort rank for a score (public)"},
             {"method": "GET", "path": "/api/tools/answerkey-checker/schemes", "desc": "Admin-set marking schemes by exam (public)"},
             {"method": "GET", "path": "/api/admin/keycheck-schemes", "desc": "List marking-scheme overrides"},
@@ -1574,6 +1576,10 @@ KEYCHECK_MAX_BYTES = int(os.environ.get("OMR_KEYCHECK_MAX_BYTES", 12 * 1024 * 10
 KEYCHECK_TIMEOUT = 20  # seconds, per hop
 KEYCHECK_MAX_HOPS = 4
 KEYCHECK_RATE_LIMIT = int(os.environ.get("OMR_KEYCHECK_RATE_LIMIT", "10"))  # per minute
+# An image-only paper is one full-page picture per page, so these files run much
+# larger than the text originals — the OSSSC scan that prompted this is 6.8MB
+# over 37 pages. Matches the 20MB the upload box already accepts.
+KEYCHECK_OCR_MAX_BYTES = int(os.environ.get("OMR_KEYCHECK_OCR_MAX_BYTES", 20 * 1024 * 1024))
 # digialm answers a default requests/curl User-Agent with a 400, so the request
 # has to look like a browser to get the page at all.
 KEYCHECK_UA = (
@@ -1710,6 +1716,55 @@ def tools_keycheck_fetch():
     # `chars`, not bytes: this is the decoded string, and these sheets are full
     # of multi-byte Indic script, so the two differ.
     return jsonify({"html": html, "url": final_url, "chars": len(html)})
+
+
+@app.post("/api/tools/answerkey-checker/ocr")
+def tools_keycheck_ocr():
+    """Read the text off a response sheet whose pages are images.
+
+    Public and unauthenticated like the rest of this tool's endpoints, and rate
+    limited on the same bucket as the link proxy because a call here is far more
+    expensive than a parse: it rasterises and OCRs every page.
+
+    Only for files that genuinely need it. A PDF that carries its own text layer
+    is refused rather than OCR'd — the browser can already read one of those,
+    and refusing keeps this from becoming a general-purpose OCR service.
+
+    Nothing is stored. The upload is held in memory for the length of the
+    request, and only the recovered lines are returned.
+    """
+    ip = _client_ip()
+    if _rate_limited(f"{ip}:keyocr", KEYCHECK_RATE_LIMIT):
+        return error("too many OCR requests; try again in a minute", 429)
+
+    if not pdf_ocr.available():
+        # 503, not 400: the file is fine, this host cannot read it.
+        return error("OCR is not available on this server", 503)
+
+    upload = request.files.get("file")
+    if upload is None:
+        return error("a PDF file is required")
+    data = upload.read()
+    if not data:
+        return error("that file is empty")
+    if len(data) > KEYCHECK_OCR_MAX_BYTES:
+        return error(
+            f"file is larger than {KEYCHECK_OCR_MAX_BYTES // (1024 * 1024)}MB", 413
+        )
+
+    try:
+        if pdf_ocr.pdf_has_text(data):
+            return error("that PDF already has readable text; OCR is not needed")
+        lines = pdf_ocr.pdf_lines(data)
+    except ValueError as exc:
+        return error(str(exc))
+    except pdf_ocr.OcrUnavailable:
+        return error("OCR is not available on this server", 503)
+    except Exception as exc:  # noqa: BLE001 — report, never 500 on a bad upload
+        app.logger.warning("tools: ocr failed: %s", exc)
+        return error("could not read that PDF", 502)
+
+    return jsonify({"lines": lines, "count": len(lines)})
 
 
 @app.get("/api/tools/answerkey-checker/rank")

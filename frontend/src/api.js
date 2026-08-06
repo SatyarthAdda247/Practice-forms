@@ -632,6 +632,32 @@ export const toolsApi = {
       body: JSON.stringify({ url }),
     }),
 
+  /* Recover the text from a response sheet whose pages are images.
+   *
+   * Needed because the copies of these papers in circulation have often been
+   * re-saved through a PDF editor, which flattens every page into a picture: no
+   * fonts, no text, nothing for the browser reader to extract. The backend
+   * rasterises and OCRs them (see backend/pdf_ocr.py) and returns the lines,
+   * which are then parsed here exactly like a text PDF's.
+   *
+   * Returns the lines, or null where OCR is unavailable or fails — the caller
+   * then reports the file as a scan it cannot read, which is what it did before
+   * this existed. The error is not swallowed silently: it is logged, and the
+   * distinction between "no engine" and "could not read it" is kept in the
+   * message so a misconfigured server is diagnosable from the browser console.
+   */
+  keyCheckOcr: async (file) => {
+    const body = new FormData();
+    body.append("file", file, file.name || "sheet.pdf");
+    try {
+      const res = await toolCall("/tools/answerkey-checker/ocr", { method: "POST", body });
+      return Array.isArray(res?.lines) ? res.lines : null;
+    } catch (err) {
+      console.warn("scanned-sheet OCR failed:", err.message);
+      return null;
+    }
+  },
+
   // Face detection for the resizer's health check. The one part of that tool
   // that cannot run in the browser — no shipping browser has a usable face
   // detector — so the resized JPEG is posted as raw bytes, measured with

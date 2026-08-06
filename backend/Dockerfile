@@ -15,6 +15,15 @@ ENV PORT=5000 \
 
 WORKDIR /app
 
+# Tesseract, for reading response sheets whose pages are images rather than text
+# (see backend/pdf_ocr.py). A system package, not a pip one — pdf_ocr shells out
+# to the binary. ~35MB with the English data, and the OCR endpoint reports itself
+# unavailable rather than failing if it is ever missing, so this line is the only
+# thing that turns the feature on in production.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-eng \
+ && rm -rf /var/lib/apt/lists/*
+
 # Install deps first for layer caching. The base image ships most deps, but
 # requirements.txt is the source of truth (it now includes google-cloud-bigquery,
 # which the base image predates), so install it explicitly.

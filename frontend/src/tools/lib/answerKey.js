@@ -166,6 +166,12 @@ const MARKING = {
   "osssc-forest-guard": quarterOff(100),
   "osssc-livestock-inspector": quarterOff(100),
   "osssc-nursing-officer": quarterOff(100),
+  // The CRE paper for the paramedical posts: 100 questions, confirmed off the
+  // 2024 shift-1 paper itself, which numbers its last question QID 100. The
+  // quarter-mark penalty is the one every other OSSSC CRE post above carries —
+  // correct it from the admin console if a notification says otherwise.
+  "osssc-pharmacist": quarterOff(100),
+  "osssc-mphw": quarterOff(100),
 
   // --- Bihar ----------------------------------------------------------------
   "bsphcl-correspondence-clerk": quarterOff(100),
@@ -473,6 +479,10 @@ const CATALOGUE = {
       ["osssc-forest-guard", "OSSSC Forest Guard"],
       ["osssc-livestock-inspector", "OSSSC Livestock Inspector"],
       ["osssc-nursing-officer", "OSSSC Nursing Officer"],
+      // Sat the same CRE paper as each other; separate slugs because they are
+      // separate posts, and the slug is the cohort a rank is measured against.
+      ["osssc-pharmacist", "OSSSC Pharmacist"],
+      ["osssc-mphw", "OSSSC Multi-Purpose Health Worker (MPHW)"],
       ["opsc-aee", "OPSC Assistant Executive Engineer"],
     ],
   },
@@ -970,12 +980,28 @@ export function parseResponseSheetHtml(html) {
   return { responses, sections };
 }
 
-// An option row: "1. 2026", a bare "1." when the option is an image, and on the
-// minority of sheets that print the marks as text rather than as an image, a
-// leading ✔/✘. A ✘ needs no handling of its own — it flags the candidate's own
-// wrong pick, which the "Chosen Option" row already states.
-const OPTION_ROW = /^\s*[✔✓☑✘✗✕✖]?\s*([1-9])\s*[.)]/;
+/* An option row: "1. 2026" or "A. permanent" — commissions label the four
+ * options either way and both forms appear in the same season's papers — a bare
+ * "1." when the option is an image, and on the minority of sheets that print the
+ * marks as text rather than as an image, a leading ✔/✘. A ✘ needs no handling of
+ * its own: it flags the candidate's own wrong pick, which the "Chosen Option"
+ * row already states.
+ *
+ * The letter form is not cosmetic. Reading digits only, a lettered sheet
+ * produced no option rows at all, so no question ever closed and the file came
+ * back with nothing in it — which the page could only report as "no answers
+ * could be read", of a file whose every answer was sitting there in the text.
+ * RRB NTPC and Bihar STET both print letters.
+ */
+const OPTION_ROW = /^\s*[✔✓☑✘✗✕✖]?\s*([1-9]|[A-E])\s*[.)]/;
 const TICK = /[✔✓☑]/;
+
+// An option label as its 1-based position, whichever way the sheet writes it:
+// "3" and "C" are both the third option.
+const optionIndex = (label) => {
+  const token = String(label).toUpperCase();
+  return token >= "A" && token <= "E" ? token.charCodeAt(0) - 64 : Number(token);
+};
 
 /* -------------------------------------------------------------------------- *
  * PDF
@@ -1273,21 +1299,67 @@ export function parseMarkingNote(text) {
   return found;
 }
 
-// Which option a block's ✔ belongs to, from the mark images alone.
-//
-// Every option carries a mark, and within one question the ✔ image appears once
-// while the ✘ appears on all the others — so the mark that is unique inside the
-// block is the tick. Anything less clear-cut (two accepted answers, a stray
-// image landing on an option row) returns null rather than a guess.
+/* Which option a block's ✔ belongs to, from the mark images alone.
+ *
+ * Found by identifying the ✘ rather than the ✔: within one question the ✘ is
+ * stamped on every option but the right one, so it is the image that repeats
+ * across the block, and the single option not carrying it is the answer.
+ *
+ * Identifying the ✘ is what makes this work on maths papers. Looking for the
+ * image that is *unique* in the block instead reads correctly only while the
+ * options are plain text — where an option is itself a picture (a fraction, a
+ * formula, a figure) that picture is unique too, so every option had a unique
+ * image and the question was abandoned as unreadable. That is one question in a
+ * hundred on an RRB quantitative paper, each one dropping out of the score's
+ * denominator.
+ *
+ * Anything less clear-cut still returns null rather than a guess: two options
+ * without the ✘ (a question with two accepted answers), no image repeating at
+ * all, or two images repeating equally often.
+ */
 function tickedOption(options) {
-  const freq = new Map();
+  const rowsPerMark = new Map();
   for (const opt of options) {
-    for (const name of opt.marks) freq.set(name, (freq.get(name) ?? 0) + 1);
+    // Per option row, not per drawing: an image painted twice on one row still
+    // only tells us about that one option.
+    for (const name of new Set(opt.marks)) {
+      rowsPerMark.set(name, (rowsPerMark.get(name) ?? 0) + 1);
+    }
   }
-  const unique = [...freq].filter(([, count]) => count === 1).map(([name]) => name);
-  if (unique.length !== 1) return null;
-  const owners = options.filter((opt) => opt.marks.includes(unique[0]));
-  return owners.length === 1 ? owners[0].n : null;
+
+  // The ✔ read directly: the one image in the block that is not repeated, on the
+  // one row that carries it. Correct wherever the options are plain text, which
+  // is the great majority of questions, so it is asked first.
+  const unique = [...rowsPerMark].filter(([, rows]) => rows === 1).map(([name]) => name);
+  if (unique.length === 1) {
+    const owners = options.filter((opt) => opt.marks.includes(unique[0]));
+    if (owners.length === 1) return owners[0].n;
+  }
+
+  /* Otherwise identify the ✘ instead and take the option that does not carry it.
+   * This is the maths-paper case: where an option is itself a picture (a
+   * fraction, a formula, a figure) that picture is unique too, so *every* option
+   * held a unique image and the question was abandoned as unreadable — a
+   * question dropping silently out of the score's denominator.
+   *
+   * Second rather than first because it is the weaker signal of the two: tried
+   * ahead of the rule above it cost 33 keys across the sheets on file while
+   * gaining one. It only ever runs where the first rule found nothing at all.
+   */
+  let cross = null;
+  let most = 1; // a mark on a single row is no evidence of being the ✘
+  for (const [name, rows] of rowsPerMark) {
+    if (rows > most) {
+      cross = name;
+      most = rows;
+    } else if (rows === most) {
+      cross = null; // tied for most common — which one is the ✘ is unknowable
+    }
+  }
+  if (!cross) return null;
+
+  const unmarked = options.filter((opt) => !opt.marks.includes(cross));
+  return unmarked.length === 1 ? unmarked[0].n : null;
 }
 
 /* Parse an annotated response sheet from `readPdfLines` output.
@@ -1401,13 +1473,16 @@ export function parseAnnotatedSheet(lines) {
     const option = runs.map((r) => ({ r, m: r.str.match(OPTION_ROW) })).find((o) => o.m);
     if (option) {
       options.push({
-        n: +option.m[1],
+        n: optionIndex(option.m[1]),
         green: runs.some((r) => r.colour === "green") || TICK.test(option.r.str),
         marks,
       });
     }
 
-    const chosen = text.match(/Chosen\s*Option\s*:?\s*(\d+|-{1,2})/i);
+    // Stated as the option's number on most sheets and as its letter on the ones
+    // that label options with letters ("Chosen Option : A"). normalizeAnswer
+    // takes either, so both are handed straight to it.
+    const chosen = text.match(/Chosen\s*Option\s*:?\s*(\d+|[A-E]|-{1,2})/i);
     if (chosen) closeQuestion(chosen[1]);
   }
   // The last question has no heading after it to close it.
@@ -1664,6 +1739,70 @@ export function parseAnswerKeyPaper(lines) {
   return { key, labels, total: key.size };
 }
 
+/* -------------------------------------------------------------------------- *
+ * Candidate answer key + grievance sheet (OSSSC and other commissions)
+ *
+ * A third layout again, and the most generous of the three: it states the
+ * official answer AND the candidate's own, both as plain text, one block per
+ * question —
+ *
+ *     QID : 8 - ______ are clear, pleasantly flavoured … preparations.
+ *     Options:
+ *     1) Elixirs
+ *     2) Nasal drops
+ *     Correct Answer:  1)   Elixirs
+ *     Candidate Answer:  3)  Liniments
+ *
+ * with "[ NOT ANSWERED ]" in place of the candidate's answer where they left it
+ * blank. Nothing is carried by colour or by an icon, so unlike the annotated
+ * sheets this one survives being flattened into images and read back by OCR —
+ * which is exactly how it reaches us, since the copies in circulation are
+ * re-saved as pictures.
+ *
+ * Questions are keyed by the printed QID, which is unique across the paper.
+ * -------------------------------------------------------------------------- */
+
+const QID_QUESTION = /^QID\s*:?\s*(\d{1,3})\b/i;
+// "Correct Answer: 1) Elixirs". The letter form is accepted too, for a
+// commission that numbers its options A-D in the same layout.
+const QID_KEY = /^Correct\s+Answer\s*:?\s*([1-9]|[A-E])\s*[).]/i;
+/* "Candidate Answer: 3) Liniments", or the unattempted marker. OCR mangles the
+ * brackets around it more often than the words inside, so the words are what is
+ * matched. */
+const QID_RESPONSE = /^Candidate\s+Answer\s*:?\s*(?:([1-9]|[A-E])\s*[).]|.{0,3}NOT\s*ANSWERED)/i;
+
+export function parseCandidateAnswerKey(lines) {
+  const responses = new Map();
+  const key = new Map();
+  let qid = null;
+
+  for (const { text } of lines) {
+    const start = text.match(QID_QUESTION);
+    if (start) {
+      qid = Number(start[1]);
+      continue;
+    }
+    // Only inside a question block, so a stray "Correct Answer" in a preamble
+    // cannot invent one.
+    if (qid === null) continue;
+
+    const right = text.match(QID_KEY);
+    if (right) {
+      key.set(qid, "ABCDE"[optionIndex(right[1]) - 1] || "");
+      continue;
+    }
+    const mine = text.match(QID_RESPONSE);
+    if (mine) {
+      // No captured option means the line said NOT ANSWERED: recorded as
+      // unattempted, which is a real answer about the paper and not a gap.
+      responses.set(qid, mine[1] ? "ABCDE"[optionIndex(mine[1]) - 1] || "" : "");
+      qid = null; // the block ends here; the next QID opens the following one
+    }
+  }
+
+  return { responses, key, total: key.size };
+}
+
 /* Whether a Map from parseAnswerList is plausibly a list of answers.
  *
  * Used only on the last-ditch "strip everything and read it as a list" paths.
@@ -1697,10 +1836,49 @@ const blank = () => ({
 // carries, and any section labels. A file that yields neither responses nor a
 // key comes back empty rather than throwing — the caller says so in its own
 // words, and an empty result is not an error condition.
-export async function parseResponseFile(file, onProgress) {
+export async function parseResponseFile(file, onProgress, ocr) {
   const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
   if (isPdf) {
     const lines = await readPdfLines(file, onProgress);
+    /* Not one character of text in the whole file: every page is a photograph or
+     * a screenshot of the paper, which is what a PDF re-saved through an editor
+     * becomes. There is nothing in the content stream to read, so the text has
+     * to be recovered by OCR — `ocr` posts the file to the backend and returns
+     * the lines it read (see toolsApi.keyCheckOcr).
+     *
+     * Only the plain-text layouts can be recovered this way, and that is fine:
+     * a flattened sheet has lost its colours and its ✔/✘ icons anyway, while
+     * the layouts that reach us like this state both answers in words. */
+    if (!lines.length) {
+      const recovered = ocr ? await ocr(file) : null;
+      const ocrLines = (recovered || []).map((text) => ({ text, runs: [], marks: [] }));
+
+      const candidate = parseCandidateAnswerKey(ocrLines);
+      if (candidate.key.size >= 5) {
+        return {
+          ...blank(),
+          responses: candidate.responses,
+          key: candidate.key,
+          scheme: { total: candidate.key.size },
+          kind: "pdf-ocr",
+        };
+      }
+      // A question paper with the key printed under each question, scanned.
+      const scannedPaper = parseAnswerKeyPaper(ocrLines);
+      if (scannedPaper.key.size >= 5) {
+        return {
+          ...blank(),
+          key: scannedPaper.key,
+          labels: scannedPaper.labels,
+          scheme: { total: scannedPaper.total },
+          kind: "pdf-ocr-key",
+        };
+      }
+      // Genuinely nothing recoverable — no OCR available, or a layout it could
+      // not read. Reported as the scan it is rather than as "no answers found".
+      return { ...blank(), kind: "pdf-image" };
+    }
+
     const parsed = parseAnnotatedSheet(lines);
     if (parsed.responses.size) return { ...parsed, kind: "pdf" };
 

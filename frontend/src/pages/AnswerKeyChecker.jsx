@@ -77,6 +77,14 @@ function detectedChips(detected) {
     chips.push(`${sections.length} section${sections.length > 1 ? "s" : ""}`);
   }
   if (meta?.testDate) chips.push([meta.testDate, meta.testTime].filter(Boolean).join(" · "));
+  /* Said out loud when the answers came from OCR rather than from the file's own
+     text, because it changes how much the candidate should trust them: a
+     mis-read digit is possible here in a way it is not when the characters were
+     read straight out of the PDF. They can check the boxes below against their
+     sheet — but only if they are told there is something to check. */
+  if (String(detected.kind || "").startsWith("pdf-ocr")) {
+    chips.push("read by OCR — worth a glance over");
+  }
   return chips;
 }
 
@@ -363,16 +371,39 @@ export default function AnswerKeyChecker() {
       // A 60-page sheet takes a few seconds to read, so say where we are.
       const onProgress = (page, pages) =>
         setFileLabel({ name: file.name, hint: `Reading page ${page} of ${pages}…` });
+      /* A PDF with no text layer is read by OCR on the backend, which takes
+         about a second a page — long enough that the box has to say what it is
+         doing rather than appear to have stalled. */
+      const readScan = async (pdf) => {
+        setFileLabel({
+          name: pdf.name,
+          hint: "This PDF is a scan — reading the text off the pages, this takes a moment…",
+        });
+        return toolsApi.keyCheckOcr(pdf);
+      };
       const { responses, key, sections: found, labels: printed, scheme: stated, meta, kind } =
-        await parseResponseFile(file, onProgress);
+        await parseResponseFile(file, onProgress, readScan);
       const hasKey = key && key.size > 0;
       if (!responses.size && !hasKey) {
-        setFileLabel({ name: file.name, hint: "Could not find any answers — paste them manually below." });
+        // A scan is its own answer, not a mystery: the file is right, the copy
+        // is a picture. Saying "upload the response sheet the commission gave
+        // you" to somebody holding exactly that sends them round in circles.
+        const scanned = kind === "pdf-image";
+        setFileLabel({
+          name: file.name,
+          hint: scanned
+            ? "This PDF is a scan — no text to read."
+            : "Could not find any answers — paste them manually below.",
+        });
         setDetected(null);
         setManualOpen(true);
         return setError(
-          "No answers could be read from that file. Upload the response sheet the " +
-            "commission gave you, or paste your answers below.",
+          scanned
+            ? "Every page of this PDF is an image — a scan or a screenshot — so there is no " +
+                "text in it to read. Download the paper again from the commission's portal " +
+                "(that copy has selectable text), or paste your answers below."
+            : "No answers could be read from that file. Upload the response sheet the " +
+                "commission gave you, or paste your answers below.",
         );
       }
       const asLines = (map) =>
