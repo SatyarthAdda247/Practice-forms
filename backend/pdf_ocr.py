@@ -36,6 +36,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +55,28 @@ MAX_PAGES = int(os.environ.get("OMR_OCR_MAX_PAGES", "120"))
 PAGE_TIMEOUT = int(os.environ.get("OMR_OCR_PAGE_TIMEOUT", "30"))
 
 TESSERACT = os.environ.get("OMR_TESSERACT", "tesseract")
+
+
+def _default_workers() -> int:
+    """How many pages to OCR at once.
+
+    From the CPUs the process is actually allowed, which under a container CPU
+    limit is fewer than the machine reports — `os.cpu_count()` sees the host.
+    Capped because each worker is a Tesseract process holding a page bitmap, and
+    several gunicorn workers may be doing this at once.
+    """
+    try:
+        allowed = len(os.sched_getaffinity(0))  # Linux: respects cpuset
+    except AttributeError:  # macOS and Windows have no sched_getaffinity
+        allowed = os.cpu_count() or 1
+    return max(1, min(4, allowed))
+
+
+OCR_WORKERS = int(os.environ.get("OMR_OCR_WORKERS", "0")) or _default_workers()
+
+# Seconds of OCR per request. Comfortably inside the 60s an nginx ingress
+# allows by default, with room for the upload and the response on either side.
+OCR_BUDGET = float(os.environ.get("OMR_OCR_BUDGET", "35"))
 
 
 class OcrUnavailable(RuntimeError):
@@ -102,38 +126,103 @@ def pdf_has_text(data: bytes) -> bool:
     return False
 
 
-def pdf_lines(data: bytes) -> list[str]:
-    """Every line of text OCR'd out of a PDF's page images, in reading order.
+def page_count(data: bytes) -> int:
+    """How many pages the PDF has, or 0 if it cannot be opened.
+
+    Only so the caller can tell the candidate how far through a long document
+    the OCR has got. Never raises: a file too broken to open has already failed
+    the read below, and this must not turn that into a different error.
+    """
+    import fitz
+
+    try:
+        with fitz.open(stream=data, filetype="pdf") as doc:
+            return doc.page_count
+    except Exception:  # noqa: BLE001 — a count is not worth failing a request over
+        return 0
+
+
+def pdf_lines(data: bytes, first: int = 1, budget: float | None = None):
+    """OCR pages from `first` onwards, returning ``(lines, next_page)``.
+
+    `next_page` is None when the document was finished, and the page number to
+    resume from when the time budget ran out first.
+
+    Two things shape this. Pages are OCR'd **concurrently**, because read one at
+    a time a 37-page paper took ~25s on a developer machine and over 70s behind
+    the production gateway, which cut the request off with a 504 — from the
+    candidate's side the upload simply produced nothing, and pressing Analyze
+    then asked them for the answers the OCR had been about to supply. Threads
+    rather than processes: the work is a Tesseract subprocess per page, so each
+    thread spends its time waiting on a child and releases the GIL. PyMuPDF page
+    objects are not thread-safe, so each task opens its own handle on the same
+    bytes rather than sharing one document.
+
+    And there is a **time budget**, because concurrency alone only narrows the
+    odds: how many CPUs the container is actually allowed decides whether a long
+    paper fits inside the gateway's window, and that is not knowable from here.
+    So pages are read in batches until the budget is nearly spent, then the
+    remainder is handed back as a cursor for the caller to ask for. A document
+    that fits — the normal case — still completes in a single call.
 
     Raises OcrUnavailable when there is no engine, ValueError when the file is
-    not a readable PDF or is longer than MAX_PAGES.
+    not a readable PDF, is longer than MAX_PAGES, or `first` is past the end.
     """
     if not available():
         raise OcrUnavailable("no OCR engine available")
 
     import fitz
 
-    lines: list[str] = []
     try:
-        doc = fitz.open(stream=data, filetype="pdf")
+        with fitz.open(stream=data, filetype="pdf") as doc:
+            pages = doc.page_count
     except Exception as exc:  # noqa: BLE001 — a bad upload is the caller's answer
         raise ValueError(f"not a readable PDF: {exc}") from exc
 
-    with doc:
-        if doc.page_count > MAX_PAGES:
-            raise ValueError(f"{doc.page_count} pages is more than the {MAX_PAGES}-page limit")
-        for number, page in enumerate(doc, start=1):
-            try:
-                png = page.get_pixmap(dpi=DPI).tobytes("png")
-                text = _ocr_png(png)
-            except subprocess.TimeoutExpired:
-                log.warning("ocr: page %s timed out; skipped", number)
-                continue
-            except Exception as exc:  # noqa: BLE001 — one bad page must not lose the rest
-                log.warning("ocr: page %s failed: %s", number, exc)
-                continue
-            for raw in text.splitlines():
-                line = " ".join(raw.split())
-                if line:
-                    lines.append(line)
-    return lines
+    if pages > MAX_PAGES:
+        raise ValueError(f"{pages} pages is more than the {MAX_PAGES}-page limit")
+    if first < 1 or first > pages:
+        raise ValueError(f"page {first} is outside this {pages}-page document")
+
+    budget = OCR_BUDGET if budget is None else budget
+
+    def read(number: int) -> list[str]:
+        """One page, rasterised and OCR'd. Never raises: a page that cannot be
+        read costs its own lines and nothing else."""
+        try:
+            with fitz.open(stream=data, filetype="pdf") as doc:
+                png = doc[number - 1].get_pixmap(dpi=DPI).tobytes("png")
+            text = _ocr_png(png)
+        except subprocess.TimeoutExpired:
+            log.warning("ocr: page %s timed out; skipped", number)
+            return []
+        except Exception as exc:  # noqa: BLE001 — one bad page must not lose the rest
+            log.warning("ocr: page %s failed: %s", number, exc)
+            return []
+        return [line for line in (" ".join(r.split()) for r in text.splitlines()) if line]
+
+    # Bounded by the CPUs the container is actually allowed rather than the
+    # host's nominal count: oversubscribing makes each page slower without
+    # finishing the set any sooner.
+    workers = max(1, min(OCR_WORKERS, pages))
+    started = time.monotonic()
+    lines: list[str] = []
+    page = first
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        while page <= pages:
+            batch = range(page, min(page + workers, pages + 1))
+            # map, so pages come back in reading order however they finish — the
+            # parsers read "Correct Answer" as belonging to the QID above it, so
+            # the order of the lines is the meaning.
+            for page_lines in pool.map(read, batch):
+                lines.extend(page_lines)
+            page = batch.stop
+            spent = time.monotonic() - started
+            # Stop while there is still room for another batch to overrun a
+            # little, rather than at the moment the budget is gone.
+            if page <= pages and spent > budget * 0.75:
+                log.info("ocr: budget spent after page %s of %s", page - 1, pages)
+                return lines, page
+
+    return lines, None

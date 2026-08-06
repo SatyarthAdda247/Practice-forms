@@ -1580,6 +1580,11 @@ KEYCHECK_RATE_LIMIT = int(os.environ.get("OMR_KEYCHECK_RATE_LIMIT", "10"))  # pe
 # larger than the text originals — the OSSSC scan that prompted this is 6.8MB
 # over 37 pages. Matches the 20MB the upload box already accepts.
 KEYCHECK_OCR_MAX_BYTES = int(os.environ.get("OMR_KEYCHECK_OCR_MAX_BYTES", 20 * 1024 * 1024))
+# Its own bucket, and a wider one than the link proxy's. A paper too long to OCR
+# inside one request comes back as a page cursor and the browser asks for the
+# rest (see below), so a single upload can legitimately be several calls — at
+# the link proxy's 10/minute a long paper would rate-limit itself halfway through.
+KEYCHECK_OCR_RATE_LIMIT = int(os.environ.get("OMR_KEYCHECK_OCR_RATE_LIMIT", "30"))
 # digialm answers a default requests/curl User-Agent with a 400, so the request
 # has to look like a browser to get the page at all.
 KEYCHECK_UA = (
@@ -1730,11 +1735,25 @@ def tools_keycheck_ocr():
     is refused rather than OCR'd — the browser can already read one of those,
     and refusing keeps this from becoming a general-purpose OCR service.
 
+    Long papers come back in instalments. OCR runs for a bounded stretch and
+    then returns what it has read together with `nextPage`, the page to resume
+    from; the browser posts the file again with `first` set to it until
+    `nextPage` is null. The alternative was a single request that ran until it
+    finished, and a 37-page OSSSC scan took long enough behind the production
+    gateway to be cut off with a 504 — which reached the candidate as an upload
+    that read nothing, and an Analyze button asking them to supply the answers
+    the OCR had been in the middle of recovering.
+
+    Each instalment re-reads the file rather than resuming server-side state:
+    the pages already read are skipped, and nothing has to be held between
+    requests (there are several gunicorn workers, and no guarantee the next
+    call lands on this one).
+
     Nothing is stored. The upload is held in memory for the length of the
     request, and only the recovered lines are returned.
     """
     ip = _client_ip()
-    if _rate_limited(f"{ip}:keyocr", KEYCHECK_RATE_LIMIT):
+    if _rate_limited(f"{ip}:keyocr", KEYCHECK_OCR_RATE_LIMIT):
         return error("too many OCR requests; try again in a minute", 429)
 
     if not pdf_ocr.available():
@@ -1753,9 +1772,16 @@ def tools_keycheck_ocr():
         )
 
     try:
+        first = int(request.form.get("first") or 1)
+    except (TypeError, ValueError):
+        return error("that page cursor is not a number")
+
+    try:
+        # Checked on every instalment, not just the first: skipping it for a
+        # resumed call would leave `first=2` as a way past the guard.
         if pdf_ocr.pdf_has_text(data):
             return error("that PDF already has readable text; OCR is not needed")
-        lines = pdf_ocr.pdf_lines(data)
+        lines, next_page = pdf_ocr.pdf_lines(data, first=first)
     except ValueError as exc:
         return error(str(exc))
     except pdf_ocr.OcrUnavailable:
@@ -1764,7 +1790,15 @@ def tools_keycheck_ocr():
         app.logger.warning("tools: ocr failed: %s", exc)
         return error("could not read that PDF", 502)
 
-    return jsonify({"lines": lines, "count": len(lines)})
+    return jsonify({
+        "lines": lines,
+        "count": len(lines),
+        # Null when the document is finished. `pages` is what the browser shows
+        # progress against while it asks for the rest.
+        "nextPage": next_page,
+        "from": first,
+        "pages": pdf_ocr.page_count(data),
+    })
 
 
 @app.get("/api/tools/answerkey-checker/rank")

@@ -379,7 +379,16 @@ export default function AnswerKeyChecker() {
           name: pdf.name,
           hint: "This PDF is a scan — reading the text off the pages, this takes a moment…",
         });
-        return toolsApi.keyCheckOcr(pdf);
+        /* A long scan is read in instalments, so say how far along it is rather
+           than leaving the same "takes a moment" up for a minute. */
+        return toolsApi.keyCheckOcr(pdf, (read, pages) =>
+          setFileLabel({
+            name: pdf.name,
+            hint: pages
+              ? `This PDF is a scan — read ${read} of ${pages} pages…`
+              : `This PDF is a scan — read ${read} pages…`,
+          }),
+        );
       };
       const { responses, key, sections: found, labels: printed, scheme: stated, meta, kind } =
         await parseResponseFile(file, onProgress, readScan);

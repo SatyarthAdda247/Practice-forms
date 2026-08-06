@@ -640,18 +640,57 @@ export const toolsApi = {
    * rasterises and OCRs them (see backend/pdf_ocr.py) and returns the lines,
    * which are then parsed here exactly like a text PDF's.
    *
+   * A long paper arrives in instalments. The server reads for a bounded stretch
+   * and answers with `nextPage` where it stopped; this posts the file again from
+   * there until the document is done. Reading a 37-page scan in one request took
+   * long enough that the production gateway returned a 504, and the candidate
+   * saw an upload that had read nothing at all.
+   *
    * Returns the lines, or null where OCR is unavailable or fails — the caller
    * then reports the file as a scan it cannot read, which is what it did before
-   * this existed. The error is not swallowed silently: it is logged, and the
-   * distinction between "no engine" and "could not read it" is kept in the
-   * message so a misconfigured server is diagnosable from the browser console.
+   * this existed. Null, specifically, rather than the pages read so far: half a
+   * paper parses into a plausible-looking half score, and quietly marking
+   * somebody against 60 of their 100 questions is worse than telling them the
+   * file could not be read. The error is not swallowed silently: it is logged,
+   * and the distinction between "no engine" and "could not read it" is kept in
+   * the message so a misconfigured server is diagnosable from the browser
+   * console.
+   *
+   * `onProgress(pagesRead, pages)` is called after each instalment so the page
+   * can show movement through a read that takes a while.
    */
-  keyCheckOcr: async (file) => {
-    const body = new FormData();
-    body.append("file", file, file.name || "sheet.pdf");
+  keyCheckOcr: async (file, onProgress) => {
+    /* Enough for the server's 120-page limit at the rate a slow host manages
+       inside one instalment (~10 pages), with room to spare. It is a backstop
+       against a read that will never finish — each round re-posts the file, so
+       twenty of them is already several minutes and a lot of upload — not a
+       limit any real paper is meant to reach. */
+    const MAX_ROUNDS = 20;
+    const lines = [];
+    let first = 1;
+
     try {
-      const res = await toolCall("/tools/answerkey-checker/ocr", { method: "POST", body });
-      return Array.isArray(res?.lines) ? res.lines : null;
+      for (let round = 0; round < MAX_ROUNDS; round++) {
+        const body = new FormData();
+        body.append("file", file, file.name || "sheet.pdf");
+        body.append("first", String(first));
+        const res = await toolCall("/tools/answerkey-checker/ocr", { method: "POST", body });
+        if (!Array.isArray(res?.lines)) return null;
+        lines.push(...res.lines);
+
+        const next = res.nextPage;
+        if (next == null) return lines;
+        // A cursor that has not moved past where this instalment began means no
+        // progress is being made; stopping beats posting the same file forever.
+        if (!(next > first)) {
+          console.warn("scanned-sheet OCR made no progress at page", first);
+          return null;
+        }
+        first = next;
+        onProgress?.(first - 1, res.pages || 0);
+      }
+      console.warn("scanned-sheet OCR did not finish in", MAX_ROUNDS, "requests");
+      return null;
     } catch (err) {
       console.warn("scanned-sheet OCR failed:", err.message);
       return null;
