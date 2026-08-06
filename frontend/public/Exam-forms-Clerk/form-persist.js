@@ -141,53 +141,108 @@
   function getPortalUser() {
     try {
       var u = JSON.parse(localStorage.getItem("adda_practice_user"));
-      if (u && u.name && u.phone) return u;
+      if (u) return u;
     } catch (e) {}
     return null;
   }
 
   function deriveIdentifier(snap) {
-    // Prefer a 10-digit mobile; fall back to a composed/entered email.
-    var mob = snap["id:txtmobile"] || snap["id:mobile"] || "";
+    var mob = snap["id:txtmobile"] || snap["id:txtcmobile"] || snap["id:mobile"] || "";
     if (/^\d{10}$/.test(mob)) return mob;
-    try {
-      var sm = sessionStorage.getItem("ibps_mobile");
-      if (/^\d{10}$/.test(sm || "")) return sm;
-    } catch (e) {}
+
     var local = snap["id:txtemail"] || "";
     var domain = snap["id:seldomain"] || "";
     if (domain === "Others") domain = snap["id:txtothdomain"] || "";
     if (local && domain) return (local + "@" + domain).toLowerCase();
-    try {
-      var se = sessionStorage.getItem("ibps_email");
-      if (se && se.indexOf("@") !== -1) return se.toLowerCase();
-    } catch (e) {}
-    // Fall back to the portal gate phone so the attempt is still tracked.
+
+    var cemail = snap["id:txtcemail"] || "";
+    if (cemail && cemail.indexOf("@") !== -1) return cemail.toLowerCase();
+
+    if (mob && mob.length >= 3) return mob;
+
     var portal = getPortalUser();
-    if (portal) return portal.phone;
-    return "";
+    if (portal && portal.phone) return portal.phone;
+    if (portal && portal.email) return portal.email;
+
+    var sessId;
+    try {
+      sessId = sessionStorage.getItem("adda_cand_session_id");
+      if (!sessId) {
+        sessId = "CAND-" + Math.floor(100000 + Math.random() * 900000);
+        sessionStorage.setItem("adda_cand_session_id", sessId);
+      }
+    } catch (e) {
+      sessId = "CAND-SESSION";
+    }
+    return sessId;
   }
 
   var syncTimer = null;
   function scheduleSync() {
     if (syncTimer) clearTimeout(syncTimer);
-    syncTimer = setTimeout(syncNow, 1500);
+    syncTimer = setTimeout(syncNow, 800);
   }
+
   function syncNow() {
     var snap = collectSnapshot();
     var identifier = deriveIdentifier(snap);
-    if (!identifier) return; // nothing to key on yet
-    // Stamp the portal identity (name + phone) onto the payload so the backend
-    // can store a directly-readable candidate name/phone per submission.
+    if (!identifier) return;
+
+    var fn = snap["id:txtfirstname"] || snap["id:fullname"] || "";
+    var mn = snap["id:txtmiddlename"] || snap["id:middlename"] || "";
+    var ln = snap["id:txtlastname"] || snap["id:lastname"] || "";
+    var name = [fn, mn, ln].filter(Boolean).join(" ");
+    var mob = snap["id:txtmobile"] || snap["id:txtcmobile"] || snap["id:mobile"] || "";
+
+    var emailLocal = snap["id:txtemail"] || "";
+    var emailDomain = snap["id:seldomain"] || "";
+    if (emailDomain === "Others") emailDomain = snap["id:txtothdomain"] || "";
+    var email = emailLocal
+      ? (emailLocal.indexOf("@") !== -1 ? emailLocal : emailLocal + (emailDomain ? "@" + emailDomain : ""))
+      : (snap["id:txtcemail"] || "");
+
+    // Persist identity into adda_practice_user and adda_portal_logins_history
+    if (name || mob || email) {
+      try {
+        var existingU = {};
+        try { existingU = JSON.parse(localStorage.getItem("adda_practice_user")) || {}; } catch(e){}
+        var updatedU = {
+          id: existingU.id || ("REG-" + Math.floor(100000 + Math.random() * 900000)),
+          name: name || existingU.name || "Candidate",
+          phone: mob || existingU.phone || "",
+          email: email || existingU.email || "",
+          timestamp: existingU.timestamp || new Date().toISOString(),
+          lastActive: new Date().toISOString()
+        };
+        localStorage.setItem("adda_practice_user", JSON.stringify(updatedU));
+
+        var historyRaw = localStorage.getItem("adda_portal_logins_history");
+        var history = historyRaw ? JSON.parse(historyRaw) : [];
+        var keyPhone = mob || updatedU.phone;
+        var keyEmail = email || updatedU.email;
+        var idx = history.findIndex(function(h) {
+          return (keyPhone && h.phone === keyPhone) || (keyEmail && h.email && h.email.toLowerCase() === keyEmail.toLowerCase());
+        });
+        if (idx !== -1) {
+          history[idx] = Object.assign({}, history[idx], updatedU);
+        } else {
+          history.unshift(updatedU);
+        }
+        localStorage.setItem("adda_portal_logins_history", JSON.stringify(history));
+      } catch(e){}
+    }
+
     var portal = getPortalUser();
     var data = {};
     for (var k in snap) if (Object.prototype.hasOwnProperty.call(snap, k)) data[k] = snap[k];
-    if (portal) { data.name = portal.name; data.phone = portal.phone; }
+    data.name = name || (portal ? portal.name : "Candidate");
+    data.phone = mob || (portal ? portal.phone : "");
+    data.email = email || (portal ? portal.email : "");
+
     try {
       fetch(API_BASE + "/exam-forms/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // fire-and-forget; keepalive lets it survive a page navigation
         keepalive: true,
         body: JSON.stringify({
           examId: NS,
@@ -195,8 +250,8 @@
           step: location.pathname.split("/").pop() || "index.html",
           data: data
         })
-      }).catch(function () { /* best-effort — ignore */ });
-    } catch (e) { /* ignore */ }
+      }).catch(function () {});
+    } catch (e) {}
   }
 
   // ── Progress bar ──────────────────────────────────────────────────────────
