@@ -273,6 +273,10 @@ def api_index():
             {"method": "POST", "path": "/api/tools/answerkey-checker/results", "desc": "Log an answer-key analysis (public)"},
             {"method": "POST", "path": "/api/tools/answerkey-checker/fetch", "desc": "Fetch a response-sheet URL for parsing (public)"},
             {"method": "GET", "path": "/api/tools/answerkey-checker/rank", "desc": "Cohort rank for a score (public)"},
+            {"method": "GET", "path": "/api/tools/answerkey-checker/schemes", "desc": "Admin-set marking schemes by exam (public)"},
+            {"method": "GET", "path": "/api/admin/keycheck-schemes", "desc": "List marking-scheme overrides"},
+            {"method": "PUT", "path": "/api/admin/keycheck-schemes", "desc": "Set one exam's marking scheme"},
+            {"method": "DELETE", "path": "/api/admin/keycheck-schemes/<exam>", "desc": "Clear one exam's marking scheme"},
         ],
     })
 
@@ -346,18 +350,26 @@ def auth_google():
 def auth_me():
     """Return the currently signed-in user (live DB record).
 
-    ``canViewLeads`` is included so the UI can hide the leads page from users
-    who have not been approved for it. The endpoint itself re-checks — this is
-    only to avoid showing a link that would 403.
+    ``canViewLeads`` and ``canEditMarking`` are included so the UI can hide
+    pages from users who have not been approved for them. Both endpoints
+    re-check — these are only here to avoid showing a link that would 403.
 
     ``impersonator`` is set when a super admin is acting as this user, so the
     UI can show a banner and an exit. It must survive a page reload, which is
     why it comes from here rather than being held in the client."""
-    return jsonify({
-        **g.user,
-        "canViewLeads": tools_store.can_view_leads(g.user),
-        "impersonator": _impersonator_summary(),
-    })
+    return jsonify({**g.user, **_grants(g.user),
+                    "impersonator": _impersonator_summary()})
+
+
+def _grants(user):
+    """The per-feature permissions the UI needs, as cosmetic flags.
+
+    Cached (see _AccessList.allows): this runs on every page load, and nothing
+    is unlocked by it — the endpoints behind each flag check for themselves."""
+    return {
+        "canViewLeads": tools_store.can_view_leads(user),
+        "canEditMarking": tools_store.can_edit_marking(user),
+    }
 
 
 def _impersonator_summary():
@@ -405,7 +417,7 @@ def admin_impersonate():
         "token": issue_session(target, actor=g.user),
         "user": {
             **target,
-            "canViewLeads": tools_store.can_view_leads(target),
+            **_grants(target),
             "impersonator": {"email": g.user["email"], "name": g.user["name"]},
         },
     })
@@ -430,7 +442,7 @@ def auth_impersonate_stop():
     )
     return jsonify({
         "token": issue_session(actor),
-        "user": {**actor, "canViewLeads": tools_store.can_view_leads(actor)},
+        "user": {**actor, **_grants(actor)},
     })
 
 
@@ -637,6 +649,130 @@ def admin_revoke_lead_access(email):
     return "", 204
 
 
+# --------------------------------------------------------------------------- #
+# Answer-key checker: marking schemes
+# --------------------------------------------------------------------------- #
+# Two permissions, deliberately separate:
+#
+#   * who may EDIT a marking scheme      -> tool_marking_access (+ super admins)
+#   * who may GRANT that permission      -> super admins only
+#
+# The edit permission is the sensitive one. A row here changes the score shown
+# to every candidate who checks that paper, so it is not open to all admins —
+# a super admin names the people who own exam marking, and only they can change
+# it. See the note above SCHEMES_TABLE in tools_store.
+def _require_marking_editor():
+    """None if the caller may edit marking schemes, else an error response.
+
+    Never served from the cache: this guards a write, and a revoked grant must
+    take effect on the next request (see _AccessList.allows)."""
+    if tools_store.can_edit_marking(g.user, cached=False):
+        return None
+    return error("you do not have access to answer-key marking schemes — "
+                 "ask a super admin to approve your account", 403)
+
+
+@app.get("/api/admin/keycheck-schemes")
+@login_required
+def admin_list_keycheck_schemes():
+    """Every marking-scheme override, with who set it and why.
+
+    Readable by super admins and by anyone approved via
+    ``/api/admin/marking-access``.
+    """
+    denied = _require_marking_editor()
+    if denied:
+        return denied
+    try:
+        return jsonify({"schemes": tools_store.list_keycheck_schemes()})
+    except Exception as exc:
+        app.logger.exception("listing marking schemes failed")
+        return error(f"could not read marking schemes: {exc}", 503)
+
+
+@app.put("/api/admin/keycheck-schemes")
+@login_required
+def admin_set_keycheck_scheme():
+    """Set one exam's marking scheme.
+
+    Body: ``{ exam, label?, correct, wrong?, skipped?, total?, enforced?,
+    note? }`` — ``exam`` is the slug from the checker's exam list, ``wrong`` is
+    the penalty as a positive number, and ``enforced`` makes this row win over
+    a marking note printed on the response sheet (normally the sheet wins).
+
+    PUT rather than POST: the exam slug is the key, so sending the same body
+    twice leaves one row, not two.
+    """
+    denied = _require_marking_editor()
+    if denied:
+        return denied
+    data = request.get_json(silent=True) or {}
+    try:
+        row = tools_store.upsert_keycheck_scheme(data, g.user["email"])
+    except ValueError as exc:               # failed validation — the caller's fix
+        return error(str(exc))
+    except Exception as exc:
+        app.logger.exception("saving a marking scheme failed")
+        return error(f"could not save that marking scheme: {exc}", 503)
+    return jsonify(row)
+
+
+@app.delete("/api/admin/keycheck-schemes/<exam>")
+@login_required
+def admin_delete_keycheck_scheme(exam):
+    """Clear one exam's override, so it falls back to its built-in preset."""
+    denied = _require_marking_editor()
+    if denied:
+        return denied
+    try:
+        tools_store.delete_keycheck_scheme(exam, g.user["email"])
+    except ValueError as exc:
+        return error(str(exc))
+    except Exception as exc:
+        app.logger.exception("deleting a marking scheme failed")
+        return error(f"could not clear that marking scheme: {exc}", 503)
+    return "", 204
+
+
+@app.get("/api/admin/marking-access")
+@admin_required
+def admin_list_marking_access():
+    """Users approved to edit marking schemes. **Super-admins only.**"""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can manage marking access", 403)
+    return jsonify(tools_store.list_marking_access())
+
+
+@app.post("/api/admin/marking-access")
+@admin_required
+def admin_grant_marking_access():
+    """Approve a user to edit marking schemes. **Super-admins only.**
+
+    Body: ``{ "email": "..." }``. Super admins always have access and do not
+    need a grant."""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can grant marking access", 403)
+    email = ((request.get_json(silent=True) or {}).get("email") or "").strip()
+    if not email or "@" not in email:
+        return error("a valid 'email' is required")
+    try:
+        tools_store.grant_marking_access(email, g.user["email"])
+    except Exception as exc:
+        app.logger.exception("granting marking access failed")
+        return error(f"could not grant access: {exc}", 500)
+    return jsonify(tools_store.list_marking_access()), 201
+
+
+@app.delete("/api/admin/marking-access/<path:email>")
+@admin_required
+def admin_revoke_marking_access(email):
+    """Revoke a user's marking-scheme access. **Super-admins only.**"""
+    if g.user["role"] != "super_admin":
+        return error("only a super admin can revoke marking access", 403)
+    tools_store.revoke_marking_access(email)
+    return "", 204
+
+
 @app.get("/api/tools/leads")
 @login_required
 def tools_leads():
@@ -762,8 +898,11 @@ def delete_exam(exam_id):
 @app.get("/api/exams/<int:exam_id>/sheets")
 @login_required
 def list_sheets(exam_id):
-    """List every uploaded sheet for an exam (the upload queue)."""
-    rows = db.list_sheets(exam_id)
+    """List every uploaded sheet for an exam (the upload queue).
+
+    ``?fresh=1`` skips the read cache — see :func:`db.list_sheets`.
+    """
+    rows = db.list_sheets(exam_id, cached=not request.args.get("fresh"))
     return jsonify([db.row_to_sheet(r) for r in rows])
 
 
@@ -1221,6 +1360,33 @@ def tools_keycheck_result():
         return error("stats object is required")
 
     return _tools_save(tools_store.save_keycheck_result, data)
+
+
+@app.get("/api/tools/answerkey-checker/schemes")
+def tools_keycheck_schemes():
+    """Admin-set marking schemes for the answer-key checker, by exam slug.
+
+    Public, because the tool that reads them is. It carries no personal data —
+    only marks per exam — and the admin-only fields (who changed it, why) are
+    stripped in ``public_keycheck_schemes``.
+
+    Never fails the caller: on a warehouse problem this answers with an empty
+    map and the tool falls back to its built-in presets, exactly as it did
+    before this table existed. Cached server-side (see SCHEME_TTL) and given a
+    matching Cache-Control, so a page load costs nothing.
+
+    Deliberately NOT rate-limited, unlike its neighbours. It is a page-load GET
+    that serves the same in-process constant to everyone, so a limit buys almost
+    nothing — and it would cost a great deal: the client treats any failure as
+    "no overrides", so a shared IP (a coaching centre, a mobile carrier's NAT)
+    tripping a per-IP bucket would silently drop every candidate behind it back
+    onto the built-in presets, for exactly the papers these rows exist to
+    correct. A wrong score returned quietly is far worse than an extra GET.
+    """
+    schemes = tools_store.public_keycheck_schemes()
+    resp = jsonify({"schemes": schemes})
+    resp.headers["Cache-Control"] = f"public, max-age={tools_store.SCHEME_TTL}"
+    return resp
 
 
 @app.post("/api/exam-forms/save")

@@ -17,6 +17,9 @@ const ADMIN_NAV = { to: "/admin", label: "Administrator", icon: "admin_panel_set
 const SUPER_ADMIN_NAV = { to: "/admin/usage", label: "Daily Usage", icon: "monitoring" };
 // Shown only to users a super admin has approved for candidate leads.
 const LEADS_NAV = { to: "/leads", label: "Resizer Leads", icon: "contacts" };
+// Marking schemes for the public Answer Key Checker. Same rule as leads: super
+// admins always, others only once a super admin approves them.
+const MARKING_NAV = { to: "/admin/marking", label: "Exam Marking", icon: "rule" };
 
 function Item({ to, label, icon, end }) {
   return (
@@ -60,6 +63,7 @@ export default function SideNav() {
     ...(["admin", "super_admin"].includes(user?.role) ? [ADMIN_NAV] : []),
     ...(user?.role === "super_admin" ? [SUPER_ADMIN_NAV] : []),
     ...(user?.role === "super_admin" || user?.canViewLeads ? [LEADS_NAV] : []),
+    ...(user?.role === "super_admin" || user?.canEditMarking ? [MARKING_NAV] : []),
   ];
 
   return (

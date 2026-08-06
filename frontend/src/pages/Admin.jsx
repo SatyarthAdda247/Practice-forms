@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import Icon from "../components/Icon.jsx";
@@ -92,6 +93,101 @@ function LeadAccessPanel() {
       {rows.length === 0 ? (
         <p className="px-lg pb-md font-body-sm text-body-sm text-secondary">
           Nobody approved yet — only super admins can see leads.
+        </p>
+      ) : (
+        <ul className="divide-y divide-outline-variant border-t border-outline-variant">
+          {rows.map((r) => (
+            <li key={r.email} className="px-lg py-sm flex items-center justify-between gap-sm">
+              <div className="min-w-0">
+                <p className="font-body-md text-body-md text-on-background truncate">{r.email}</p>
+                {r.grantedBy && (
+                  <p className="font-body-sm text-body-sm text-secondary truncate">
+                    approved by {r.grantedBy}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => revoke(r.email)}
+                disabled={busy}
+                title="Revoke access"
+                className="p-xs rounded-full text-outline hover:text-error hover:bg-error-container transition-colors disabled:opacity-40 shrink-0"
+              >
+                <Icon name="remove_circle" size={20} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Super admins name who may change marking in the public Answer Key Checker.
+// Here rather than on that screen, beside the leads grant: both are the same kind
+// of permission, and this is the page an admin comes to looking for one.
+function MarkingAccessPanel() {
+  const [rows, setRows] = useState([]);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const load = () =>
+    api.adminListMarkingAccess().then(setRows).catch((e) => setErr(e.message));
+  useEffect(() => { load(); }, []);
+
+  const grant = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr("");
+    try {
+      setRows(await api.adminGrantMarkingAccess(email.trim()));
+      setEmail("");
+    } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+
+  const revoke = async (addr) => {
+    if (!confirm(`Remove ${addr}? They will no longer be able to change how any paper is marked.`)) return;
+    setBusy(true); setErr("");
+    try { await api.adminRevokeMarkingAccess(addr); await load(); }
+    catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden mb-xl">
+      <div className="px-lg py-md border-b border-outline-variant bg-surface-bright">
+        <h4 className="font-headline-sm text-headline-sm text-on-background flex items-center gap-sm">
+          <Icon name="key" size={20} />
+          Who can change marking
+        </h4>
+        <p className="font-body-sm text-body-sm text-secondary mt-xs">
+          Approved users can set the marks for any exam in the public Answer Key Checker. Super
+          admins always can. Keep this list to the people who own exam marking — a change here
+          alters the score every candidate sitting that paper is shown.
+        </p>
+      </div>
+
+      {err && <p className="px-lg pt-md font-body-sm text-body-sm text-error">{err}</p>}
+
+      <form onSubmit={grant} className="px-lg py-md flex flex-wrap gap-sm items-center">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@adda247.com"
+          className="flex-1 min-w-[220px] bg-surface border border-outline-variant rounded-lg px-sm py-2 font-body-md text-body-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="py-2 px-md bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors disabled:opacity-60"
+        >
+          Approve
+        </button>
+      </form>
+
+      {rows.length === 0 ? (
+        <p className="px-lg pb-md font-body-sm text-body-sm text-secondary">
+          Nobody approved yet — only super admins can change marking.
         </p>
       ) : (
         <ul className="divide-y divide-outline-variant border-t border-outline-variant">
@@ -227,7 +323,31 @@ export default function Admin() {
         <Loading />
       ) : (
         <>
+          {/* The side nav carries this too, but the mobile tab bar has no room
+              for it — and this is the page people go to looking for anything
+              administrative. */}
+          {(me?.role === "super_admin" || me?.canEditMarking) && (
+            <Link
+              to="/admin/marking"
+              className="mb-xl flex items-center gap-md px-lg py-md rounded-xl border border-outline-variant bg-surface-container-lowest hover:bg-surface-container transition-colors"
+            >
+              <span className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0">
+                <Icon name="rule" size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-body-md text-body-md text-on-background font-medium">
+                  Exam Marking Schemes
+                </span>
+                <span className="block font-body-sm text-body-sm text-secondary">
+                  Marks per correct answer and negative marking for the public Answer Key Checker
+                </span>
+              </span>
+              <Icon name="arrow_forward" size={20} className="text-outline shrink-0" />
+            </Link>
+          )}
+
           {me?.role === "super_admin" && <LeadAccessPanel />}
+          {me?.role === "super_admin" && <MarkingAccessPanel />}
       {/* Counts */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-lg flex justify-around items-center mb-xl">
         {[

@@ -29,8 +29,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   // Restore the session on boot. The token is the only thing that survives a
-  // reload; role and canViewLeads must come from the server, since trusting a
-  // cached copy would let a doctored localStorage entry unlock admin routes.
+  // reload; the role and the per-feature grants (canViewLeads, canEditMarking)
+  // must come from the server, since trusting a cached copy would let a doctored
+  // localStorage entry unlock admin routes.
   // The API enforces this too — this only gates what renders.
   useEffect(() => {
     if (!tokenStore.get()) return;

@@ -25,6 +25,8 @@ written to be safe and cheap for transactional-style access, mirroring
 
 import json
 import os
+import threading
+import time
 from datetime import datetime, timezone
 
 # Users live in the shared BigQuery dataset; re-export the repo functions so
@@ -122,6 +124,113 @@ def _next_id(table_fqn):
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+# --------------------------------------------------------------------------- #
+# Read cache
+# --------------------------------------------------------------------------- #
+# BigQuery bills by bytes scanned, and ``use_query_cache=True`` already makes a
+# repeated read free — but it does NOT make it fast. Every read is still a query
+# *job*: create, poll, fetch. Measured against these (tiny) tables that floor is
+# ~0.5-1.5s regardless of how little data comes back, and a screen that issues
+# two reads pays it twice. That is the whole reason the app felt slow.
+#
+# So reads are memoised in-process, exactly like the id -> user cache in
+# bigquery_users (see BQ_USER_CACHE_TTL there):
+#
+#   * within TTL          -> returned straight from memory, no job at all
+#   * TTL..STALE_TTL      -> the cached value is returned *immediately* and a
+#                            daemon thread refreshes it in the background, so
+#                            the next caller gets fresh data without anyone
+#                            having waited for a job
+#   * beyond STALE_TTL    -> fetched synchronously, as before
+#
+# Every write bumps ``_data_version``, which is part of the cache key, so a
+# change made through this process is visible on the very next read — stale data
+# can never outlive a write.
+#
+# CAVEAT, same as the users cache: this is per *process*. Under gunicorn each
+# worker has its own, so a write served by worker A is invisible to a read
+# served by worker B for up to TTL seconds. That is why the default is short and
+# why grading input (:func:`list_validated_sheets`) is deliberately NOT cached —
+# scoring must never run against a sheet list that is seconds out of date.
+# Set BQ_READ_CACHE_TTL=0 to turn the whole thing off.
+READ_CACHE_TTL = int(os.environ.get("BQ_READ_CACHE_TTL", "30"))
+READ_CACHE_STALE_TTL = int(os.environ.get("BQ_READ_CACHE_STALE_TTL", "300"))
+
+_read_cache = {}          # (version, key) -> (stored_at, value)
+_read_lock = threading.Lock()
+_refreshing = set()       # keys with a background refresh already in flight
+_data_version = 0
+
+
+def bust_read_cache():
+    """Drop every cached read. Called by all writers in this module."""
+    global _data_version
+    with _read_lock:
+        _data_version += 1
+        _read_cache.clear()
+
+
+def _refresh_async(full_key, loader):
+    """Re-run ``loader`` off the request thread and store the result."""
+    def run():
+        value = None
+        ok = False
+        try:
+            value = loader()
+            ok = True
+        except Exception:  # a background refresh must never take the app down
+            pass
+        with _read_lock:
+            # Only write back if the entry is still current: a bust while this
+            # was running means the version moved on and this value is garbage.
+            if ok and full_key in _read_cache:
+                _read_cache[full_key] = (time.time(), value)
+            _refreshing.discard(full_key)
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _cached(key, loader):
+    """Return ``loader()``, memoised under ``key`` (see the notes above)."""
+    if READ_CACHE_TTL <= 0:
+        return loader()
+
+    full_key = (_data_version, key)
+    with _read_lock:
+        hit = _read_cache.get(full_key)
+
+    if hit is not None:
+        age = time.time() - hit[0]
+        if age < READ_CACHE_TTL:
+            return hit[1]
+        if age < READ_CACHE_STALE_TTL:
+            with _read_lock:
+                start = full_key not in _refreshing
+                if start:
+                    _refreshing.add(full_key)
+            if start:
+                _refresh_async(full_key, loader)
+            return hit[1]
+
+    value = loader()
+    with _read_lock:
+        # Don't store it if a write landed while the query was running: that
+        # value predates the write, and caching it would hide the change.
+        if full_key[0] == _data_version:
+            _read_cache[full_key] = (time.time(), value)
+    return value
+
+
+# Callers get their own copy of a cached row/list, so a caller that mutates what
+# it was handed cannot corrupt the entry every later caller will be served.
+def _copy_rows(rows):
+    return [dict(r) for r in rows]
+
+
+def _copy_row(row):
+    return dict(row) if row is not None else None
 
 
 # --------------------------------------------------------------------------- #
@@ -277,8 +386,7 @@ def row_to_sheet(row):
 # --------------------------------------------------------------------------- #
 # Exams
 # --------------------------------------------------------------------------- #
-def list_exams():
-    """All exams as physical-column dicts, newest first."""
+def _query_exams():
     _, rows = _execute(
         f"SELECT id, name, exam_date, num_questions, marks_correct, "
         f"marks_penalty, answer_key, created_at FROM {_EXAMS} ORDER BY id DESC"
@@ -286,8 +394,12 @@ def list_exams():
     return [dict(r) for r in rows]
 
 
-def get_exam(exam_id):
-    """A single exam as a physical-column dict, or ``None``."""
+def list_exams():
+    """All exams as physical-column dicts, newest first (cached)."""
+    return _copy_rows(_cached("exams", _query_exams))
+
+
+def _query_exam(exam_id):
     _, rows = _execute(
         f"SELECT id, name, exam_date, num_questions, marks_correct, "
         f"marks_penalty, answer_key, created_at FROM {_EXAMS} "
@@ -295,6 +407,11 @@ def get_exam(exam_id):
         [_p("id", "INT64", exam_id)],
     )
     return dict(rows[0]) if rows else None
+
+
+def get_exam(exam_id):
+    """A single exam as a physical-column dict, or ``None`` (cached)."""
+    return _copy_row(_cached(("exam", exam_id), lambda: _query_exam(exam_id)))
 
 
 def create_exam(name, exam_date, num_questions, marks_correct, marks_penalty,
@@ -320,6 +437,7 @@ def create_exam(name, exam_date, num_questions, marks_correct, marks_penalty,
             _p("created_at", "TIMESTAMP", created_at),
         ],
     )
+    bust_read_cache()
     return {
         "id": exam_id,
         "name": name,
@@ -352,6 +470,7 @@ def update_exam(exam_id, name, exam_date, num_questions, marks_correct,
             _p("answer_key", "STRING", json.dumps(answer_key)),
         ],
     )
+    bust_read_cache()  # before the re-read, so it cannot serve the old row
     return get_exam(exam_id)
 
 
@@ -364,14 +483,14 @@ def delete_exam(exam_id):
              [_p("id", "INT64", exam_id)])
     job, _ = _execute(f"DELETE FROM {_EXAMS} WHERE id = @id",
                       [_p("id", "INT64", exam_id)])
+    bust_read_cache()
     return bool(job.num_dml_affected_rows)
 
 
 # --------------------------------------------------------------------------- #
 # Sheets
 # --------------------------------------------------------------------------- #
-def list_sheets(exam_id):
-    """All sheets for an exam as physical-column dicts, newest first."""
+def _query_sheets(exam_id):
     _, rows = _execute(
         f"SELECT id, exam_id, filename, size_bytes, status, error, "
         f"roll_number, student_name, answers, flags, created_at FROM {_SHEETS} "
@@ -381,6 +500,19 @@ def list_sheets(exam_id):
     return [dict(r) for r in rows]
 
 
+def list_sheets(exam_id, cached=True):
+    """All sheets for an exam as physical-column dicts, newest first.
+
+    ``cached=False`` forces a live read. The upload client uses it to ask "did
+    this file land?" after the server dropped a request — an answer from another
+    worker's cache could predate the upload and get the file sent twice.
+    """
+    if not cached:
+        return _query_sheets(exam_id)
+    return _copy_rows(_cached(("sheets", exam_id), lambda: _query_sheets(exam_id)))
+
+
+# Deliberately uncached — this is what grading scores. See the read-cache notes.
 def list_validated_sheets(exam_id):
     """Sheets for an exam with status ``validated`` (grading input)."""
     _, rows = _execute(
@@ -421,6 +553,7 @@ def create_sheet(exam_id, filename, size_bytes, status, error=None,
             _p("created_at", "TIMESTAMP", created_at),
         ],
     )
+    bust_read_cache()
     return {
         "id": sheet_id,
         "exam_id": exam_id,
@@ -436,8 +569,7 @@ def create_sheet(exam_id, filename, size_bytes, status, error=None,
     }
 
 
-def get_sheet(sheet_id):
-    """A single sheet as a physical-column dict, or ``None``."""
+def _query_sheet(sheet_id):
     _, rows = _execute(
         f"SELECT id, exam_id, filename, size_bytes, status, error, "
         f"roll_number, student_name, answers, flags, created_at FROM {_SHEETS} "
@@ -445,6 +577,11 @@ def get_sheet(sheet_id):
         [_p("id", "INT64", sheet_id)],
     )
     return dict(rows[0]) if rows else None
+
+
+def get_sheet(sheet_id):
+    """A single sheet as a physical-column dict, or ``None`` (cached)."""
+    return _copy_row(_cached(("sheet", sheet_id), lambda: _query_sheet(sheet_id)))
 
 
 def update_sheet_identity(sheet_id, student_name=None, roll_number=None):
@@ -463,6 +600,7 @@ def update_sheet_identity(sheet_id, student_name=None, roll_number=None):
     if not sets:
         return get_sheet(sheet_id)
     _execute(f"UPDATE {_SHEETS} SET {', '.join(sets)} WHERE id = @id", params)
+    bust_read_cache()  # before the re-read, so it cannot serve the old row
     return get_sheet(sheet_id)
 
 
@@ -473,6 +611,7 @@ def delete_sheet(sheet_id):
              [_p("id", "INT64", sheet_id)])
     job, _ = _execute(f"DELETE FROM {_SHEETS} WHERE id = @id",
                       [_p("id", "INT64", sheet_id)])
+    bust_read_cache()
     return bool(job.num_dml_affected_rows)
 
 
@@ -488,6 +627,7 @@ def replace_results(exam_id, results):
     """
     _execute(f"DELETE FROM {_RESULTS} WHERE exam_id = @exam_id",
              [_p("exam_id", "INT64", exam_id)])
+    bust_read_cache()
     if not results:
         return 0
 
@@ -516,14 +656,11 @@ def replace_results(exam_id, results):
             VALUES {', '.join(tuples)}""",
         params,
     )
+    bust_read_cache()
     return len(results)
 
 
-def list_results(exam_id):
-    """Results joined with their sheet metadata, highest score first. Returns
-    dicts with keys: ``sheet_id``, ``roll_number``, ``student_name``,
-    ``filename``, ``flags``, ``correct``, ``wrong``, ``unattempted``,
-    ``score``, ``max_score``."""
+def _query_results(exam_id):
     _, rows = _execute(
         f"""SELECT r.sheet_id AS sheet_id, s.roll_number AS roll_number,
                    s.student_name AS student_name, s.filename AS filename,
@@ -538,6 +675,14 @@ def list_results(exam_id):
         [_p("exam_id", "INT64", exam_id)],
     )
     return [dict(r) for r in rows]
+
+
+def list_results(exam_id):
+    """Results joined with their sheet metadata, highest score first (cached).
+    Returns dicts with keys: ``sheet_id``, ``roll_number``, ``student_name``,
+    ``filename``, ``flags``, ``correct``, ``wrong``, ``unattempted``,
+    ``score``, ``max_score``."""
+    return _copy_rows(_cached(("results", exam_id), lambda: _query_results(exam_id)))
 
 
 # --------------------------------------------------------------------------- #
@@ -558,9 +703,15 @@ def daily_usage(days=30):
     ``sheets`` counts every uploaded page (one page = one student's sheet);
     ``graded`` counts those that made it through scoring on that day, which can
     differ because grading is a separate step run later.
+
+    Cached like the other reads — this is the heaviest query in the app and the
+    dashboard re-runs it on every visit and range change.
     """
     days = max(1, min(int(days), 365))
+    return _copy_rows(_cached(("usage", days), lambda: _query_daily_usage(days)))
 
+
+def _query_daily_usage(days):
     # Cut-off is computed here and passed as a parameter, deliberately NOT with
     # CURRENT_TIMESTAMP() in SQL. A query containing CURRENT_TIMESTAMP() is
     # non-deterministic, so BigQuery refuses to cache it: measured, the
