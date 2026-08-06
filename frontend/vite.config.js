@@ -32,7 +32,8 @@ function routeMeta() {
 export default defineConfig({
   plugins: [react(), routeMeta()],
   server: {
-    port: 5173,
+    port: 5174,
+    strictPort: true,
     // Google Identity Services opens its sign-in popup and talks back via
     // window.postMessage. The default COOP ("same-origin") severs that handle,
     // so the popup's message is dropped. server.js sets the same header for the
