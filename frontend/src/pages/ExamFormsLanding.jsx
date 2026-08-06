@@ -38,9 +38,6 @@ export default function ExamFormsLanding() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans antialiased">
 
-      {/* Required Name + Phone gate — everyone who enters is recorded. */}
-      {!practiceUser && <PracticeGate />}
-
       {/* ── Announcement Banner ── */}
       <div
         role="banner"

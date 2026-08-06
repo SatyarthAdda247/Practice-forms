@@ -1,62 +1,40 @@
 // ─── src/pages/exam-forms/ExamFormsAdmin.jsx ─────────────────────────────
 // Admin dashboard for the Adda247 Practice Forms portal.
 //
-// Architecture:
-//   • Reads from THREE data sources in localStorage:
-//     1. Portal logins history  (adda_portal_logins_history)
-//     2. Form-persist fields    (examform:IBPS-PO:*, examform:IBPS-CLERK:*)
-//     3. Practice store entries (adda247_practice_entries_v1)
-//   • Cross-references initial sign-in credentials (Name, Phone, Email)
-//     against the candidate's filled basic-details fields to verify
-//     genuine-user integrity with field-level match/mismatch indicators.
-//   • Tracks total unique website sessions via adda_website_visitor_count.
+// Features:
+//   • Tracks total website visitors (adda_website_visitor_count)
+//   • Tracks every click made on "Start Practice" (adda_start_practice_clicks)
+//   • Saves candidate Name, Mobile Number, and Email ID directly from Form Basic Details
+//   • Shows where each candidate left the form at or if they fully completed it
+//   • Provides search, filter, CSV export, auto-refresh, and inspect candidate modal
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/Icon.jsx";
 import { Adda247Logo } from "../../components/GovtLogos.jsx";
-import { getVisitorCount, getPortalLoginsHistory } from "../../practiceUser.js";
+import {
+  getVisitorCount,
+  getStartPracticeClickCount,
+  getPortalLoginsHistory,
+} from "../../practiceUser.js";
 import { practiceStore } from "../../tools/lib/practiceStore.js";
-import { EXAM_ADMIN_KEY, examApiBase } from "../../examFormsConfig.js";
+import { toolsApi } from "../../api.js";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
-// Backend API origin + admin key come from the shared frontend config, with a
-// localStorage override (set from the admin login password).
-async function fetchBackendSubmissions() {
-  let key = "";
-  try { key = localStorage.getItem("adda_exam_admin_key") || ""; } catch { /* */ }
-  if (!key) key = EXAM_ADMIN_KEY; // fall back to the configured key
-  if (!key) return null;
-  try {
-    const res = await fetch(`${examApiBase()}/exam-forms/submissions?key=${encodeURIComponent(key)}`, {
-      headers: { "X-Admin-Key": key },
-    });
-    if (!res.ok) return null;
-    const body = await res.json();
-    return Array.isArray(body.submissions) ? body.submissions : [];
-  } catch {
-    return null;
-  }
-}
-
-/** Normalise a name for fuzzy comparison: lowercase, only a-z, no spaces. */
 function normName(s) {
   return (s || "").toLowerCase().replace(/[^a-z]/g, "");
 }
 
-/** Normalise a phone string to its last 10 digits. */
 function normPhone(s) {
   const d = (s || "").replace(/\D/g, "");
   return d.length >= 10 ? d.slice(-10) : d;
 }
 
-/** Normalise an email for comparison. */
 function normEmail(s) {
   return (s || "").toLowerCase().trim();
 }
 
-/** Read all form-persist localStorage keys for a given exam namespace. */
 function readFormPersistKeys(examNS) {
   const PREFIX = `examform:${examNS}:`;
   const data = {};
@@ -67,11 +45,10 @@ function readFormPersistKeys(examNS) {
         data[k.slice(PREFIX.length)] = localStorage.getItem(k);
       }
     }
-  } catch { /* storage disabled */ }
+  } catch { /* ignore */ }
   return data;
 }
 
-/** Format a date string to a human-readable form. */
 function fmtDate(iso) {
   if (!iso) return "-";
   try {
@@ -84,7 +61,6 @@ function fmtDate(iso) {
   } catch { return iso; }
 }
 
-/** Format a relative-time string ("2 hours ago", "just now"). */
 function timeAgo(iso) {
   if (!iso) return "";
   try {
@@ -94,6 +70,14 @@ function timeAgo(iso) {
     if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + "h ago";
     return Math.floor(diff / 86_400_000) + "d ago";
   } catch { return ""; }
+}
+
+async function fetchBackendSubmissions() {
+  try {
+    const res = await toolsApi.listExamFormSubmissions();
+    if (res && res.ok && Array.isArray(res.items)) return res.items;
+  } catch { /* best-effort */ }
+  return null;
 }
 
 /* ── Admin Credentials ───────────────────────────────────────────────────── */
@@ -119,12 +103,8 @@ export default function ExamFormsAdmin() {
     e.preventDefault();
     if (loginUser.trim() === ADMIN_USER && loginPass === ADMIN_PASS) {
       try { sessionStorage.setItem(AUTH_KEY, "true"); } catch { /* ignore */ }
-      // Use the admin password as the backend read key (backend must set
-      // EXAM_FORMS_ADMIN_KEY to the same value). Enables central cross-device data.
-      try { localStorage.setItem("adda_exam_admin_key", loginPass); } catch { /* ignore */ }
       setIsAuthenticated(true);
       setLoginError("");
-      loadData();
     } else {
       setLoginError("Invalid username or password. Please try again.");
     }
@@ -137,8 +117,9 @@ export default function ExamFormsAdmin() {
     setLoginPass("");
   }
 
-  // ── Dashboard state (only used when authenticated) ──
+  // ── Dashboard state ──
   const [visitorCount, setVisitorCount] = useState(0);
+  const [startPracticeClicks, setStartPracticeClicks] = useState(0);
   const [loginsHistory, setLoginsHistory] = useState([]);
   const [storeEntries, setStoreEntries] = useState([]);
   const [formPersistPO, setFormPersistPO] = useState({});
@@ -147,20 +128,19 @@ export default function ExamFormsAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [examFilter, setExamFilter] = useState("ALL");
-  const [sortBy, setSortBy] = useState("recent"); // recent | name | status
+  const [sortBy, setSortBy] = useState("recent");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date().toISOString());
-  const [backendRows, setBackendRows] = useState([]); // central (cross-device) DynamoDB data
+  const [backendRows, setBackendRows] = useState([]);
 
   const loadData = useCallback(() => {
     setVisitorCount(getVisitorCount());
+    setStartPracticeClicks(getStartPracticeClickCount());
     setLoginsHistory(getPortalLoginsHistory());
     setStoreEntries(practiceStore.getAllEntries());
     setFormPersistPO(readFormPersistKeys("IBPS-PO"));
     setFormPersistClerk(readFormPersistKeys("IBPS-CLERK"));
     setLastRefreshed(new Date().toISOString());
-    // Central backend tracking (shows sign-ins from ALL devices, not just this
-    // browser). Best-effort: falls back to the localStorage-only view.
     fetchBackendSubmissions().then((rows) => { if (rows) setBackendRows(rows); });
   }, []);
 
@@ -177,41 +157,18 @@ export default function ExamFormsAdmin() {
   const records = useMemo(() => {
     const map = new Map();
 
-    // Stable ID generator — seeded by phone so it doesn't randomise on re-render.
     const stableId = (seed) => "REG-" + Math.abs(
       (seed || "x").split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0)
     ).toString().slice(0, 6).padStart(6, "0");
 
-    // 1. Portal sign-in entries
-    loginsHistory.forEach((login) => {
-      const key = normPhone(login.phone) || normEmail(login.email) || login.id || "";
-      if (!key) return;
-      map.set(key, {
-        id: login.id || stableId(key),
-        loginName: login.name || "",
-        loginPhone: login.phone || "",
-        loginEmail: login.email || "",
-        loginTimestamp: login.timestamp || login.lastActive || "",
-        lastActive: login.lastActive || login.timestamp || "",
-        basicName: "",
-        basicPhone: "",
-        basicEmail: "",
-        examId: "",
-        state: "",
-        category: "",
-        currentStep: "Portal Login",
-        isSubmitted: false,
-      });
-    });
-
-    // 2. form-persist localStorage snapshots (IBPS-PO and IBPS-CLERK)
+    // 1. Process form-persist localStorage snapshots (IBPS-PO and IBPS-CLERK)
     [
       { ns: "IBPS-PO", snap: formPersistPO },
       { ns: "IBPS-CLERK", snap: formPersistClerk },
     ].forEach(({ ns, snap }) => {
-      const fn  = snap["id:txtfirstname"] || "";
-      const mn  = snap["id:txtmiddlename"] || "";
-      const ln  = snap["id:txtlastname"] || "";
+      const fn  = snap["id:txtfirstname"] || snap["id:fullname"] || "";
+      const mn  = snap["id:txtmiddlename"] || snap["id:middlename"] || "";
+      const ln  = snap["id:txtlastname"] || snap["id:lastname"] || "";
       const mob = snap["id:txtmobile"] || "";
       const emailLocal = snap["id:txtemail"] || "";
       const emailDomain = snap["id:seldomain"] || "";
@@ -226,42 +183,41 @@ export default function ExamFormsAdmin() {
       const dob = snap["id:txtdob"] || "";
       const gender = snap["name:gender"] || "";
 
-      if (!fullName && !mob && !fullEmail) return; // nothing filled
+      if (!fullName && !mob && !fullEmail) return;
 
       const key = normPhone(mob) || normEmail(fullEmail) || ("form-" + ns);
       const existing = map.get(key) || {
         id: stableId(key),
-        loginName: "",
-        loginPhone: "",
-        loginEmail: "",
-        loginTimestamp: "",
-        lastActive: "",
+        timestamp: new Date().toISOString(),
       };
 
-      // Determine form step from the max step counter
       const maxStep = parseInt(snap["__maxstep"] || "0", 10);
       const stepLabels = [
         "Basic Information", "OTP Verification", "Photo & Signature",
         "Details", "Preview", "Uploads", "Payment"
       ];
       const stepLabel = stepLabels[maxStep] || `Step ${maxStep + 1}`;
+      const isSubmitted = maxStep >= 6 || snap["payment_completed"] === "1";
 
       map.set(key, {
         ...existing,
-        basicName: fullName,
-        basicPhone: mob,
-        basicEmail: fullEmail,
+        name: fullName || existing.name || "Candidate",
+        phone: mob || existing.phone || "-",
+        email: fullEmail || existing.email || "-",
         examId: ns,
-        state,
-        category,
-        dob,
-        gender,
+        state: state || existing.state || "-",
+        category: category || existing.category || "-",
+        dob: dob || existing.dob || "-",
+        gender: gender || existing.gender || "-",
         currentStep: stepLabel,
+        stepLeftAt: isSubmitted ? "Payment & Submission" : stepLabel,
+        formStatus: isSubmitted ? "COMPLETED" : "IN_PROGRESS",
+        isSubmitted: isSubmitted,
         lastActive: new Date().toISOString(),
       });
     });
 
-    // 3. practiceStore entries (DynamoDB-modelled localStorage)
+    // 2. Process practiceStore entries
     storeEntries.forEach((entry) => {
       const sd = entry.stepData || {};
       const mob = sd.mobile || sd.txtmobile || sd.phone || "";
@@ -275,95 +231,83 @@ export default function ExamFormsAdmin() {
       const key = normPhone(mob || identifier) || normEmail(email) || identifier;
       if (!key) return;
 
-      const existing = map.get(key) || {
-        id: stableId(key),
-        loginName: fullName || sd.name || "",
-        loginPhone: mob || (/^\d{10}$/.test(identifier) ? identifier : ""),
-        loginEmail: email || (identifier.includes("@") ? identifier : ""),
-        loginTimestamp: entry.createdAt || "",
-        lastActive: entry.updatedAt || entry.createdAt || "",
-      };
+      const existing = map.get(key) || {};
+      const isSubmitted = Boolean(entry.isSubmitted);
 
       map.set(key, {
         ...existing,
-        basicName: fullName || existing.basicName || "",
-        basicPhone: mob || existing.basicPhone || "",
-        basicEmail: email || existing.basicEmail || "",
-        examId: examId || existing.examId || "",
-        currentStep: entry.isSubmitted ? "Submitted ✓" : `Step ${entry.currentStep || 1}`,
-        isSubmitted: Boolean(entry.isSubmitted),
-        lastActive: entry.updatedAt || existing.lastActive || "",
+        id: existing.id || stableId(key),
+        name: fullName || existing.name || "Candidate",
+        phone: mob || existing.phone || "-",
+        email: email || existing.email || "-",
+        examId: examId || existing.examId || "-",
+        currentStep: isSubmitted ? "Submitted ✓" : `Step ${entry.currentStep || 1}`,
+        stepLeftAt: isSubmitted ? "Completed & Submitted" : `Step ${entry.currentStep || 1}`,
+        formStatus: isSubmitted ? "COMPLETED" : "IN_PROGRESS",
+        isSubmitted: isSubmitted,
+        lastActive: entry.updatedAt || existing.lastActive || new Date().toISOString(),
       });
     });
 
-    // 3b. Central backend (DynamoDB) rows — sign-ins/form data from ALL devices.
-    // This is what makes the dashboard work on prod (localStorage is per-browser).
+    // 3. Process central backend rows
     backendRows.forEach((row) => {
       const d = row.data || {};
       const phone = normPhone(row.candidatePhone || row.identifier || d["id:txtmobile"] || d.phone || "");
       const email = normEmail(d["id:txtemail"] ? (d["id:txtemail"] + "@" + (d["id:seldomain"] || "")) : "");
       const key = phone || email || row.identifier || "";
       if (!key) return;
+
       const existing = map.get(key) || {};
       const name = row.candidateName || d.name || [d["id:fullname"], d["id:middlename"], d["id:lastname"]].filter(Boolean).join(" ");
-      const tsIso = row.updatedAt ? new Date(row.updatedAt * 1000).toISOString() : (existing.lastActive || "");
+      const isSubmitted = row.step === "payment.html" || row.step === "submitted" || existing.isSubmitted;
+
       map.set(key, {
         ...existing,
         id: existing.id || stableId(key),
-        loginName: existing.loginName || name || "",
-        loginPhone: existing.loginPhone || row.candidatePhone || (phone || ""),
-        loginEmail: existing.loginEmail || (email || ""),
-        loginTimestamp: existing.loginTimestamp || tsIso,
-        lastActive: tsIso || existing.lastActive || "",
-        basicName: name || existing.basicName || "",
-        basicPhone: (row.candidatePhone || d["id:txtmobile"] || phone || "") || existing.basicPhone || "",
-        basicEmail: email || existing.basicEmail || "",
-        examId: row.examId || existing.examId || "",
-        currentStep: row.step ? String(row.step) : (existing.currentStep || "Portal Login"),
-        isSubmitted: /payment|complete/i.test(row.step || "") || existing.isSubmitted || false,
-        source: "backend",
+        name: name || existing.name || "Candidate",
+        phone: phone || existing.phone || "-",
+        email: email || existing.email || "-",
+        examId: row.examId || existing.examId || "-",
+        currentStep: isSubmitted ? "Submitted ✓" : (row.step || existing.currentStep || "In Progress"),
+        stepLeftAt: isSubmitted ? "Completed & Submitted" : (row.step || existing.stepLeftAt || "Basic Info"),
+        formStatus: isSubmitted ? "COMPLETED" : "IN_PROGRESS",
+        isSubmitted: isSubmitted,
+        lastActive: row.updatedAt ? new Date(row.updatedAt * 1000).toISOString() : (existing.lastActive || new Date().toISOString()),
       });
     });
 
-    // 4. Compute field-level match flags and overall verification status
-    const results = Array.from(map.values()).map((rec) => {
-      const hasBasic = rec.basicName || rec.basicPhone || rec.basicEmail;
-      const hasLogin = rec.loginName || rec.loginPhone || rec.loginEmail;
-
-      if (!hasBasic || !hasLogin) {
-        return { ...rec, nameMatch: null, phoneMatch: null, emailMatch: null, verificationStatus: "PENDING" };
+    // 4. Portal sign-ins history fallback
+    loginsHistory.forEach((login) => {
+      const key = normPhone(login.phone) || normEmail(login.email) || login.id || "";
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: login.id || stableId(key),
+          name: login.name || "Candidate",
+          phone: login.phone || "-",
+          email: login.email || "-",
+          examId: "-",
+          state: "-",
+          category: "-",
+          currentStep: "Form Not Started",
+          stepLeftAt: "Form Not Started",
+          formStatus: "NOT_STARTED",
+          isSubmitted: false,
+          lastActive: login.timestamp || login.lastActive || new Date().toISOString(),
+        });
       }
-
-      const nameMatch  = normName(rec.loginName) && normName(rec.basicName) &&
-        (normName(rec.loginName).includes(normName(rec.basicName)) ||
-         normName(rec.basicName).includes(normName(rec.loginName)));
-      const phoneMatch = normPhone(rec.loginPhone) && normPhone(rec.basicPhone) &&
-        normPhone(rec.loginPhone) === normPhone(rec.basicPhone);
-      const emailMatch = normEmail(rec.loginEmail) && normEmail(rec.basicEmail) &&
-        normEmail(rec.loginEmail) === normEmail(rec.basicEmail);
-
-      const matched = [nameMatch, phoneMatch, emailMatch].filter(Boolean).length;
-      let verificationStatus = "MISMATCH";
-      if (matched === 3)                                    verificationStatus = "GENUINE";
-      else if (matched === 2 || (phoneMatch && nameMatch))  verificationStatus = "GENUINE";
-      else if (matched === 1)                               verificationStatus = "PARTIAL";
-
-      return { ...rec, nameMatch, phoneMatch, emailMatch, verificationStatus };
     });
 
-    // Sort
+    const results = Array.from(map.values());
+
     results.sort((a, b) => {
-      if (sortBy === "name") return (a.loginName || "").localeCompare(b.loginName || "");
-      if (sortBy === "status") {
-        const order = { MISMATCH: 0, PARTIAL: 1, PENDING: 2, GENUINE: 3 };
-        return (order[a.verificationStatus] || 0) - (order[b.verificationStatus] || 0);
-      }
-      // recent (default)
+      if (sortBy === "name") return (a.name || "").localeCompare(b.name || "");
+      if (sortBy === "status") return (a.formStatus || "").localeCompare(b.formStatus || "");
       return new Date(b.lastActive || 0) - new Date(a.lastActive || 0);
     });
 
     return results;
-  }, [loginsHistory, formPersistPO, formPersistClerk, storeEntries, backendRows, sortBy]);
+  }, [formPersistPO, formPersistClerk, storeEntries, backendRows, loginsHistory, sortBy]);
 
   /* ── Filtering ────────────────────────────────────────────────────────── */
 
@@ -371,60 +315,46 @@ export default function ExamFormsAdmin() {
     const q = searchQuery.toLowerCase().trim();
     return records.filter((rec) => {
       const matchSearch = !q ||
-        (rec.loginName || "").toLowerCase().includes(q) ||
-        (rec.loginPhone || "").includes(q) ||
-        (rec.loginEmail || "").toLowerCase().includes(q) ||
-        (rec.basicName || "").toLowerCase().includes(q) ||
-        (rec.basicPhone || "").includes(q) ||
-        (rec.basicEmail || "").toLowerCase().includes(q) ||
+        (rec.name || "").toLowerCase().includes(q) ||
+        (rec.phone || "").includes(q) ||
+        (rec.email || "").toLowerCase().includes(q) ||
         (rec.id || "").toLowerCase().includes(q);
-      const matchStatus = statusFilter === "ALL" || rec.verificationStatus === statusFilter;
-      const matchExam = examFilter === "ALL" || rec.examId === examFilter || (!rec.examId && examFilter === "ALL");
+      const matchStatus = statusFilter === "ALL" || rec.formStatus === statusFilter;
+      const matchExam = examFilter === "ALL" || rec.examId === examFilter;
       return matchSearch && matchStatus && matchExam;
     });
   }, [records, searchQuery, statusFilter, examFilter]);
 
-  /* ── Derived stats ────────────────────────────────────────────────────── */
+  /* ── Derived Stats ────────────────────────────────────────────────────── */
 
-  const genuineCount = records.filter(r => r.verificationStatus === "GENUINE").length;
-  const partialCount = records.filter(r => r.verificationStatus === "PARTIAL").length;
-  const mismatchCount = records.filter(r => r.verificationStatus === "MISMATCH").length;
-  const pendingCount = records.filter(r => r.verificationStatus === "PENDING").length;
-  const submittedCount = records.filter(r => r.isSubmitted).length;
+  const inProgressCount = records.filter(r => r.formStatus === "IN_PROGRESS").length;
+  const completedCount = records.filter(r => r.formStatus === "COMPLETED").length;
 
   /* ── Export to CSV ────────────────────────────────────────────────────── */
 
   function exportCSV() {
     const headers = [
-      "Sl.No", "Candidate ID", "Login Name", "Login Mobile", "Login Email",
-      "Form Name", "Form Mobile", "Form Email", "Exam Form", "State/UT",
-      "Category", "Current Step", "Submitted", "Name Match", "Phone Match",
-      "Email Match", "Verification Status", "Login Timestamp", "Last Active"
+      "Sl.No", "Candidate ID", "Candidate Name", "Mobile Number", "Email ID",
+      "Exam Form", "State/UT", "Category", "Step Left At", "Form Status", "Last Active"
     ];
     const rows = filteredRecords.map((r, i) => [
       i + 1,
-      `"${r.id}"`, `"${r.loginName}"`, `"${r.loginPhone}"`, `"${r.loginEmail}"`,
-      `"${r.basicName}"`, `"${r.basicPhone}"`, `"${r.basicEmail}"`,
+      `"${r.id}"`, `"${r.name}"`, `"${r.phone}"`, `"${r.email}"`,
       `"${r.examId || "-"}"`, `"${r.state || "-"}"`,
-      `"${r.category || "-"}"`, `"${r.currentStep}"`,
-      r.isSubmitted ? "Yes" : "No",
-      r.nameMatch === null ? "N/A" : r.nameMatch ? "Yes" : "No",
-      r.phoneMatch === null ? "N/A" : r.phoneMatch ? "Yes" : "No",
-      r.emailMatch === null ? "N/A" : r.emailMatch ? "Yes" : "No",
-      `"${r.verificationStatus}"`,
-      `"${r.loginTimestamp}"`, `"${r.lastActive}"`
+      `"${r.category || "-"}"`, `"${r.stepLeftAt}"`,
+      `"${r.formStatus}"`, `"${r.lastActive}"`
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `adda247_candidate_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `candidate_tracking_report_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  /* ── Clear all data ───────────────────────────────────────────────────── */
+  /* ── Clear All Data ───────────────────────────────────────────────────── */
 
   function clearAllData() {
     if (!window.confirm(
@@ -433,8 +363,9 @@ export default function ExamFormsAdmin() {
     try {
       localStorage.removeItem("adda_portal_logins_history");
       localStorage.removeItem("adda_website_visitor_count");
+      localStorage.removeItem("adda_start_practice_clicks");
+      localStorage.removeItem("adda_start_practice_history");
       localStorage.removeItem("adda247_practice_entries_v1");
-      // Clear form-persist keys
       Object.keys(localStorage).forEach((k) => {
         if (k.startsWith("examform:")) localStorage.removeItem(k);
       });
@@ -443,35 +374,31 @@ export default function ExamFormsAdmin() {
     loadData();
   }
 
-  /* ── Status badge renderer ────────────────────────────────────────────── */
+  /* ── Form Status Badge ────────────────────────────────────────────────── */
 
-  function StatusBadge({ status }) {
-    const cfg = {
-      GENUINE: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-800", icon: "verified", label: "Genuine" },
-      PARTIAL: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-800", icon: "error_outline", label: "Partial Match" },
-      MISMATCH: { bg: "bg-red-50", border: "border-red-200", text: "text-red-800", icon: "gpp_bad", label: "Mismatch" },
-      PENDING: { bg: "bg-slate-50", border: "border-slate-200", text: "text-slate-600", icon: "hourglass_top", label: "Pending" },
-    };
-    const c = cfg[status] || cfg.PENDING;
+  function FormStatusBadge({ status, stepLeftAt }) {
+    if (status === "COMPLETED") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <Icon name="check_circle" size={13} /> Fully Completed
+        </span>
+      );
+    }
+    if (status === "IN_PROGRESS") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200" title={`Left at: ${stepLeftAt}`}>
+          <Icon name="hourglass_top" size={13} /> Left at: {stepLeftAt}
+        </span>
+      );
+    }
     return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${c.bg} ${c.text} border ${c.border}`}>
-        <Icon name={c.icon} size={13} /> {c.label}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+        <Icon name="hourglass_empty" size={13} /> Not Started
       </span>
     );
   }
 
-  /* ── Field match indicator (for inspect modal) ────────────────────────── */
-
-  function MatchDot({ match }) {
-    if (match === null || match === undefined) {
-      return <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-medium"><Icon name="remove" size={12} /> N/A</span>;
-    }
-    return match
-      ? <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 font-bold"><Icon name="check_circle" size={12} /> Match</span>
-      : <span className="inline-flex items-center gap-1 text-[10px] text-red-600 font-bold"><Icon name="cancel" size={12} /> Mismatch</span>;
-  }
-
-  /* ── Render ────────────────────────────────────────────────────────────── */
+  /* ── Render Login Screen ──────────────────────────────────────────────── */
 
   if (!isAuthenticated) {
     return (
@@ -559,13 +486,14 @@ export default function ExamFormsAdmin() {
     );
   }
 
+  /* ── Render Dashboard ──────────────────────────────────────────────────── */
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 text-slate-800 flex flex-col font-sans antialiased">
 
-      {/* ═══ Top Navbar ═══ */}
+      {/* Navbar Header */}
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-lg">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
-          {/* Left: Logo + Title */}
           <div className="flex items-center gap-3.5 min-w-0">
             <button
               onClick={() => navigate("/exam-forms")}
@@ -579,16 +507,15 @@ export default function ExamFormsAdmin() {
               <h1 className="text-sm font-extrabold tracking-tight truncate flex items-center gap-2">
                 Admin Dashboard
                 <span className="bg-emerald-500/20 text-emerald-400 text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full border border-emerald-500/30 animate-pulse">
-                  Live
+                  Live Analytics
                 </span>
               </h1>
               <p className="text-[11px] text-slate-400 truncate hidden sm:block">
-                Candidate tracking, data verification & analytics
+                Candidate form progress tracking & website analytics
               </p>
             </div>
           </div>
 
-          {/* Right: Controls */}
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[10px] text-slate-500 hidden lg:block mr-1">
               Updated {timeAgo(lastRefreshed)}
@@ -618,51 +545,51 @@ export default function ExamFormsAdmin() {
         </div>
       </header>
 
-      {/* ═══ Main ═══ */}
+      {/* Main Content */}
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-4 sm:px-8 py-7 space-y-7">
 
-        {/* ── Metric Cards ── */}
+        {/* Metric Cards Row */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             {
               label: "Website Visitors",
               value: visitorCount,
-              sub: "Unique sessions tracked",
+              sub: "Unique website sessions",
               icon: "visibility",
               iconBg: "bg-blue-100 text-blue-600",
               accent: "text-blue-600",
             },
             {
-              label: "Portal Sign-Ins",
-              value: loginsHistory.length,
-              sub: "Name + Phone + Email",
-              icon: "person_add",
+              label: "Start Practice Clicks",
+              value: startPracticeClicks,
+              sub: "Total Start Practice clicks",
+              icon: "touch_app",
+              iconBg: "bg-purple-100 text-purple-600",
+              accent: "text-purple-600",
+            },
+            {
+              label: "Candidates Tracked",
+              value: records.length,
+              sub: "Filled Basic Details",
+              icon: "group",
               iconBg: "bg-violet-100 text-violet-600",
               accent: "text-violet-600",
             },
             {
-              label: "Genuine Users",
-              value: genuineCount,
-              sub: records.length ? `${Math.round((genuineCount / records.length) * 100)}% verified` : "—",
-              icon: "verified_user",
-              iconBg: "bg-emerald-100 text-emerald-600",
-              accent: "text-emerald-600",
-            },
-            {
-              label: "Mismatched",
-              value: mismatchCount + partialCount,
-              sub: `${mismatchCount} bad · ${partialCount} partial`,
-              icon: "gpp_maybe",
+              label: "In Progress / Drafts",
+              value: inProgressCount,
+              sub: "Candidates currently filling form",
+              icon: "hourglass_top",
               iconBg: "bg-amber-100 text-amber-600",
               accent: "text-amber-600",
             },
             {
-              label: "Submissions",
-              value: submittedCount,
-              sub: `${pendingCount} still in progress`,
-              icon: "task_alt",
-              iconBg: "bg-teal-100 text-teal-600",
-              accent: "text-teal-600",
+              label: "Fully Completed",
+              value: completedCount,
+              sub: `${records.length ? Math.round((completedCount / records.length) * 100) : 0}% completion rate`,
+              icon: "check_circle",
+              iconBg: "bg-emerald-100 text-emerald-600",
+              accent: "text-emerald-600",
             },
           ].map((card) => (
             <div key={card.label} className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow flex items-start justify-between gap-3">
@@ -682,21 +609,21 @@ export default function ExamFormsAdmin() {
           ))}
         </div>
 
-        {/* ── Candidate Table Card ── */}
+        {/* Candidate Tracking Table & Filter Toolbar */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
 
           {/* Table Header */}
           <div className="p-5 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <Icon name="group" size={20} className="text-red-600" />
-                Candidate Data & Verification
+                <Icon name="assignment" size={20} className="text-red-600" />
+                Candidate Data & Form Progression Tracking
                 <span className="text-[11px] font-semibold text-slate-400 ml-1">
                   ({filteredRecords.length}{filteredRecords.length !== records.length ? ` of ${records.length}` : ""})
                 </span>
               </h2>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Cross-validates initial login credentials against form details to flag discrepancies.
+                Displays candidate Name, Mobile Number, and Email ID from basic details, along with step-by-step form progression.
               </p>
             </div>
 
@@ -721,25 +648,23 @@ export default function ExamFormsAdmin() {
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, mobile, email, ID…"
+                placeholder="Search candidate name, mobile, email, ID…"
                 className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
               />
             </div>
 
-            {/* Verification Status */}
+            {/* Status Filter */}
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-200 transition-all">
-              <option value="ALL">All Statuses</option>
-              <option value="GENUINE">✅ Genuine</option>
-              <option value="PARTIAL">⚠️ Partial Match</option>
-              <option value="MISMATCH">❌ Mismatch</option>
-              <option value="PENDING">⏳ Pending</option>
+              <option value="ALL">All Completion Statuses</option>
+              <option value="IN_PROGRESS">⏳ In Progress / Drafts</option>
+              <option value="COMPLETED">✅ Fully Completed</option>
             </select>
 
             {/* Exam Filter */}
             <select value={examFilter} onChange={(e) => setExamFilter(e.target.value)}
               className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-200 transition-all">
-              <option value="ALL">All Exams</option>
+              <option value="ALL">All Exam Forms</option>
               <option value="IBPS-PO">IBPS PO</option>
               <option value="IBPS-CLERK">IBPS Clerk</option>
             </select>
@@ -749,7 +674,7 @@ export default function ExamFormsAdmin() {
               className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-red-200 transition-all">
               <option value="recent">Sort: Most Recent</option>
               <option value="name">Sort: Name A→Z</option>
-              <option value="status">Sort: Issues First</option>
+              <option value="status">Sort: Status</option>
             </select>
           </div>
 
@@ -759,12 +684,12 @@ export default function ExamFormsAdmin() {
               <thead>
                 <tr className="bg-slate-100/60 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
                   <th className="py-3 px-4 w-8">#</th>
-                  <th className="py-3 px-4">Candidate</th>
-                  <th className="py-3 px-4">Initial Sign-In Data</th>
-                  <th className="py-3 px-4">Form Basic Details</th>
-                  <th className="py-3 px-4">Exam Info</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-center">Step</th>
+                  <th className="py-3 px-4">Candidate ID</th>
+                  <th className="py-3 px-4">Candidate Name</th>
+                  <th className="py-3 px-4">Mobile Number</th>
+                  <th className="py-3 px-4">Email ID</th>
+                  <th className="py-3 px-4">Exam & State</th>
+                  <th className="py-3 px-4 text-center">Completion Status & Step Left At</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -772,97 +697,59 @@ export default function ExamFormsAdmin() {
                 {filteredRecords.length > 0 ? filteredRecords.map((rec, idx) => (
                   <tr key={rec.id + idx} className="group hover:bg-red-50/30 transition-colors">
                     {/* Sl.No */}
-                    <td className="py-3 px-4 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
+                    <td className="py-3.5 px-4 text-[11px] text-slate-400 font-mono">{idx + 1}</td>
 
-                    {/* Candidate ID + Avatar */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 uppercase ${
-                            rec.verificationStatus === "GENUINE" ? "bg-emerald-100 text-emerald-700" :
-                            rec.verificationStatus === "MISMATCH" ? "bg-red-100 text-red-700" :
-                            rec.verificationStatus === "PARTIAL" ? "bg-amber-100 text-amber-700" :
-                            "bg-slate-200 text-slate-500"
-                          }`}
-                        >
-                          {(rec.loginName || "?").charAt(0)}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-900 truncate max-w-[120px]">{rec.loginName || "—"}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{rec.id}</div>
-                        </div>
+                    {/* Candidate ID */}
+                    <td className="py-3.5 px-4 font-mono text-xs text-slate-600 font-bold">
+                      {rec.id}
+                      <div className="text-[10px] text-slate-400 font-sans font-normal mt-0.5">
+                        {fmtDate(rec.lastActive)}
                       </div>
                     </td>
 
-                    {/* Initial Sign-In */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-0.5 text-[11px]">
-                        <div className="text-slate-800 font-semibold truncate max-w-[160px]">{rec.loginName || "—"}</div>
-                        <div className="text-slate-500 flex items-center gap-1">
-                          <Icon name="phone_iphone" size={11} className="text-slate-400" /> {rec.loginPhone || "—"}
-                        </div>
-                        <div className="text-slate-500 flex items-center gap-1 truncate max-w-[160px]">
-                          <Icon name="mail" size={11} className="text-slate-400" /> {rec.loginEmail || "—"}
-                        </div>
-                      </div>
+                    {/* Candidate Name */}
+                    <td className="py-3.5 px-4">
+                      <div className="font-extrabold text-slate-900 text-xs">{rec.name || "Candidate"}</div>
                     </td>
 
-                    {/* Form Basic Details */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-0.5 text-[11px]">
-                        <div className={`font-semibold truncate max-w-[160px] ${
-                          rec.nameMatch === true ? "text-emerald-700" : rec.nameMatch === false ? "text-red-700" : "text-slate-800"
-                        }`}>
-                          {rec.basicName || "—"}
-                        </div>
-                        <div className={`flex items-center gap-1 ${
-                          rec.phoneMatch === true ? "text-emerald-600" : rec.phoneMatch === false ? "text-red-600" : "text-slate-500"
-                        }`}>
-                          <Icon name="phone_iphone" size={11} /> {rec.basicPhone || "—"}
-                        </div>
-                        <div className={`flex items-center gap-1 truncate max-w-[160px] ${
-                          rec.emailMatch === true ? "text-emerald-600" : rec.emailMatch === false ? "text-red-600" : "text-slate-500"
-                        }`}>
-                          <Icon name="mail" size={11} /> {rec.basicEmail || "—"}
-                        </div>
-                      </div>
+                    {/* Mobile Number */}
+                    <td className="py-3.5 px-4 text-xs font-semibold text-slate-800">
+                      {rec.phone !== "-" ? `+91 ${rec.phone}` : "-"}
                     </td>
 
-                    {/* Exam Info */}
-                    <td className="py-3 px-4">
-                      {rec.examId ? (
+                    {/* Email ID */}
+                    <td className="py-3.5 px-4 text-xs text-slate-700 truncate max-w-[180px]">
+                      {rec.email || "-"}
+                    </td>
+
+                    {/* Exam & State */}
+                    <td className="py-3.5 px-4">
+                      {rec.examId !== "-" ? (
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${
                           rec.examId === "IBPS-PO" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"
                         }`}>
                           {rec.examId}
                         </span>
                       ) : <span className="text-[10px] text-slate-400">—</span>}
-                      {rec.state && (
-                        <div className="text-[10px] text-slate-500 mt-1 truncate max-w-[100px]">
-                          {rec.state}
+                      {rec.state && rec.state !== "-" && (
+                        <div className="text-[10px] text-slate-500 mt-1 truncate max-w-[110px]">
+                          📍 {rec.state}
                         </div>
                       )}
                     </td>
 
-                    {/* Verification Status */}
-                    <td className="py-3 px-4 text-center">
-                      <StatusBadge status={rec.verificationStatus} />
-                    </td>
-
-                    {/* Current Step */}
-                    <td className="py-3 px-4 text-center">
-                      <span className={`text-[11px] font-semibold ${rec.isSubmitted ? "text-emerald-700" : "text-slate-600"}`}>
-                        {rec.currentStep}
-                      </span>
+                    {/* Completion Status & Step Left At */}
+                    <td className="py-3.5 px-4 text-center">
+                      <FormStatusBadge status={rec.formStatus} stepLeftAt={rec.stepLeftAt} />
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => setSelectedCandidate(rec)}
-                        className="px-2.5 py-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors opacity-70 group-hover:opacity-100"
+                        className="px-2.5 py-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                       >
-                        <Icon name="open_in_new" size={13} />
+                        Inspect Details
                       </button>
                     </td>
                   </tr>
@@ -870,11 +757,11 @@ export default function ExamFormsAdmin() {
                   <tr>
                     <td colSpan={8} className="py-16 text-center">
                       <Icon name="inbox" size={40} className="mx-auto mb-3 text-slate-300" />
-                      <p className="text-sm font-bold text-slate-500">No candidate records found</p>
+                      <p className="text-sm font-bold text-slate-500">No candidate form records found</p>
                       <p className="text-xs text-slate-400 mt-1">
                         {searchQuery || statusFilter !== "ALL"
                           ? "Try adjusting your search or filters."
-                          : "Candidates will appear here once they enter through the portal gate."}
+                          : "Candidate records will appear here as soon as basic details are filled in application forms."}
                       </p>
                     </td>
                   </tr>
@@ -887,7 +774,7 @@ export default function ExamFormsAdmin() {
           {filteredRecords.length > 0 && (
             <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-[11px] text-slate-500">
               <span>
-                Showing <strong className="text-slate-700">{filteredRecords.length}</strong> of <strong className="text-slate-700">{records.length}</strong> candidates
+                Showing <strong className="text-slate-700">{filteredRecords.length}</strong> of <strong className="text-slate-700">{records.length}</strong> candidate form entries
               </span>
               <span className="flex items-center gap-1">
                 <Icon name="schedule" size={12} /> Auto-refreshes every 15s
@@ -897,139 +784,42 @@ export default function ExamFormsAdmin() {
         </div>
       </main>
 
-      {/* ═══ Candidate Inspect Modal ═══ */}
+      {/* Inspect Candidate Details Modal */}
       {selectedCandidate && (
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedCandidate(null); }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-[modalSlideIn_0.2s_ease-out]">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold uppercase shrink-0 ${
-                    selectedCandidate.verificationStatus === "GENUINE" ? "bg-emerald-100 text-emerald-700" :
-                    selectedCandidate.verificationStatus === "MISMATCH" ? "bg-red-100 text-red-700" :
-                    "bg-amber-100 text-amber-700"
-                  }`}
-                >
-                  {(selectedCandidate.loginName || "?").charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-extrabold text-slate-900 text-sm truncate">
-                    {selectedCandidate.loginName || "Candidate"}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">{selectedCandidate.id}</p>
-                </div>
-              </div>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 animate-[modalSlideIn_0.2s_ease-out]">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                <Icon name="account_box" size={20} className="text-red-600" />
+                Candidate Details ({selectedCandidate.id})
+              </h3>
               <button
                 onClick={() => setSelectedCandidate(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
               >
-                <Icon name="close" size={16} />
+                ✕
               </button>
             </div>
 
-            <div className="px-6 py-5 space-y-5">
-              {/* Overall Verdict */}
-              <div className={`p-4 rounded-xl border-2 flex items-center gap-3 ${
-                selectedCandidate.verificationStatus === "GENUINE"
-                  ? "bg-emerald-50 border-emerald-200"
-                  : selectedCandidate.verificationStatus === "MISMATCH"
-                  ? "bg-red-50 border-red-200"
-                  : selectedCandidate.verificationStatus === "PARTIAL"
-                  ? "bg-amber-50 border-amber-200"
-                  : "bg-slate-50 border-slate-200"
-              }`}>
-                <Icon
-                  name={
-                    selectedCandidate.verificationStatus === "GENUINE" ? "verified_user" :
-                    selectedCandidate.verificationStatus === "MISMATCH" ? "gpp_bad" :
-                    selectedCandidate.verificationStatus === "PARTIAL" ? "gpp_maybe" :
-                    "hourglass_top"
-                  }
-                  size={28}
-                  className={
-                    selectedCandidate.verificationStatus === "GENUINE" ? "text-emerald-600" :
-                    selectedCandidate.verificationStatus === "MISMATCH" ? "text-red-600" :
-                    selectedCandidate.verificationStatus === "PARTIAL" ? "text-amber-600" :
-                    "text-slate-500"
-                  }
-                />
-                <div>
-                  <div className="text-sm font-extrabold">
-                    {selectedCandidate.verificationStatus === "GENUINE" && "✅ Genuine User — Data Verified"}
-                    {selectedCandidate.verificationStatus === "PARTIAL" && "⚠️ Partial Match — Review Recommended"}
-                    {selectedCandidate.verificationStatus === "MISMATCH" && "❌ Data Mismatch — Inconsistent Entries"}
-                    {selectedCandidate.verificationStatus === "PENDING" && "⏳ Verification Pending — Form Not Completed"}
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    Initial sign-in credentials are compared field-by-field against form basic details.
-                  </p>
-                </div>
-              </div>
-
-              {/* Side-by-Side Data Comparison */}
-              <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-[10px] uppercase tracking-wider text-slate-500">
-                      <th className="py-2.5 px-4 text-left font-extrabold">Field</th>
-                      <th className="py-2.5 px-4 text-left font-extrabold">Initial Login</th>
-                      <th className="py-2.5 px-4 text-left font-extrabold">Form Details</th>
-                      <th className="py-2.5 px-4 text-center font-extrabold">Match</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2.5 px-4 font-bold text-slate-700">Full Name</td>
-                      <td className="py-2.5 px-4 text-slate-800">{selectedCandidate.loginName || "—"}</td>
-                      <td className="py-2.5 px-4 text-slate-800">{selectedCandidate.basicName || "—"}</td>
-                      <td className="py-2.5 px-4 text-center"><MatchDot match={selectedCandidate.nameMatch} /></td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2.5 px-4 font-bold text-slate-700">Mobile No.</td>
-                      <td className="py-2.5 px-4 text-slate-800">{selectedCandidate.loginPhone ? "+91 " + selectedCandidate.loginPhone : "—"}</td>
-                      <td className="py-2.5 px-4 text-slate-800">{selectedCandidate.basicPhone ? "+91 " + selectedCandidate.basicPhone : "—"}</td>
-                      <td className="py-2.5 px-4 text-center"><MatchDot match={selectedCandidate.phoneMatch} /></td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2.5 px-4 font-bold text-slate-700">Email ID</td>
-                      <td className="py-2.5 px-4 text-slate-800 break-all">{selectedCandidate.loginEmail || "—"}</td>
-                      <td className="py-2.5 px-4 text-slate-800 break-all">{selectedCandidate.basicEmail || "—"}</td>
-                      <td className="py-2.5 px-4 text-center"><MatchDot match={selectedCandidate.emailMatch} /></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Additional Info Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                {[
-                  { label: "Exam Form", value: selectedCandidate.examId || "—", icon: "description" },
-                  { label: "State / UT", value: selectedCandidate.state || "—", icon: "location_on" },
-                  { label: "Category", value: selectedCandidate.category || "—", icon: "badge" },
-                  { label: "Current Step", value: selectedCandidate.currentStep, icon: "fact_check" },
-                  { label: "Login Time", value: fmtDate(selectedCandidate.loginTimestamp), icon: "login" },
-                  { label: "Last Active", value: fmtDate(selectedCandidate.lastActive), icon: "schedule" },
-                ].map((item) => (
-                  <div key={item.label} className="bg-slate-50 rounded-lg p-3 border border-slate-100 flex items-start gap-2">
-                    <Icon name={item.icon} size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{item.label}</div>
-                      <div className="font-semibold text-slate-800 mt-0.5">{item.value}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <p><strong>Full Name:</strong> {selectedCandidate.name}</p>
+              <p><strong>Mobile Number:</strong> {selectedCandidate.phone !== "-" ? `+91 ${selectedCandidate.phone}` : "-"}</p>
+              <p><strong>Email ID:</strong> {selectedCandidate.email}</p>
+              <p><strong>Exam Form:</strong> {selectedCandidate.examId}</p>
+              <p><strong>State / UT:</strong> {selectedCandidate.state}</p>
+              <p><strong>Category:</strong> {selectedCandidate.category}</p>
+              <p><strong>Form Status:</strong> {selectedCandidate.formStatus === "COMPLETED" ? "✅ Fully Completed" : "⏳ In Progress"}</p>
+              <p><strong>Step Left At:</strong> {selectedCandidate.stepLeftAt}</p>
+              <p><strong>Last Active:</strong> {fmtDate(selectedCandidate.lastActive)}</p>
             </div>
 
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-end rounded-b-2xl">
+            <div className="text-right pt-2">
               <button
                 onClick={() => setSelectedCandidate(null)}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-5 py-2 rounded-lg transition-colors"
+                className="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-800"
               >
                 Close
               </button>
