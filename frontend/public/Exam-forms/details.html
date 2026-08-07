@@ -465,7 +465,7 @@
 
 <header class="loginheader regheader" id="myHeader">
   <nav class="navbar navbar-light shadow d-flex justify-content-between align-items-center">
-    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px"></a>
+    <a class="navbar-brand"><img src="images/logo.jpg" width="500px" height="90px" loading="lazy" decoding="async" alt="Header Logo"></a>
     <div class="header-reg-info pr-3" id="headerRegInfo" style="display:none;">
       <div>Name: <strong id="hdrName"></strong></div>
       <div>Reg. No: <strong id="hdrRegNo"></strong></div>
@@ -3244,6 +3244,6 @@ if($('btnNext')) $('btnNext').addEventListener('click', handleSaveNextClick);
     </div>
   </div>
 
-  <script src="form-persist.js"></script>
+  <script src="form-persist.js" defer></script>
 </body>
 </html>

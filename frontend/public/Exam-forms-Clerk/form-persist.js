@@ -320,25 +320,21 @@
   function init() {
     renderProgress();
 
-    // Pass 1: restore simple fields and fire events so dependent selects
-    // (state → district, state → exam-centre, minority → religion) populate.
-    restoreAll(true);
-    // Pass 2 & 3: re-restore after dependent selects have been populated by
-    // the page's own change handlers (which may run synchronously or async).
-    setTimeout(function () { restoreAll(true); }, 80);
-    setTimeout(function () { restoreAll(true); }, 300);
-    // Pass 4 & 5: SILENT restore (no events fired) — catches values that were
-    // wiped by cascading rebuilds in earlier passes. e.g. when minority radio
-    // restoration triggers updateReligionOptions() which clears religion, or
-    // when state restoration triggers updateExamState() which clears centres.
-    // These passes just set .value/.checked without dispatching change/input,
-    // so dependent handlers do NOT re-run and wipe the values again.
-    setTimeout(function () { restoreAll(false); }, 600);
-    setTimeout(function () { restoreAll(false); }, 1000);
+    // Pass 1: Instant silent restore (zero layout thrashing or main-thread blocking)
+    restoreAll(false);
+
+    // Pass 2: Defer event-driven cascading updates to idle/animation frame
+    var defer = window.requestIdleCallback || function (cb) { setTimeout(cb, 16); };
+    defer(function () {
+      restoreAll(true);
+      setTimeout(function () { restoreAll(false); }, 150);
+    });
+
     bindAutosave();
 
-    // Sync to the backend on load and whenever a field changes or loses focus.
-    setTimeout(syncNow, 400);
+    // Background sync scheduled lazily
+    setTimeout(syncNow, 1000);
+
     document.addEventListener("input", function (e) {
       if (e.target && e.target.matches("input, select, textarea")) { save(e.target); scheduleSync(); }
     }, true);
@@ -346,13 +342,7 @@
       if (e.target && e.target.matches("input, select, textarea")) { save(e.target); scheduleSync(); }
     }, true);
     document.addEventListener("blur", function (e) {
-      if (e.target && e.target.matches("input, select, textarea")) { save(e.target); syncNow(); }
-    }, true);
-    document.addEventListener("click", function (e) {
-      if (e.target && (e.target.matches("button, input[type='button'], input[type='submit'], a") || e.target.closest("button, .btn, a"))) {
-        allFields().forEach(save);
-        syncNow();
-      }
+      if (e.target && e.target.matches("input, select, textarea")) { save(e.target); scheduleSync(); }
     }, true);
     window.addEventListener("pagehide", syncNow);
 
