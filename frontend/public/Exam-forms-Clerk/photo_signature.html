@@ -280,6 +280,7 @@
 
     <div class="row justify-content-center mt-4 mb-5">
       <a href="index.html" class="btn sbtn1 mr-3" style="text-decoration:none;">Back</a>
+      <input class="btn sbtn1 mr-3" type="button" id="ValidateBtn" value="Validate your details">
       <input class="btn sbtn" type="button" id="btnNext" value="Next">
     </div>
   </form>
@@ -562,32 +563,74 @@ function clearError(field){
   if(err){ err.textContent = ''; err.classList.remove('show'); }
 }
 
-$('btnNext').addEventListener('click', function() {
+function validatePhotoSig() {
   var result = $('result');
   clearError('confirmRecent'); clearError('confirmCaptured'); clearError('confirmSig');
   result.style.display = 'none';
 
-  var hasPhoto = sessionStorage.getItem('ibps_photoImg');
-  var hasLive  = sessionStorage.getItem('ibps_liveImg');
-  var hasSig   = sessionStorage.getItem('ibps_sigImg');
+  var hasPhoto = sessionStorage.getItem('ibps_photoImg') || localStorage.getItem('ibps_photoImg');
+  var hasLive  = sessionStorage.getItem('ibps_liveImg') || localStorage.getItem('ibps_liveImg');
+  var hasSig   = sessionStorage.getItem('ibps_sigImg') || localStorage.getItem('ibps_sigImg');
   var errors = 0;
 
-  if (!hasPhoto) { alert('Please upload your scanned photograph (use "Browse").'); return; }
-  if (!$('confirmRecent').checked) { showError('confirmRecent','Please confirm this is your recent photograph.'); errors++; }
+  if (!hasPhoto) { showError('confirmRecent','Please upload your scanned photograph (use "Browse").'); errors++; }
+  else if (!$('confirmRecent').checked) { showError('confirmRecent','Please confirm this is your recent photograph.'); errors++; }
 
-  if (!hasLive) { alert('Please capture your live photograph (click "Capture Photo").'); return; }
-  if (!$('confirmCaptured').checked) { showError('confirmCaptured','Please confirm the captured photograph declaration.'); errors++; }
+  if (!hasLive) { showError('confirmCaptured','Please capture your live photograph (click "Capture Photo").'); errors++; }
+  else if (!$('confirmCaptured').checked) { showError('confirmCaptured','Please confirm the captured photograph declaration.'); errors++; }
 
-  if (!hasSig) { alert('Please upload your scanned signature (use "Browse").'); return; }
-  if (!$('confirmSig').checked) { showError('confirmSig','Please confirm this is your valid signature.'); errors++; }
+  if (!hasSig) { showError('confirmSig','Please upload your scanned signature (use "Browse").'); errors++; }
+  else if (!$('confirmSig').checked) { showError('confirmSig','Please confirm this is your valid signature.'); errors++; }
 
   if (errors) {
     result.className = 'alert-box error show';
     result.style.display = 'block';
-    result.textContent = 'Please tick all confirmation checkboxes before continuing.';
-    return;
+    result.textContent = 'Validation found ' + errors + ' issue(s). Please complete all uploads and tick all confirmation checkboxes.';
+    return false;
   }
+  return true;
+}
 
+function showVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'flex';
+  modalEl.style.position = 'fixed';
+  modalEl.style.top = '0';
+  modalEl.style.left = '0';
+  modalEl.style.width = '100%';
+  modalEl.style.height = '100%';
+  modalEl.style.alignItems = 'center';
+  modalEl.style.justifyContent = 'center';
+  modalEl.style.zIndex = '100000';
+  modalEl.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function hideVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'none';
+  modalEl.classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+if($('closeVerifiedModal')) $('closeVerifiedModal').onclick = hideVerifiedSuccessModal;
+if($('btnVerifiedModalOk')) $('btnVerifiedModalOk').onclick = hideVerifiedSuccessModal;
+
+if($('ValidateBtn')) {
+  $('ValidateBtn').addEventListener('click', function() {
+    var result = $('result');
+    result.className = 'alert-box success show';
+    result.style.display = 'block';
+    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields & uploads are valid! You can now click "Next" to proceed.';
+    window.scrollTo({top:0, behavior:'smooth'});
+    showVerifiedSuccessModal();
+  });
+}
+
+$('btnNext').addEventListener('click', function() {
+  if (!validatePhotoSig()) return;
   window.location.href = 'details.html';
 });
 
@@ -611,6 +654,24 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 });
 </script>
+
+  <!-- Verified Successfully Modal -->
+  <div class="modal fade" id="verifiedSuccessModal" tabindex="-1" role="dialog" aria-hidden="true" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; align-items: center; justify-content: center;">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px; margin: auto; width: 90%;">
+      <div class="modal-content style-modal" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.3); padding: 16px; background: #fff;">
+        <div class="modal-header border-0 pb-0 justify-content-end" style="padding: 5px 10px 0;">
+          <button type="button" class="close text-muted" id="closeVerifiedModal" style="font-size: 24px; outline: none; opacity: 0.7; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body text-center pt-0 px-4 pb-4">
+          <div class="mb-3" style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; border: 3px solid #22c55e; background-color: #f0fdf4;">
+            <i class="bi bi-check-lg" style="font-size: 44px; color: #16a34a; line-height: 1; -webkit-text-stroke: 1.5px #16a34a;"></i>
+          </div>
+          <h5 class="modal-title font-weight-bold mb-4" style="color: #1e293b; font-size: 18px;">Verified Successfully</h5>
+          <button type="button" class="btn btn-primary px-4 py-2 font-weight-bold" id="btnVerifiedModalOk" style="background-color: #4f46e5; border-color: #4f46e5; border-radius: 8px; min-width: 90px; color: #fff; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="form-persist.js"></script>
 </body>

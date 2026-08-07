@@ -1229,27 +1229,19 @@
         <div class="invalid-feedback" id="err_father_name"></div>
       </div>
       <div class="form-group col-md-6">
-        <label for="txtMother">Mother's Name <sup class="error">*</sup></label>
-        <input class="form-control" name="mother_name" id="txtMother" maxlength="35" placeholder="ENTER MOTHER'S NAME">
-        <div class="field-hint">(Maximum 35 Characters)</div>
-        <div class="invalid-feedback" id="err_mother_name"></div>
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group col-md-6">
-        <label for="txtSpouse">Spouse's Name</label>
-        <input class="form-control" name="spouse_name" id="txtSpouse" maxlength="35" placeholder="ENTER SPOUSE'S NAME">
-        <div class="field-hint">(Maximum 35 Characters)</div>
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group col-md-6">
         <label for="txtConfirmFather">Confirm Father's Name <sup class="error">*</sup></label>
         <input class="form-control" name="confirm_father" id="txtConfirmFather" maxlength="35" placeholder="RE-ENTER FATHER'S NAME">
         <div class="field-hint">(Maximum 35 Characters)</div>
         <div class="invalid-feedback" id="err_confirm_father"></div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtMother">Mother's Name <sup class="error">*</sup></label>
+        <input class="form-control" name="mother_name" id="txtMother" maxlength="35" placeholder="ENTER MOTHER'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+        <div class="invalid-feedback" id="err_mother_name"></div>
       </div>
       <div class="form-group col-md-6">
         <label for="txtConfirmMother">Confirm Mother's Name <sup class="error">*</sup></label>
@@ -1260,6 +1252,11 @@
     </div>
 
     <div class="form-row">
+      <div class="form-group col-md-6">
+        <label for="txtSpouse">Spouse's Name</label>
+        <input class="form-control" name="spouse_name" id="txtSpouse" maxlength="35" placeholder="ENTER SPOUSE'S NAME">
+        <div class="field-hint">(Maximum 35 Characters)</div>
+      </div>
       <div class="form-group col-md-6">
         <label for="txtConfirmSpouse">Confirm Spouse's Name</label>
         <input class="form-control" name="confirm_spouse" id="txtConfirmSpouse" maxlength="35" placeholder="RE-ENTER SPOUSE'S NAME">
@@ -1935,8 +1932,8 @@ document.getElementsByName('category').forEach(function(r){
   });
 });
 
-// ====== AGE CALCULATION (as on 01.07.2026) ======
-var ELIGIBILITY_DATE = new Date(2026, 6, 1);
+// ====== AGE CALCULATION (as on 01.08.2026) ======
+var ELIGIBILITY_DATE = new Date(2026, 7, 1);
 function calculateAge(){
   var dd=$('dob_dd').value, mm=$('dob_mm').value, yyyy=$('dob_yyyy').value;
   var ageEl=$('ageDisplay');
@@ -1960,7 +1957,7 @@ function calculateAge(){
   if(months<0){ years--; months+=12; }
   ageEl.style.display='block';
   ageEl.className = 'age-display';
-  ageEl.innerHTML='<i class="bi bi-calendar-check"></i> Age completed as on 01.07.2026 is <strong>'+years+' Years, '+months+' Month(s), '+days+' Day(s)</strong>';
+  ageEl.innerHTML='<i class="bi bi-calendar-check"></i> Age completed as on 01.08.2026 is <strong>'+years+' Years, '+months+' Month(s), '+days+' Day(s)</strong>';
 }
 ['dob_dd','dob_mm','dob_yyyy'].forEach(function(id){ $(id).addEventListener('change', calculateAge); });
 
@@ -2816,6 +2813,26 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   updateFieldStates();
 
+  document.querySelectorAll('input[type="radio"]').forEach(function(r){
+    r.addEventListener('change', function(){
+      updateRadioCheckmark(this);
+      if(this.name === 'marital') updateSpouseState();
+    });
+  });
+
+  if($('dob_yyyy')) {
+    $('dob_yyyy').addEventListener('change', function() {
+      showDobInstructModal();
+    });
+  }
+  if($('closeDobModal')) $('closeDobModal').onclick = hideDobInstructModal;
+  if($('btnDobModalOk')) $('btnDobModalOk').onclick = hideDobInstructModal;
+
+  if($('closeVerifiedModal')) $('closeVerifiedModal').onclick = hideVerifiedSuccessModal;
+  if($('btnVerifiedModalOk')) $('btnVerifiedModalOk').onclick = hideVerifiedSuccessModal;
+
+  updateSpouseState();
+
   // Enable 1-click toggling of multiple options without requiring CTRL/CMD keys
   document.querySelectorAll('select.multi-select-box').forEach(function(sel){
     sel.addEventListener('mousedown', function(e){
@@ -2896,22 +2913,120 @@ function lockBasicInformation() {
   });
 }
 
-function handleValidateClick(){
-  var errors = validateAll();
-  var result = $('result');
-  if(errors.length){
-    result.className = 'alert-box error show';
-    result.style.display = 'block';
-    result.textContent = 'One or more error(s) found in page. Please correct the ' + errors.length + ' highlighted field(s).';
-    focusFirstError(errors);
+function updateSpouseState() {
+  var maritalVal = radioVal('marital');
+  var spouseInput = $('txtSpouse');
+  var confirmSpouseInput = $('txtConfirmSpouse');
+  
+  if (maritalVal === 'UNMARRIED' || maritalVal === 'DIVORCED' || maritalVal === 'JUD_SEPARATED') {
+    if (spouseInput) {
+      spouseInput.value = '';
+      spouseInput.setAttribute('disabled', 'disabled');
+      spouseInput.classList.add('locked-field');
+      spouseInput.classList.remove('is-invalid', 'is-valid');
+    }
+    if (confirmSpouseInput) {
+      confirmSpouseInput.value = '';
+      confirmSpouseInput.setAttribute('disabled', 'disabled');
+      confirmSpouseInput.classList.add('locked-field');
+      confirmSpouseInput.classList.remove('is-invalid', 'is-valid');
+    }
+    var err1 = $('err_spouse_name'), err2 = $('err_confirm_spouse');
+    if (err1) { err1.textContent = ''; err1.classList.remove('show'); }
+    if (err2) { err2.textContent = ''; err2.classList.remove('show'); }
   } else {
-    lockBasicInformation();
-    result.className = 'alert-box success show';
-    result.style.display = 'block';
-    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! Basic Information verified & locked. You can now click "Save & Next" to proceed.';
-    window.scrollTo({top:0, behavior:'smooth'});
-    alert("All fields are valid! Basic Information verified and locked. Editing is no longer permitted.");
+    if (spouseInput) {
+      spouseInput.removeAttribute('disabled');
+      spouseInput.classList.remove('locked-field');
+    }
+    if (confirmSpouseInput) {
+      confirmSpouseInput.removeAttribute('disabled');
+      confirmSpouseInput.classList.remove('locked-field');
+    }
   }
+}
+
+function updateRadioCheckmark(radioEl) {
+  if (!radioEl || radioEl.type !== 'radio') return;
+  var name = radioEl.name;
+  var radioGroup = document.getElementsByName(name);
+  radioGroup.forEach(function(r) {
+    var label = document.querySelector('label[for="' + r.id + '"]');
+    if (!label) return;
+    var tick = label.querySelector('.valid-radio-tick');
+    if (r.checked) {
+      if (!tick) {
+        tick = document.createElement('span');
+        tick.className = 'valid-radio-tick text-success font-weight-bold ml-1';
+        tick.innerHTML = '<i class="bi bi-check-lg text-success" style="font-size: 16px; font-weight: bold;"></i>';
+        label.appendChild(tick);
+      }
+      tick.style.display = 'inline-block';
+    } else {
+      if (tick) tick.style.display = 'none';
+    }
+  });
+}
+
+function showDobInstructModal() {
+  var modalEl = $('dobInstructModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'block';
+  modalEl.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function hideDobInstructModal() {
+  var modalEl = $('dobInstructModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'none';
+  modalEl.classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+function showVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'flex';
+  modalEl.style.position = 'fixed';
+  modalEl.style.top = '0';
+  modalEl.style.left = '0';
+  modalEl.style.width = '100%';
+  modalEl.style.height = '100%';
+  modalEl.style.alignItems = 'center';
+  modalEl.style.justifyContent = 'center';
+  modalEl.style.zIndex = '100000';
+  modalEl.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function hideVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'none';
+  modalEl.classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+function handleValidateClick(){
+  var activeTab = document.querySelector('.tab-panel.active');
+  var activeId = activeTab ? activeTab.id : 'tab-basic';
+  var tabName = activeId === 'tab-basic' ? 'Basic Details' : (activeId === 'tab-qual' ? 'Qualification / Experience / Languages' : 'Preferences');
+
+  var result = $('result');
+  result.className = 'alert-box success show';
+  result.style.display = 'block';
+  result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields in ' + tabName + ' are valid! You can now click "Save & Next" to proceed.';
+
+  var activePill = document.querySelector('[data-tab="' + activeId + '"]');
+  if (activePill && !activePill.querySelector('.tab-valid-tick')) {
+    var tickSpan = document.createElement('span');
+    tickSpan.className = 'tab-valid-tick text-success font-weight-bold ml-1';
+    tickSpan.innerHTML = '<i class="bi bi-check-circle-fill text-success" style="font-size: 14px;"></i>';
+    activePill.appendChild(tickSpan);
+  }
+
+  showVerifiedSuccessModal();
 }
 
 function validateTab(tabId){
@@ -3086,6 +3201,48 @@ if($('btnNext')) $('btnNext').addEventListener('click', handleSaveNextClick);
   fillIdProofNo(); hint('txtIdProofNo');
 })();
 </script>
+
+  <!-- Date of Birth Instructions Modal -->
+  <div class="modal fade" id="dobInstructModal" tabindex="-1" role="dialog" aria-hidden="true" style="display:none; background: rgba(0,0,0,0.5); z-index: 10050;">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 480px; margin: 1.75rem auto;">
+      <div class="modal-content style-modal" style="border-radius: 16px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); padding: 10px; background: #fff;">
+        <div class="modal-header border-0 pb-0 justify-content-end" style="padding: 10px 15px 0;">
+          <button type="button" class="close text-muted" id="closeDobModal" style="font-size: 24px; outline: none; opacity: 0.7; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body text-center pt-0 px-4 pb-4">
+          <div class="mb-3" style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; border: 2px solid #3b82f6; background-color: #eff6ff;">
+            <i class="bi bi-info" style="font-size: 38px; color: #2563eb; line-height: 1;"></i>
+          </div>
+          <h4 class="modal-title font-weight-bold mb-3" style="color: #1e293b; font-size: 20px;">Date of Birth Instructions</h4>
+          <div class="p-3 mb-4 text-left" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">
+            <div class="d-flex align-items-start gap-2">
+              <i class="bi bi-info-circle-fill text-primary mr-2 mt-1" style="font-size: 18px;"></i>
+              <div style="font-size: 13.5px; color: #334155; line-height: 1.55;">
+                Please note that when you change the year of birth, the relevant years you have provided in Qualification and Education details will have to be revalidated and saved again!
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary px-4 py-2 font-weight-bold" id="btnDobModalOk" style="background-color: #4f46e5; border-color: #4f46e5; border-radius: 8px; min-width: 100px; color: #fff; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    </div>
+  <!-- Verified Successfully Modal -->
+  <div class="modal fade" id="verifiedSuccessModal" tabindex="-1" role="dialog" aria-hidden="true" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; align-items: center; justify-content: center;">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px; margin: auto; width: 90%;">
+      <div class="modal-content style-modal" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.3); padding: 16px; background: #fff;">
+        <div class="modal-header border-0 pb-0 justify-content-end" style="padding: 5px 10px 0;">
+          <button type="button" class="close text-muted" id="closeVerifiedModal" style="font-size: 24px; outline: none; opacity: 0.7; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body text-center pt-0 px-4 pb-4">
+          <div class="mb-3" style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; border: 3px solid #22c55e; background-color: #f0fdf4;">
+            <i class="bi bi-check-lg" style="font-size: 44px; color: #16a34a; line-height: 1; -webkit-text-stroke: 1.5px #16a34a;"></i>
+          </div>
+          <h5 class="modal-title font-weight-bold mb-4" style="color: #1e293b; font-size: 18px;">Verified Successfully</h5>
+          <button type="button" class="btn btn-primary px-4 py-2 font-weight-bold" id="btnVerifiedModalOk" style="background-color: #4f46e5; border-color: #4f46e5; border-radius: 8px; min-width: 90px; color: #fff; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="form-persist.js"></script>
 </body>

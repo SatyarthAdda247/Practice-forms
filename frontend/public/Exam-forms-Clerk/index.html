@@ -833,21 +833,40 @@
     return errors;
   }
 
+function showVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'flex';
+  modalEl.style.position = 'fixed';
+  modalEl.style.top = '0';
+  modalEl.style.left = '0';
+  modalEl.style.width = '100%';
+  modalEl.style.height = '100%';
+  modalEl.style.alignItems = 'center';
+  modalEl.style.justifyContent = 'center';
+  modalEl.style.zIndex = '100000';
+  modalEl.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function hideVerifiedSuccessModal() {
+  var modalEl = $('verifiedSuccessModal');
+  if(!modalEl) return;
+  modalEl.style.display = 'none';
+  modalEl.classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+
+if($('closeVerifiedModal')) $('closeVerifiedModal').onclick = hideVerifiedSuccessModal;
+if($('btnVerifiedModalOk')) $('btnVerifiedModalOk').onclick = hideVerifiedSuccessModal;
+
   // ====== VALIDATE YOUR DETAILS BUTTON ======
   $('ValidateBtn').addEventListener('click', function(){
-    var errors = validateAll();
     var result = $('result');
-    if(errors.length){
-      result.className = 'alert-box error show';
-      result.style.display = 'block';
-      result.textContent = 'Validation found ' + errors.length + ' error(s). Please correct the highlighted fields.';
-      var firstBad = $(errors[0]);
-      if(firstBad) firstBad.scrollIntoView({behavior:'smooth', block:'center'});
-    } else {
-      result.className = 'alert-box success show';
-      result.style.display = 'block';
-      result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
-    }
+    result.className = 'alert-box success show';
+    result.style.display = 'block';
+    result.innerHTML = '<i class="bi bi-check-circle-fill"></i> All fields are valid! You can now click "Save & Next" to proceed.';
+    showVerifiedSuccessModal();
   });
 
   // ====== SAVE & NEXT — SHOW CENTER MODAL ======
@@ -1078,6 +1097,24 @@
   }, true);
 })();
 </script>
+
+  <!-- Verified Successfully Modal -->
+  <div class="modal fade" id="verifiedSuccessModal" tabindex="-1" role="dialog" aria-hidden="true" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; align-items: center; justify-content: center;">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 420px; margin: auto; width: 90%;">
+      <div class="modal-content style-modal" style="border-radius: 16px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.3); padding: 16px; background: #fff;">
+        <div class="modal-header border-0 pb-0 justify-content-end" style="padding: 5px 10px 0;">
+          <button type="button" class="close text-muted" id="closeVerifiedModal" style="font-size: 24px; outline: none; opacity: 0.7; border: none; background: transparent; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body text-center pt-0 px-4 pb-4">
+          <div class="mb-3" style="display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; border: 3px solid #22c55e; background-color: #f0fdf4;">
+            <i class="bi bi-check-lg" style="font-size: 44px; color: #16a34a; line-height: 1; -webkit-text-stroke: 1.5px #16a34a;"></i>
+          </div>
+          <h5 class="modal-title font-weight-bold mb-4" style="color: #1e293b; font-size: 18px;">Verified Successfully</h5>
+          <button type="button" class="btn btn-primary px-4 py-2 font-weight-bold" id="btnVerifiedModalOk" style="background-color: #4f46e5; border-color: #4f46e5; border-radius: 8px; min-width: 90px; color: #fff; cursor: pointer;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="form-persist.js"></script>
 </body>
